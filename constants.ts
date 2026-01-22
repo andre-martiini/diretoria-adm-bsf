@@ -13,7 +13,7 @@ export const PCA_YEARS_MAP: Record<string, string> = {
 
 export const DEFAULT_YEAR = '2025';
 
-export const LOCAL_API_SERVER = 'http://localhost:3001';
+export const LOCAL_API_SERVER = 'http://localhost:3002';
 // A URL base agora será construída dinamicamente no App.tsx
 
 export const FALLBACK_DATA: ContractItem[] = [];

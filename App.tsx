@@ -54,13 +54,14 @@ const App: React.FC = () => {
   const itemsPerPage = 10;
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'valor', direction: 'desc' });
   const [activeInsight, setActiveInsight] = useState<'abc' | 'monthly'>('abc');
+  const [pcaMeta, setPcaMeta] = useState<{ id: string, dataPublicacao: string } | null>(null);
 
   const fetchData = useCallback(async (year: string) => {
     setLoading(true);
     try {
-      const sequencial = PCA_YEARS_MAP[year] || '12';
-      const api_url = `${LOCAL_API_SERVER}/api/pncp/pca/${CNPJ_IFES_BSF}/${year}?sequencial=${sequencial}&tamanhoPagina=500&`;
-      const response = await fetch(`${api_url}pagina=1`);
+      const api_url = `/data/pca_${year}.json`;
+      console.log(`Buscando dados locais: ${api_url}`);
+      const response = await fetch(api_url);
 
       if (!response.ok) throw new Error(`API Response Error: ${response.status}`);
 
@@ -96,10 +97,25 @@ const App: React.FC = () => {
 
       setData(mapped);
       setUsingFallback(false);
+
+      // Extrai metadados do primeiro item retornado (se houver)
+      if (items.length > 0) {
+        const firstItem = items[0];
+        const sequencialCode = PCA_YEARS_MAP[year] || '12';
+        const pureSeq = firstItem.sequencialPca || sequencialCode;
+        const paddedSeq = pureSeq.toString().padStart(6, '0');
+        const cnpjFull = firstItem.cnpj || CNPJ_IFES_BSF;
+
+        setPcaMeta({
+          id: `${cnpjFull}-0-${paddedSeq}/${firstItem.anoPca || year}`,
+          dataPublicacao: firstItem.dataPublicacaoPncp || firstItem.dataInclusao
+        });
+      }
     } catch (err) {
-      console.warn("Conexão ao PNCP falhou.", err);
+      console.warn("Conexão ao PNCP falhou para itens.", err);
       setData(FALLBACK_DATA);
       setUsingFallback(true);
+      setPcaMeta(null);
     } finally {
       setLoading(false);
     }
@@ -232,18 +248,27 @@ const App: React.FC = () => {
             <div className="hidden md:block border-l border-slate-100 pl-6 ml-6">
               <div className="flex flex-col">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Ano de Referência</span>
-                <select
-                  value={selectedYear}
-                  onChange={(e) => {
-                    setSelectedYear(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="bg-ifes-green/5 text-ifes-green border border-ifes-green/20 rounded-md px-3 py-1 text-sm font-black outline-none focus:ring-2 focus:ring-ifes-green/40 transition-all cursor-pointer"
-                >
-                  {Object.keys(PCA_YEARS_MAP).sort((a, b) => b.localeCompare(a)).map(year => (
-                    <option key={year} value={year}>Plano PCA {year}</option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-3">
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => {
+                      setSelectedYear(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="bg-ifes-green/5 text-ifes-green border border-ifes-green/20 rounded-md px-3 py-1 text-sm font-black outline-none focus:ring-2 focus:ring-ifes-green/40 transition-all cursor-pointer"
+                  >
+                    {Object.keys(PCA_YEARS_MAP).sort((a, b) => b.localeCompare(a)).map(year => (
+                      <option key={year} value={year}>Plano PCA {year}</option>
+                    ))}
+                  </select>
+
+                  {pcaMeta && (
+                    <div className="flex flex-col border-l border-slate-200 pl-3">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase leading-none">PCA ID: {pcaMeta.id}</span>
+                      <span className="text-[9px] font-medium text-slate-400 mt-1">Ref.: {formatDate(pcaMeta.dataPublicacao)}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             {loading && <RefreshCw size={20} className="animate-spin text-ifes-green" />}
@@ -312,7 +337,7 @@ const App: React.FC = () => {
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <h3 className="text-lg font-extrabold text-slate-800 mb-2">Mapa de Alocação de Recursos</h3>
             <p className="text-xs text-slate-400 font-medium mb-6">Proporção visual por categoria de gasto</p>
-            <div className="h-80 w-full overflow-hidden flex items-center justify-center">
+            <div className="h-80 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie

@@ -3,13 +3,13 @@ import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyB600o5jXYF9n29W8cA4d5IzaM_Je4Usr0",
-    authDomain: "diretoria-adm-bsf.firebaseapp.com",
-    projectId: "diretoria-adm-bsf",
-    storageBucket: "diretoria-adm-bsf.firebasestorage.app",
-    messagingSenderId: "58118601035",
-    appId: "1:58118601035:web:cf5f0c213929acab7510ce",
-    measurementId: "G-4XSJVRW2FB"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);
