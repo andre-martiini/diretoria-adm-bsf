@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Poppins", "sans-serif";
+  --color-ifes-green: #2f9e41;
+  --color-ifes-red: #cd191e;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+  }
+}

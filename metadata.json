@@ -1,0 +1,5 @@
+{
+  "name": "Portal PCA - Ifes BSF",
+  "description": "Dashboard inteligente para visualização e análise do Plano de Contratação Anual (PCA) do Ifes Campus Barra de São Francisco, integrado ao PNCP.",
+  "requestFramePermissions": []
+}
