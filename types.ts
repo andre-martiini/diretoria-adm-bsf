@@ -14,8 +14,10 @@ export interface ContractItem {
   inicio: string;
   fim: string;
   area: string;
+  valorExecutado?: number;
   abcClass?: 'A' | 'B' | 'C';
   riskStatus?: 'Baixo' | 'Médio' | 'Alto';
+  isManual?: boolean;
 }
 
 export interface SummaryData {
@@ -25,8 +27,8 @@ export interface SummaryData {
   tic: { qtd: number; val: number };
   services: { qtd: number; val: number };
   obras: { qtd: number; val: number };
-  executedValue: number; // Para HUD
-  monthlyPlan: { month: string; value: number }[]; // Para Histograma
+  totalExecutado: number;
+  monthlyPlan: { month: string; value: number }[];
 }
 
 export interface SortConfig {
