@@ -21,7 +21,7 @@ import {
     LayoutDashboard
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { fetchPcaData } from '../services/pcaService';
+import { fetchPcaData, hasPcaInMemoryCache, fetchLocalPcaSnapshot } from '../services/pcaService';
 import { fetchBudgetTransparencyData } from '../services/budgetService';
 import {
     ContractItem,
@@ -74,13 +74,24 @@ const PublicDashboard: React.FC = () => {
     const itemsPerPage = 10;
 
     const loadPcaData = useCallback(async (year: string) => {
-        if (pcaData.length > 0 && pcaData[0].ano === year) return;
+        const hasCache = hasPcaInMemoryCache(year);
 
-        setPcaLoading(true);
+        if (!hasCache) {
+            // Tenta carga progressiva do snapshot local para não travar a tela
+            const localData = await fetchLocalPcaSnapshot(year);
+            if (localData && localData.length > 0) {
+                setPcaData(localData);
+                setPcaLoading(false); // Já mostra a tabela e botões
+                console.log(`[PublicDashboard] Snapshot local carregado progressivamente.`);
+            } else {
+                setPcaLoading(true);
+            }
+        }
+
         setSyncProgress(0);
         try {
-            // Fetch PCA (skipSync to avoid local proxy for public users)
             const pcaResult = await fetchPcaData(year, false, true, (p) => setSyncProgress(p));
+            console.log(`[PublicDashboard] PCA Finalizado: ${pcaResult.data.length} itens.`);
             setPcaData(pcaResult.data);
             setPcaMeta(pcaResult.pcaMeta);
         } catch (err) {
@@ -105,12 +116,15 @@ const PublicDashboard: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        if (activeTab === 'pca') {
-            loadPcaData(selectedYear);
-        } else {
-            loadBudgetData(selectedYear);
-        }
-    }, [selectedYear, activeTab, loadPcaData, loadBudgetData]);
+        // Carrega ambos em paralelo para evitar gargalos sequenciais
+        const yearToLoad = selectedYear;
+
+        // PCA (com lógica interna progressiva)
+        loadPcaData(yearToLoad);
+
+        // Orçamento
+        loadBudgetData(yearToLoad);
+    }, [selectedYear, loadPcaData, loadBudgetData]);
 
     // --- PCA Calculations ---
     const processedPcaData = useMemo(() => {

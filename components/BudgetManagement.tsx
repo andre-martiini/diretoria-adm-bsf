@@ -37,7 +37,8 @@ import {
     deleteDoc,
     Timestamp,
     orderBy,
-    onSnapshot
+    onSnapshot,
+    writeBatch
 } from 'firebase/firestore';
 import { BudgetElement, BudgetRecord, BudgetType } from '../types';
 import { DEFAULT_YEAR, PCA_YEARS_MAP } from '../constants';
@@ -153,13 +154,18 @@ const BudgetManagement: React.FC = () => {
     const handleSaveRecords = async () => {
         if (!selectedRecordElement) return;
         setSaving(true);
+        // Fechar modal imediatamente para sensação de velocidade (Optimistic UI)
+        setIsRecordModalOpen(false);
         try {
-            const promises = Object.entries(monthlyRecords).map(async ([mes, record]) => {
+            const batch = writeBatch(db);
+
+            Object.entries(monthlyRecords).forEach(([mes, record]) => {
                 const docId = `${selectedYear}-${selectedRecordElement.id}-${mes}`;
                 const docRef = doc(db, "budget_records", docId);
                 const recordData = { ...(record as any) };
                 if ('id' in recordData) delete (recordData as any).id;
-                await setDoc(docRef, {
+
+                batch.set(docRef, {
                     ...recordData,
                     elementId: selectedRecordElement.id,
                     ano: Number(selectedYear),
@@ -167,10 +173,13 @@ const BudgetManagement: React.FC = () => {
                     updatedAt: Timestamp.now()
                 }, { merge: true });
             });
-            await Promise.all(promises);
-            setIsRecordModalOpen(false);
+
+            await batch.commit();
+            console.log("[Budget] Registros salvos em lote com sucesso.");
         } catch (err) {
             console.error("Erro ao salvar registros:", err);
+            alert("Erro ao salvar dados. Por favor, tente novamente.");
+            // Se falhar, talvez queira reabrir ou avisar
         } finally {
             setSaving(false);
         }
@@ -265,14 +274,16 @@ const BudgetManagement: React.FC = () => {
         ];
 
         try {
-            const promises = list.map(item =>
-                addDoc(collection(db, "budget_elements"), {
+            const batch = writeBatch(db);
+            list.forEach(item => {
+                const newDocRef = doc(collection(db, "budget_elements"));
+                batch.set(newDocRef, {
                     ...item,
                     ano: Number(selectedYear),
                     createdAt: Timestamp.now()
-                })
-            );
-            await Promise.all(promises);
+                });
+            });
+            await batch.commit();
             alert("Lista importada com sucesso!");
         } catch (err) {
             console.error("Erro na importação:", err);
@@ -384,9 +395,7 @@ const BudgetManagement: React.FC = () => {
                                 onChange={(e) => setSelectedYear(e.target.value)}
                                 className="bg-ifes-green/5 text-ifes-green border border-ifes-green/20 rounded-md px-3 py-1 text-sm font-black outline-none focus:ring-2 focus:ring-ifes-green/40 transition-all cursor-pointer"
                             >
-                                {Object.keys(PCA_YEARS_MAP).sort((a, b) => b.localeCompare(a)).map(year => (
-                                    <option key={year} value={year}>{year}</option>
-                                ))}
+                                <option value="2026">2026</option>
                             </select>
                         </div>
 

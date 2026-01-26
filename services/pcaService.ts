@@ -29,6 +29,42 @@ const inMemoryCache: Record<string, {
 
 export const hasPcaInMemoryCache = (year: string) => !!inMemoryCache[year];
 
+export const fetchLocalPcaSnapshot = async (year: string): Promise<ContractItem[]> => {
+    const api_url = `/data/pca_${year}.json?t=${Date.now()}`;
+    try {
+        const response = await fetch(api_url);
+        if (response.ok) {
+            const jsonData = await response.json();
+            const raw = jsonData.data || (Array.isArray(jsonData) ? jsonData : []);
+            return raw.map((item: any, index: number) => {
+                const officialId = String(item.id || item.numeroItem || index);
+                const pncpCategory = String(item.categoriaItemPcaNome || item.nomeClassificacao || '').toLowerCase();
+                let categoria = Category.Bens;
+                if (pncpCategory.includes('serviç') || pncpCategory.includes('obra')) {
+                    categoria = Category.Servicos;
+                } else if (pncpCategory.includes('tic') || pncpCategory.includes('tecnologia')) {
+                    categoria = Category.TIC;
+                }
+                return {
+                    id: officialId,
+                    titulo: item.descricao || item.grupoContratacaoNome || "Item do Plano de Contratação",
+                    categoria: categoria,
+                    valor: Number(item.valorTotal || (Number(item.valorUnitario || 0) * Number(item.quantidade || 0)) || 0),
+                    valorExecutado: 0,
+                    inicio: item.dataDesejada || new Date().toISOString().split('T')[0],
+                    fim: item.dataFim || '',
+                    area: item.nomeUnidade || "IFES - BSF",
+                    isManual: false,
+                    ano: String(year)
+                };
+            });
+        }
+    } catch (e) {
+        console.warn("[PCA Service] Erro no snapshot local:", e);
+    }
+    return [];
+};
+
 export const fetchPcaData = async (
     year: string,
     forceSync: boolean = false,
@@ -37,23 +73,28 @@ export const fetchPcaData = async (
 ) => {
     const report = (p: number) => onProgress?.(Math.min(p, 100));
 
-    // 1. Return from in-memory cache if available and not forcing sync
+    // 1. In-memory Cache (Fastest)
     if (!forceSync && inMemoryCache[year]) {
-        console.log(`[PCA Service] Returning in-memory cache for ${year}`);
+        console.log(`[PCA Service] Retornando cache em memória para ${year}`);
         report(100);
         return inMemoryCache[year];
     }
 
-    report(5); // Started
-    console.log(`[PCA Service] Fetching data for ${year} (forceSync: ${forceSync})`);
+    console.log(`[PCA Service] 🚀 Iniciando carregamento para ${year} (Force: ${forceSync})`);
+    report(5);
 
-    let officialItems: any[] = [];
-    const cacheRef = doc(db, "pca_cache", year);
     const yearNum = Number(year);
+    const cacheRef = doc(db, "pca_cache", year);
     const itemsQuery = query(collection(db, "pca_data"), where("ano", "in", [year, yearNum]));
 
+    let rawOfficialItems: any[] = [];
+    let firestoreManualItems: ContractItem[] = [];
+    let firestoreDataUpdates: Record<string, any> = {};
+    let cacheMetadata: any = null;
+
+    // 2. Helper para Carregamento Local (Prioridade de Velocidade)
     const tryLocalJson = async () => {
-        const api_url = `/data/pca_${year}.json`;
+        const api_url = `/data/pca_${year}.json?t=${Date.now()}`;
         try {
             const response = await fetch(api_url);
             if (response.ok) {
@@ -61,170 +102,161 @@ export const fetchPcaData = async (
                 return jsonData.data || (Array.isArray(jsonData) ? jsonData : []);
             }
         } catch (e) {
-            console.warn("JSON local não encontrado:", api_url);
+            console.warn("[PCA Service] JSON local não encontrado:", api_url);
         }
         return [];
     };
 
-    report(10); // Checking local and cloud snapshots
+    // 3. Tentar carregar Snapshot Local PRIMEIRO (para não travar a tela)
+    report(10);
+    rawOfficialItems = await tryLocalJson();
+    console.log(`[PCA Service] Snapshot local carregado: ${rawOfficialItems.length} itens.`);
 
-    // Priority: 1. Firestore Cache | 2. Local JSON Snapshot (The "Midnight Photograph")
-    const cacheSnap = await getDoc(cacheRef);
-    const cacheData = cacheSnap.exists() ? cacheSnap.data() : null;
+    // 4. Se não estiver forçando sincronização com a PNCP, buscar atualizações no Firestore (Manual + Cache)
+    try {
+        report(20);
 
-    if (cacheData && cacheData.items && !forceSync) {
-        console.log(`[PCA Service] Using Firestore snapshot for ${year}`);
-        officialItems = cacheData.items;
-    } else if (!forceSync) {
-        console.log(`[PCA Service] Firestore cache missing, trying local snapshot...`);
-        officialItems = await tryLocalJson();
+        // Timeout de 2 segundos para o Firestore para não travar a experiência do usuário
+        const firestorePromise = Promise.all([
+            getDoc(cacheRef).catch(() => null),
+            getDocs(itemsQuery).catch(() => null)
+        ]);
+
+        const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000));
+
+        const results = await Promise.race([firestorePromise, timeoutPromise]);
+
+        if (results) {
+            const [cacheSnap, suppSnap] = results;
+
+            if (cacheSnap?.exists()) {
+                cacheMetadata = cacheSnap.data();
+                // Se o cache do Firestore for mais novo ou se o local falhou, usamos ele
+                if (cacheMetadata.items && (rawOfficialItems.length === 0 || forceSync)) {
+                    rawOfficialItems = cacheMetadata.items;
+                    console.log(`[PCA Service] Usando cache do Firestore (${rawOfficialItems.length} itens)`);
+                }
+            }
+
+            if (suppSnap) {
+                suppSnap.forEach((doc) => {
+                    const d = doc.data();
+                    if (d.isManual) {
+                        firestoreManualItems.push({
+                            id: doc.id,
+                            titulo: d.titulo || "Item Manual",
+                            categoria: d.categoria,
+                            valor: Number(d.valor || 0),
+                            valorExecutado: Number(d.valorExecutado || 0),
+                            inicio: d.inicio || new Date().toISOString(),
+                            area: d.area || "Manual",
+                            isManual: true,
+                            ano: String(year)
+                        } as any);
+                    } else {
+                        firestoreDataUpdates[String(d.officialId)] = d;
+                    }
+                });
+                console.log(`[PCA Service] ${firestoreManualItems.length} itens manuais e ${Object.keys(firestoreDataUpdates).length} atualizações oficiais encontradas.`);
+            }
+        }
+    } catch (fsErr) {
+        console.error("[PCA Service] Erro ao carregar dados do Firestore:", fsErr);
     }
 
-    // Determine if we need to sync with PNCP (ONLY if forced or no data at all and not skipSync)
-    const shouldSyncNow = forceSync || (officialItems.length === 0 && !skipSync);
-
+    // 5. LIVE SYNC (Somente se explicitamente solicitado ou se tudo estiver vazio)
+    const shouldSyncNow = forceSync || (rawOfficialItems.length === 0 && !skipSync);
     if (shouldSyncNow) {
         try {
-            console.log(`[PCA Service] Performing LIVE sync with PNCP for ${year}...`);
+            console.log(`[PCA Service] 📡 Realizando Sincronização LIVE com PNCP...`);
             const seq = PCA_YEARS_MAP[year] || '12';
             const pageSize = 100;
-            let currentPage = 1;
-            let totalPages = 1;
-
-            report(15);
-
-            const firstUrl = `${LOCAL_API_SERVER}/api/pncp/pca/${CNPJ_IFES_BSF}/${year}?tamanhoPagina=${pageSize}&sequencial=${seq}&pagina=${currentPage}`;
+            const firstUrl = `${LOCAL_API_SERVER}/api/pncp/pca/${CNPJ_IFES_BSF}/${year}?tamanhoPagina=${pageSize}&sequencial=${seq}&pagina=1`;
             const firstRes = await fetch(firstUrl);
 
             if (firstRes.ok) {
                 const firstData = await firstRes.json();
-                const initialItems = firstData.data || (Array.isArray(firstData) ? firstData : []);
-                officialItems = [...initialItems];
-                totalPages = firstData.totalPaginas || 1;
+                rawOfficialItems = firstData.data || (Array.isArray(firstData) ? firstData : []);
+                const totalPages = firstData.totalPaginas || 1;
 
-                report(30);
-
-                for (currentPage = 2; currentPage <= totalPages; currentPage++) {
-                    const url = `${LOCAL_API_SERVER}/api/pncp/pca/${CNPJ_IFES_BSF}/${year}?tamanhoPagina=${pageSize}&sequencial=${seq}&pagina=${currentPage}`;
-                    const res = await fetch(url);
+                for (let p = 2; p <= totalPages; p++) {
+                    const res = await fetch(`${LOCAL_API_SERVER}/api/pncp/pca/${CNPJ_IFES_BSF}/${year}?tamanhoPagina=${pageSize}&sequencial=${seq}&pagina=${p}`);
                     if (res.ok) {
                         const pageData = await res.json();
-                        const items = pageData.data || (Array.isArray(pageData) ? pageData : []);
-                        officialItems = [...officialItems, ...items];
-                        report(30 + (currentPage / totalPages) * 45);
+                        rawOfficialItems = [...rawOfficialItems, ...(pageData.data || [])];
+                        report(30 + (p / totalPages) * 50);
                     }
                 }
 
-                if (officialItems.length > 0) {
-                    try {
-                        await setDoc(cacheRef, {
-                            items: officialItems,
-                            updatedAt: Timestamp.now(),
-                            count: officialItems.length
-                        });
-                        console.log(`[PCA Service] Firestore snapshot updated for ${year}`);
-                    } catch (fsErr) {
-                        console.error("[PCA Service] Error writing to Firestore cache:", fsErr);
-                    }
-                }
-            } else {
-                throw new Error(`API Proxy returned status ${firstRes.status}`);
+                // Salva no Firestore para as próximas vezes
+                setDoc(cacheRef, {
+                    items: rawOfficialItems,
+                    updatedAt: Timestamp.now(),
+                    count: rawOfficialItems.length
+                }).catch(e => console.error("Erro cache:", e));
             }
         } catch (syncErr) {
-            console.error("[PCA Service] Erro no sync PNCP:", syncErr);
-            report(70);
-            if (!officialItems.length) {
-                officialItems = await tryLocalJson();
-            }
+            console.error("[PCA Service] Falha na sincronização LIVE:", syncErr);
         }
-    } else {
-        report(75);
-        console.log(`[PCA Service] Snapshots loaded successfully (No sync needed)`);
     }
 
-    report(80); // Fetching supplemental data
+    report(90);
 
-    // Fetch supplemental/manual data
-    const querySnapshot = await getDocs(itemsQuery);
-    const firestoreData: Record<string, any> = {};
-    const manualItems: ContractItem[] = [];
+    // 6. Mapeamento Final e Unificação
+    const mappedOfficial = rawOfficialItems.map((item: any, index: number) => {
+        const officialId = String(item.id || item.numeroItem || index);
+        const pncpCategory = String(item.categoriaItemPcaNome || item.nomeClassificacao || '').toLowerCase();
 
-    querySnapshot.forEach((doc) => {
-        const d = doc.data();
-        if (d.isManual) {
-            manualItems.push({
-                id: doc.id,
-                titulo: d.titulo,
-                categoria: d.categoria,
-                valor: d.valor,
-                valorExecutado: d.valorExecutado || 0,
-                inicio: d.inicio,
-                fim: d.fim || '',
-                area: d.area,
-                isManual: true
-            });
-        } else {
-            firestoreData[d.officialId] = d;
-        }
-    });
-
-    report(90); // Mapping and Merge
-
-    // Map and Merge
-    const mappedOfficial = (Array.isArray(officialItems) ? officialItems : []).map((item: any, index: number) => {
-        const officialId = String(item.id || index);
-        const pncpCategory = item.categoriaItemPcaNome || '';
         let categoria = Category.Bens;
-
-        if (pncpCategory.includes('Serviço') || pncpCategory.includes('Obra')) {
+        if (pncpCategory.includes('serviç') || pncpCategory.includes('obra')) {
             categoria = Category.Servicos;
-        } else if (pncpCategory.includes('TIC')) {
+        } else if (pncpCategory.includes('tic') || pncpCategory.includes('tecnologia')) {
             categoria = Category.TIC;
         }
 
-        const valor = item.valorTotal || (item.valorUnitario || 0) * (item.quantidade || 0);
-        const extra = firestoreData[officialId] || {};
+        const valor = Number(item.valorTotal || (Number(item.valorUnitario || 0) * Number(item.quantidade || 0)) || 0);
+        const extra = firestoreDataUpdates[officialId] || {};
 
         return {
             id: officialId,
-            titulo: item.descricao || item.grupoContratacaoNome || "Item sem descrição",
+            titulo: item.descricao || item.grupoContratacaoNome || "Item do Plano de Contratação",
             categoria: categoria,
             valor: valor,
-            valorExecutado: extra.valorExecutado || 0,
+            valorExecutado: Number(extra.valorExecutado || 0),
             inicio: item.dataDesejada || new Date().toISOString().split('T')[0],
             fim: item.dataFim || '',
-            area: item.nomeUnidade || "Diretoria de Adm. e Planejamento",
-            isManual: false
+            area: item.nomeUnidade || "IFES - BSF",
+            isManual: false,
+            ano: String(year)
         };
     });
 
-    const finalData = [...mappedOfficial, ...manualItems];
+    const finalData = [...mappedOfficial, ...firestoreManualItems];
 
-    // Determine the date of the photograph/snapshot
-    let lastSyncStr = "Snapshot Recente";
-    if (cacheData?.updatedAt) {
-        lastSyncStr = cacheData.updatedAt.toDate().toLocaleString('pt-BR');
-    } else {
-        // Fallback for local JSON (we assume it's from the last 24h sync)
-        lastSyncStr = `Snapshot Local (${new Date().toLocaleDateString('pt-BR')})`;
-    }
+    let lastSyncStr = cacheMetadata?.updatedAt
+        ? cacheMetadata.updatedAt.toDate().toLocaleString('pt-BR')
+        : `Snapshot Local (${new Date().toLocaleDateString('pt-BR')})`;
 
     let pcaMeta = null;
-    if (officialItems.length > 0) {
-        const firstItem = officialItems[0];
+    if (rawOfficialItems.length > 0) {
+        const first = rawOfficialItems[0];
         pcaMeta = {
-            id: `${firstItem.cnpj || CNPJ_IFES_BSF}-0-${String(firstItem.sequencialPca || '12').padStart(6, '0')}/${firstItem.anoPca || year}`,
-            dataPublicacao: firstItem.dataPublicacaoPncp || firstItem.dataInclusao
+            id: `${first.cnpj || CNPJ_IFES_BSF}-0-${String(first.sequencialPca || '12').padStart(6, '0')}/${first.anoPca || year}`,
+            dataPublicacao: first.dataPublicacaoPncp || first.dataInclusao
         };
     }
 
-    // Update in-memory cache
-    inMemoryCache[year] = {
+    const result = {
         data: finalData,
         lastSync: lastSyncStr,
         pcaMeta
     };
 
-    report(100); // Done
-    return inMemoryCache[year];
+    // Atualiza cache em memória
+    inMemoryCache[year] = result;
+
+    console.log(`[PCA Service] ✅ Carregamento finalizado para ${year}. Total: ${finalData.length} itens.`);
+    report(100);
+
+    return result;
 };

@@ -49,7 +49,13 @@ app.get('/api/pncp/pca/:cnpj/:ano', async (req, res) => {
 
 // --- Background Sync Logic (Midnight Photograph) ---
 const CNPJ_IFES_BSF = '10838653000106';
-const YEARS_TO_SYNC = ['2026'];
+const YEARS_MAP = {
+  '2026': '12',
+  '2025': '12',
+  '2024': '15',
+  '2023': '14',
+  '2022': '20'
+};
 const PUBLIC_DATA_DIR = path.join(__dirname, '..', 'public', 'data');
 
 if (!fs.existsSync(PUBLIC_DATA_DIR)) {
@@ -59,12 +65,9 @@ if (!fs.existsSync(PUBLIC_DATA_DIR)) {
 async function performAutomaticSync() {
   console.log(`[${new Date().toISOString()}] 🚀 Iniciando Sincronização Automática Diária...`);
 
-  for (const year of YEARS_TO_SYNC) {
+  for (const [year, seq] of Object.entries(YEARS_MAP)) {
     try {
-      console.log(`[SYNC] Baixando dados de ${year} da PNCP...`);
-      // Busca uma página grande para garantir que pegamos a maioria dos itens (Snapshot)
-      // O sequencial 12 é o padrão para 2026 no BSF
-      const seq = '12';
+      console.log(`[SYNC] Baixando dados de ${year} (Seq: ${seq}) da PNCP...`);
       const url = `https://pncp.gov.br/api/pncp/v1/orgaos/${CNPJ_IFES_BSF}/pca/${year}/${seq}/itens?pagina=1&tamanhoPagina=1000`;
 
       const response = await axios.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });

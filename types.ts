@@ -18,6 +18,7 @@ export interface ContractItem {
   abcClass?: 'A' | 'B' | 'C';
   riskStatus?: 'Baixo' | 'Médio' | 'Alto';
   isManual?: boolean;
+  ano?: string;
 }
 
 export interface SummaryData {

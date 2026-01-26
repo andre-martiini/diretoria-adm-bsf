@@ -55,7 +55,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid
 } from 'recharts';
 
-import { fetchPcaData, hasPcaInMemoryCache } from '../services/pcaService';
+import { fetchPcaData, hasPcaInMemoryCache, fetchLocalPcaSnapshot } from '../services/pcaService';
 
 // Components
 import ContractTable from './ContractTable';
@@ -95,17 +95,27 @@ const AnnualHiringPlan: React.FC = () => {
 
   const fetchData = useCallback(async (year: string, forceSync: boolean = false) => {
     const hasCache = hasPcaInMemoryCache(year);
-    if (forceSync) setIsSyncing(true);
 
-    // Mostra o loading apenas se não tivermos dados em cache (para navegação instantânea)
-    // Se for forceSync, mostramos o overlay de qualquer jeito.
-    if (!hasCache || forceSync) {
+    if (forceSync) {
+      setIsSyncing(true);
       setLoading(true);
+    } else if (!hasCache) {
+      // Tenta carregar o snapshot local IMEDIATAMENTE para não travar o usuário
+      const localSnapshot = await fetchLocalPcaSnapshot(year);
+      if (localSnapshot && localSnapshot.length > 0) {
+        setData(localSnapshot);
+        setLoading(false); // Já temos dados base, esconde o overlay
+        console.log(`[AnnualHiringPlan] Carregamento progressivo ativado (${localSnapshot.length} itens).`);
+      } else {
+        setLoading(true); // Se não houver nem local, mostra o overlay
+      }
     }
 
     try {
       setSyncProgress(0);
+      // O fetchPcaData agora é super rápido pois prioriza o JSON local.
       const result = await fetchPcaData(year, forceSync, false, (p) => setSyncProgress(p));
+
       setData(result.data);
       setLastSync(result.lastSync);
       setPcaMeta(result.pcaMeta);
@@ -125,7 +135,9 @@ const AnnualHiringPlan: React.FC = () => {
   }, [selectedYear, fetchData]);
 
   const processedData = useMemo(() => {
-    const totalVal = data.reduce((acc, i) => acc + i.valor, 0);
+    if (!data || data.length === 0) return [];
+
+    const totalVal = data.reduce((acc, i) => acc + (Number(i.valor) || 0), 0);
     const sorted = [...data].sort((a, b) => b.valor - a.valor);
     let runningSum = 0;
 
@@ -337,14 +349,18 @@ const AnnualHiringPlan: React.FC = () => {
 
             <div className="space-y-4">
               <div className="flex flex-col items-center">
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Sincronizando</h3>
-                <span className="text-[10px] font-black text-ifes-green uppercase tracking-[0.3em] mt-1">Conexão PNCP Ativa</span>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight">
+                  {isSyncing ? 'Sincronizando' : 'Carregando'}
+                </h3>
+                <span className="text-[10px] font-black text-ifes-green uppercase tracking-[0.3em] mt-1">
+                  {isSyncing ? 'Conexão PNCP Ativa' : 'Banco de Dados Cloud'}
+                </span>
               </div>
 
               <p className="text-sm font-bold text-slate-500 leading-relaxed px-2">
-                {syncProgress < 15 ? 'Estabelecendo conexão com o portal do governo...' :
-                  syncProgress < 75 ? `Baixando pacotes de dados (${Math.round(syncProgress)}%)...` :
-                    syncProgress < 95 ? 'Processando e organizando itens...' : 'Finalizando sincronização...'}
+                {syncProgress < 15 ? 'Inicializando componentes...' :
+                  syncProgress < 70 ? (isSyncing ? `Baixando pacotes de dados (${Math.round(syncProgress)}%)...` : 'Conectando ao banco de dados...') :
+                    syncProgress < 95 ? 'Processando e organizando itens...' : 'Finalizando...'}
               </p>
             </div>
 
