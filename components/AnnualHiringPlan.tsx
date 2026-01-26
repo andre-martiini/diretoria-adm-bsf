@@ -16,7 +16,8 @@ import {
   Trash2,
   AlertCircle,
   Link,
-  Check
+  Check,
+  TrendingUp
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
@@ -26,6 +27,7 @@ import {
   where,
   getDocs,
   doc,
+  getDoc,
   setDoc,
   addDoc,
   deleteDoc,
@@ -42,6 +44,7 @@ import {
   PCA_YEARS_MAP,
   DEFAULT_YEAR,
   FALLBACK_DATA,
+  LOCAL_API_SERVER
 } from '../constants';
 import {
   formatCurrency,
@@ -51,6 +54,8 @@ import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid
 } from 'recharts';
+
+import { fetchPcaData, hasPcaInMemoryCache } from '../services/pcaService';
 
 // Components
 import ContractTable from './ContractTable';
@@ -74,14 +79,10 @@ const AnnualHiringPlan: React.FC = () => {
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ContractItem | null>(null);
   const [saving, setSaving] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState<string | null>(null);
+  const [syncProgress, setSyncProgress] = useState<number>(0);
 
-  const handleCopyLink = () => {
-    const url = `${window.location.origin}/transparencia-pca`;
-    navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   // Novos campos para item manual
   const [newItem, setNewItem] = useState<Partial<ContractItem>>({
@@ -92,87 +93,30 @@ const AnnualHiringPlan: React.FC = () => {
     area: 'Diretoria de Adm. e Planejamento'
   });
 
-  const fetchData = useCallback(async (year: string) => {
-    setLoading(true);
+  const fetchData = useCallback(async (year: string, forceSync: boolean = false) => {
+    const hasCache = hasPcaInMemoryCache(year);
+    if (forceSync) setIsSyncing(true);
+
+    // Mostra o loading apenas se não tivermos dados em cache (para navegação instantânea)
+    // Se for forceSync, mostramos o overlay de qualquer jeito.
+    if (!hasCache || forceSync) {
+      setLoading(true);
+    }
+
     try {
-      // 1. Buscar dados oficiais (JSON)
-      const api_url = `/data/pca_${year}.json`;
-      const response = await fetch(api_url);
-      let officialItems = [];
-
-      if (response.ok) {
-        const jsonData = await response.json();
-        officialItems = jsonData.data || jsonData;
-      }
-
-      // 2. Buscar suplementos do Firestore (Empenho/Execução/Manuais)
-      const q = query(collection(db, "pca_data"), where("ano", "==", year));
-      const querySnapshot = await getDocs(q);
-      const firestoreData: Record<string, any> = {};
-      const manualItems: ContractItem[] = [];
-
-      querySnapshot.forEach((doc) => {
-        const d = doc.data();
-        if (d.isManual) {
-          manualItems.push({
-            id: doc.id,
-            titulo: d.titulo,
-            categoria: d.categoria,
-            valor: d.valor,
-            valorExecutado: d.valorExecutado || 0,
-            inicio: d.inicio,
-            fim: d.fim || '',
-            area: d.area,
-            isManual: true
-          });
-        } else {
-          firestoreData[d.officialId] = d;
-        }
-      });
-
-      // 3. Mapear e Mesclar
-      const mappedOfficial = (Array.isArray(officialItems) ? officialItems : []).map((item: any, index: number) => {
-        const officialId = String(item.id || index);
-        const pncpCategory = item.categoriaItemPcaNome || '';
-        let categoria = Category.Bens;
-
-        if (pncpCategory.includes('Serviço') || pncpCategory.includes('Obra')) {
-          categoria = Category.Servicos;
-        } else if (pncpCategory.includes('TIC')) {
-          categoria = Category.TIC;
-        }
-
-        const valor = item.valorTotal || (item.valorUnitario || 0) * (item.quantidade || 0);
-        const extra = firestoreData[officialId] || {};
-
-        return {
-          id: officialId,
-          titulo: item.descricao || item.grupoContratacaoNome || "Item sem descrição",
-          categoria: categoria,
-          valor: valor,
-          valorExecutado: extra.valorExecutado || 0,
-          inicio: item.dataDesejada || new Date().toISOString().split('T')[0],
-          fim: item.dataFim || '',
-          area: item.nomeUnidade || "Diretoria de Adm. e Planejamento",
-          isManual: false
-        };
-      });
-
-      setData([...mappedOfficial, ...manualItems]);
-      setUsingFallback(!response.ok && mappedOfficial.length === 0);
-
-      if (officialItems.length > 0) {
-        const firstItem = officialItems[0];
-        setPcaMeta({
-          id: `${firstItem.cnpj || CNPJ_IFES_BSF}-0-${String(firstItem.sequencialPca || '12').padStart(6, '0')}/${firstItem.anoPca || year}`,
-          dataPublicacao: firstItem.dataPublicacaoPncp || firstItem.dataInclusao
-        });
-      }
+      setSyncProgress(0);
+      const result = await fetchPcaData(year, forceSync, false, (p) => setSyncProgress(p));
+      setData(result.data);
+      setLastSync(result.lastSync);
+      setPcaMeta(result.pcaMeta);
+      setUsingFallback(result.data.length === 0);
     } catch (err) {
       console.error("Erro ao carregar dados:", err);
       setData(FALLBACK_DATA);
     } finally {
       setLoading(false);
+      setIsSyncing(false);
+      setSyncProgress(100);
     }
   }, []);
 
@@ -264,7 +208,7 @@ const AnnualHiringPlan: React.FC = () => {
     try {
       await addDoc(collection(db, "pca_data"), {
         ...newItem,
-        ano: selectedYear,
+        ano: Number(selectedYear),
         isManual: true,
         valorExecutado: 0,
         updatedAt: Timestamp.now()
@@ -360,22 +304,53 @@ const AnnualHiringPlan: React.FC = () => {
     <div className="min-h-screen border-t-4 border-ifes-green bg-slate-50/30 relative">
       {/* Overlay de carregamento PNCP */}
       {loading && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/60 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-white p-10 rounded-3xl shadow-2xl border border-slate-100 flex flex-col items-center gap-6 max-w-sm text-center">
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/70 backdrop-blur-xl animate-in fade-in duration-300">
+          <div className="bg-white p-10 rounded-[40px] shadow-2xl border border-slate-100 flex flex-col items-center gap-8 max-w-sm text-center relative overflow-hidden">
+            {/* Progress Background Graphic */}
+            <div className="absolute top-0 left-0 h-1 bg-ifes-green/10 w-full">
+              <div
+                className="h-full bg-ifes-green transition-all duration-500 ease-out"
+                style={{ width: `${syncProgress}%` }}
+              ></div>
+            </div>
+
             <div className="relative">
-              <div className="w-20 h-20 border-4 border-emerald-50 border-t-emerald-500 rounded-full animate-spin"></div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <RefreshCw size={24} className="text-emerald-500 animate-pulse" />
+              <svg className="w-24 h-24 -rotate-90">
+                <circle
+                  cx="48" cy="48" r="42"
+                  stroke="currentColor" strokeWidth="6" fill="transparent"
+                  className="text-slate-50"
+                />
+                <circle
+                  cx="48" cy="48" r="42"
+                  stroke="currentColor" strokeWidth="6" fill="transparent"
+                  strokeDasharray={2 * Math.PI * 42}
+                  strokeDashoffset={2 * Math.PI * 42 * (1 - syncProgress / 100)}
+                  strokeLinecap="round"
+                  className="text-ifes-green transition-all duration-500 ease-out"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-xl font-black text-slate-800 leading-none">{Math.round(syncProgress)}%</span>
               </div>
             </div>
-            <div className="space-y-2">
-              <h3 className="text-xl font-black text-slate-800 tracking-tight">Consultando Base PNCP</h3>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-relaxed px-4">
-                Sincronizando dados oficiais da plataforma do governo federal...
+
+            <div className="space-y-4">
+              <div className="flex flex-col items-center">
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Sincronizando</h3>
+                <span className="text-[10px] font-black text-ifes-green uppercase tracking-[0.3em] mt-1">Conexão PNCP Ativa</span>
+              </div>
+
+              <p className="text-sm font-bold text-slate-500 leading-relaxed px-2">
+                {syncProgress < 15 ? 'Estabelecendo conexão com o portal do governo...' :
+                  syncProgress < 75 ? `Baixando pacotes de dados (${Math.round(syncProgress)}%)...` :
+                    syncProgress < 95 ? 'Processando e organizando itens...' : 'Finalizando sincronização...'}
               </p>
             </div>
-            <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mt-2">
-              <div className="h-full bg-emerald-500 w-2/3 animate-[loading_1.5s_ease-in-out_infinite]"></div>
+
+            <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-full border border-slate-100">
+              <RefreshCw size={14} className="text-ifes-green animate-spin" />
+              <span className="text-[10px] font-black text-slate-400 uppercase">Processando em Tempo Real</span>
             </div>
           </div>
         </div>
@@ -421,18 +396,23 @@ const AnnualHiringPlan: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-            {loading && <RefreshCw size={18} className="animate-spin text-ifes-green hidden sm:block" />}
+            {(loading || isSyncing) && <RefreshCw size={18} className="animate-spin text-ifes-green hidden sm:block" />}
+
+            <div className="hidden lg:flex flex-col items-end mr-2">
+              <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Última Sincronização</span>
+              <span className="text-[10px] font-bold text-slate-600">{lastSync || 'Carregando...'}</span>
+            </div>
 
             <button
-              onClick={handleCopyLink}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all font-bold text-xs sm:text-sm border cursor-pointer ${copied
-                ? 'bg-emerald-500 text-white border-emerald-500'
-                : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
-                }`}
+              onClick={() => fetchData(selectedYear, true)}
+              disabled={isSyncing}
+              className="flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl transition-all font-bold text-xs sm:text-sm border border-blue-200 cursor-pointer disabled:opacity-50"
+              title="Atualizar dados diretamente da PNCP"
             >
-              {copied ? <Check size={18} /> : <Link size={18} />}
-              <span className="hidden md:inline">{copied ? 'Link Copiado!' : 'Link Público'}</span>
+              <RefreshCw size={18} className={isSyncing ? 'animate-spin' : ''} />
+              <span className="hidden md:inline">Atualizar PNCP</span>
             </button>
+
 
             <button
               onClick={() => navigate('/dashboard')}

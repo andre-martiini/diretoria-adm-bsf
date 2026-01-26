@@ -2,6 +2,12 @@
 import express from 'express';
 import axios from 'axios';
 import cors from 'cors';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = 3002;
@@ -28,18 +34,67 @@ app.get('/api/pncp/pca/:cnpj/:ano/meta', async (req, res) => {
   }
 });
 
-// Endpoint para itens
+// Endpoint para itens (usado para sincronização manual profunda)
 app.get('/api/pncp/pca/:cnpj/:ano', async (req, res) => {
   const { cnpj, ano } = req.params;
   const { pagina = 1, tamanhoPagina = 100, sequencial = 12 } = req.query;
   try {
     const url = `https://pncp.gov.br/api/pncp/v1/orgaos/${cnpj}/pca/${ano}/${sequencial}/itens?pagina=${pagina}&tamanhoPagina=${tamanhoPagina}`;
-    const response = await axios.get(url);
+    const response = await axios.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
     res.json(response.data);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
+
+// --- Background Sync Logic (Midnight Photograph) ---
+const CNPJ_IFES_BSF = '10838653000106';
+const YEARS_TO_SYNC = ['2026'];
+const PUBLIC_DATA_DIR = path.join(__dirname, '..', 'public', 'data');
+
+if (!fs.existsSync(PUBLIC_DATA_DIR)) {
+  fs.mkdirSync(PUBLIC_DATA_DIR, { recursive: true });
+}
+
+async function performAutomaticSync() {
+  console.log(`[${new Date().toISOString()}] 🚀 Iniciando Sincronização Automática Diária...`);
+
+  for (const year of YEARS_TO_SYNC) {
+    try {
+      console.log(`[SYNC] Baixando dados de ${year} da PNCP...`);
+      // Busca uma página grande para garantir que pegamos a maioria dos itens (Snapshot)
+      // O sequencial 12 é o padrão para 2026 no BSF
+      const seq = '12';
+      const url = `https://pncp.gov.br/api/pncp/v1/orgaos/${CNPJ_IFES_BSF}/pca/${year}/${seq}/itens?pagina=1&tamanhoPagina=1000`;
+
+      const response = await axios.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+      const data = response.data.data || (Array.isArray(response.data) ? response.data : []);
+
+      if (data.length > 0) {
+        const filePath = path.join(PUBLIC_DATA_DIR, `pca_${year}.json`);
+        fs.writeFileSync(filePath, JSON.stringify({
+          data,
+          updatedAt: new Date().toISOString(),
+          source: 'Automatic Daily Sync'
+        }, null, 2));
+        console.log(`[SYNC] ✅ Snapshot salvo: ${filePath} (${data.length} itens)`);
+      }
+    } catch (error) {
+      console.error(`[SYNC] ❌ Erro ao sincronizar ${year}:`, error.message);
+    }
+  }
+}
+
+// Executa uma vez no início (se o arquivo não existir ou for velho) e depois a cada 24h
+function scheduleDailySync() {
+  // Primeira execução após 10 segundos para não pesar o startup
+  setTimeout(performAutomaticSync, 10000);
+
+  // Intervalo de 24 horas
+  setInterval(performAutomaticSync, 24 * 60 * 60 * 1000);
+}
+
+scheduleDailySync();
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Servidor rodando em http://localhost:${PORT}`);

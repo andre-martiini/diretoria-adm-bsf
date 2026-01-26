@@ -35,3 +35,25 @@ export interface SortConfig {
   key: keyof ContractItem;
   direction: 'asc' | 'desc';
 }
+
+export enum BudgetType {
+  Custeio = 'Custeio',
+  Investimento = 'Investimento'
+}
+
+export interface BudgetElement {
+  id: string;
+  nome: string;
+  tipo: BudgetType;
+  ano: number;
+}
+
+export interface BudgetRecord {
+  id: string;
+  elementId: string;
+  mes: number;
+  ano: number;
+  empenhado: number;
+  executadoRP: number;
+  executado: number;
+}
