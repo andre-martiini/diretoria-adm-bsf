@@ -11,6 +11,15 @@ import { scrapeSIPACProcess } from './sipacService.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Prevenção de crash global
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL ERROR] Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[FATAL ERROR] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 const app = express();
 const PORT = 3002;
 

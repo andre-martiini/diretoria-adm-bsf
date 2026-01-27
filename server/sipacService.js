@@ -156,55 +156,63 @@ export async function scrapeSIPACProcess(protocol) {
             }
         });
 
-        // 1. Go to search page directly if possible, or portal
-        console.log(`[SIPAC] Navigating to search page...`);
-        try {
-            // First try direct link to save time
-            await page.goto('https://sipac.ifes.edu.br/public/jsp/processos/processo_consulta.jsf', { waitUntil: 'domcontentloaded', timeout: 45000 });
-        } catch (e) {
-            console.log(`[SIPAC] Direct link failed, using portal fallback...`);
-            await page.goto('https://sipac.ifes.edu.br/public/jsp/portal.jsf', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        // 1. Go to portal (Establishing session)
+        console.log(`[SIPAC] Opening portal...`);
+        await page.goto('https://sipac.ifes.edu.br/public/jsp/portal.jsf', { waitUntil: 'load', timeout: 90000 });
 
-            // 2. Click "Processos"
-            console.log(`[SIPAC] Clicking 'Processos' from portal...`);
-            await Promise.all([
-                page.evaluate(() => {
-                    const el = Array.from(document.querySelectorAll('div.item.sub-item, span')).find(el => el.innerText.trim() === 'Processos');
-                    if (el) el.click();
-                }),
-                page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 60000 })
-            ]);
+        // 2. Click "Processos"
+        console.log(`[SIPAC] Looking for 'Processos' menu...`);
+        try {
+            const elHandle = await page.evaluateHandle(() => {
+                return Array.from(document.querySelectorAll('div.item.sub-item, span, a')).find(el =>
+                    el.innerText.trim() === 'Processos' ||
+                    el.innerText.trim().includes('Consultar Processo')
+                );
+            });
+
+            if (elHandle && elHandle.asElement()) {
+                console.log(`[SIPAC] Menu 'Processos' found, clicking...`);
+                await Promise.all([
+                    elHandle.asElement().click(),
+                    page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 45000 }).catch(e => console.log('[SIPAC] Navigation timeout after click, but continuing...'))
+                ]);
+            } else {
+                console.warn(`[SIPAC] Menu 'Processos' NOT found, trying direct search page jump...`);
+                await page.goto('https://sipac.ifes.edu.br/public/jsp/processos/processo_consulta.jsf', { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => { });
+            }
+        } catch (err) {
+            console.error('[SIPAC] Error during menu navigation:', err.message);
+            // Fallback attempt
+            await page.goto('https://sipac.ifes.edu.br/public/jsp/processos/processo_consulta.jsf', { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => { });
         }
 
         // 3. Ensure "Nº Processo" is selected and fill fields
-        console.log(`[SIPAC] Filling search fields for ${protocol}...`);
-        await page.waitForSelector('#n_proc_p', { timeout: 30000 }).catch(() => console.log('[SIPAC] Radio not found, but continuing...'));
+        console.log(`[SIPAC] Preparing search form...`);
+        try {
+            await page.waitForSelector('#n_proc_p', { timeout: 20000 });
+        } catch (e) {
+            console.log('[SIPAC] Selector #n_proc_p not found, but trying to proceed...');
+        }
 
         await page.evaluate(() => {
             const radio = document.getElementById('n_proc_p');
             if (radio) {
+                // The site uses a checkbox/radio that triggers divProcessoP(true)
                 radio.click();
                 radio.checked = true;
-                radio.dispatchEvent(new Event('change', { bubbles: true }));
+                // Force triggering the UI expansion if it hasn't happened
+                if (typeof window.divProcessoP === 'function') window.divProcessoP(true);
             }
         });
 
-        // Relaxed regex to handle dots/slashes/dashes more flexibly
         const parts = protocol.match(/(\d{5})[.\s]*(\d{6})[/\s]*(\d{4})[- \s]*(\d{2})/);
         if (!parts) throw new Error('Formato de protocolo inválido. Use XXXXX.XXXXXX/XXXX-XX');
 
-        // Selecting and clearing fields to avoid the "Year 2026" problem
-        // We use page.evaluate to set values directly as it's more robust against masks
         await page.evaluate((p) => {
             const findInput = (namePart) => Array.from(document.querySelectorAll('input')).find(i => i.name && i.name.includes(namePart));
-
             const fields = {
-                'RADICAL_PROTOCOLO': p[1],
-                'NUM_PROTOCOLO': p[2],
-                'ANO_PROTOCOLO': p[3],
-                'DV_PROTOCOLO': p[4]
+                'RADICAL_PROTOCOLO': p[1], 'NUM_PROTOCOLO': p[2], 'ANO_PROTOCOLO': p[3], 'DV_PROTOCOLO': p[4]
             };
-
             for (const [name, value] of Object.entries(fields)) {
                 const input = findInput(name);
                 if (input) {
@@ -220,11 +228,11 @@ export async function scrapeSIPACProcess(protocol) {
         await Promise.all([
             page.evaluate(() => {
                 const b = Array.from(document.querySelectorAll('input[type="submit"]')).find(b =>
-                    b.name.includes('processoForm') || b.value.toLowerCase().includes('consultar')
+                    b.value.toLowerCase().includes('consultar')
                 );
                 if (b) b.click();
             }),
-            page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 90000 })
+            page.waitForNavigation({ waitUntil: 'load', timeout: 90000 })
         ]);
 
         // 5. Look for results and click "Visualizar Processo" (Lupa)
@@ -234,7 +242,6 @@ export async function scrapeSIPACProcess(protocol) {
         });
 
         if (!lupa || !lupa.asElement()) {
-            // Double check if page didn't load any results
             const noResults = await page.evaluate(() => document.body.innerText.includes('Nenhum processo foi encontrado'));
             if (noResults) throw new Error('Nenhum processo foi encontrado com este número/ano.');
             throw new Error('Falha ao localizar resultado na tabela do SIPAC.');
@@ -243,47 +250,106 @@ export async function scrapeSIPACProcess(protocol) {
         console.log(`[SIPAC] Clicking 'Visualizar Processo'...`);
         await Promise.all([
             lupa.asElement().click(),
-            page.waitForNavigation({ waitUntil: 'load', timeout: 120000 }) // Load here because we need all details
+            page.waitForNavigation({ waitUntil: 'load', timeout: 120000 })
         ]);
 
         console.log(`[SIPAC] Extracting data...`);
         // 6. Extract Data from single vertical page
         const result = await page.evaluate(() => {
             const getText = (label) => {
-                const rows = Array.from(document.querySelectorAll('tr'));
-                const row = rows.find(r => r.innerText.trim().includes(label));
-                if (row) {
-                    const cells = Array.from(row.querySelectorAll('td, th'));
-                    const labelIdx = cells.findIndex(c => c.innerText.trim().includes(label));
-                    if (labelIdx !== -1 && cells[labelIdx + 1]) return cells[labelIdx + 1].innerText.trim();
+                // Try finding the label in <td> or <th>
+                const cells = Array.from(document.querySelectorAll('td, th'));
+
+                // 1. Exact match with colon
+                let targetCell = cells.find(c => c.innerText.trim().replace(/\s+/g, ' ').toUpperCase() === label.toUpperCase());
+
+                // 2. Or starts with label
+                if (!targetCell) {
+                    targetCell = cells.find(c => c.innerText.trim().replace(/\s+/g, ' ').toUpperCase().startsWith(label.toUpperCase()));
                 }
-                return '';
+
+                if (targetCell) {
+                    // Strategy A: Value is in the next sibling cell
+                    const next = targetCell.nextElementSibling;
+                    if (next && next.tagName === 'TD') {
+                        return next.innerText.trim();
+                    }
+
+                    // Strategy B: Value is text node inside the same cell (after a <br> or <b>)
+                    // If the cell text contains the label, remove the label from it
+                    const fullText = targetCell.innerText.trim();
+                    if (fullText.toUpperCase().includes(label.toUpperCase())) {
+                        const valueInfo = fullText.slice(fullText.toUpperCase().indexOf(label.toUpperCase()) + label.length).trim();
+                        // Clean up colons if they remain
+                        return valueInfo.replace(/^[:\s]+/, '').trim();
+                    }
+                }
+
+                // Fallback for very specific layouts (like "Processo: XXXXX")
+                const allText = document.body.innerText;
+                const regex = new RegExp(`${label}\\s*[:]?\\s*(.*)`, 'i');
+                const match = allText.match(regex);
+                if (match && match[1]) return match[1].trim();
+
+                return 'Não informado';
             };
 
             const parseListagemTable = (titleText, extractLinks = false) => {
-                const tables = Array.from(document.querySelectorAll('table.listagem, table.subListagem'));
-                const table = tables.find(t => {
-                    const caption = t.querySelector('caption');
-                    if (caption && caption.innerText.toUpperCase().includes(titleText.toUpperCase())) return true;
+                const tables = Array.from(document.querySelectorAll('table'));
 
-                    const prev = t.previousElementSibling;
+                const table = tables.find(t => {
+                    const cleanTitle = titleText.toUpperCase();
+
+                    // 1. Check caption
+                    const caption = t.querySelector('caption');
+                    if (caption && caption.innerText.toUpperCase().includes(cleanTitle)) return true;
+
+                    // 2. Check first row header
+                    const firstHeader = t.querySelector('th');
+                    if (firstHeader && firstHeader.innerText.toUpperCase().includes(cleanTitle)) return true;
+
+                    // 3. Check previous siblings (often a div or span with the title)
+                    let prev = t.previousElementSibling;
+                    while (prev) {
+                        if (prev.innerText && prev.innerText.toUpperCase().includes(titleText.toUpperCase())) return true;
+                        // Don't look too far up
+                        if (prev.tagName === 'TABLE' || prev.tagName === 'HR') break;
+                        prev = prev.previousElementSibling;
+                    }
+
+                    // 4. Check parent's previous sibling (common structure in SIPAC)
                     const parentPrev = t.parentElement?.previousElementSibling;
-                    return (prev && prev.innerText.toUpperCase().includes(titleText.toUpperCase())) ||
-                        (parentPrev && parentPrev.innerText.toUpperCase().includes(titleText.toUpperCase())) ||
-                        (t.closest('div')?.previousElementSibling?.innerText.toUpperCase().includes(titleText.toUpperCase()));
+                    if (parentPrev && parentPrev.innerText.toUpperCase().includes(cleanTitle)) return true;
+
+                    return false;
                 });
+
                 if (!table) return [];
 
                 const SIPAC_DOMAIN = 'https://sipac.ifes.edu.br';
 
                 return Array.from(table.querySelectorAll('tr'))
                     .filter(r => {
+                        // Skip header rows explicitly
+                        const text = r.innerText.toUpperCase();
+                        if (text.includes('TIPO') && text.includes('NOME') && text.includes('IDENTIFICADOR')) return false;
+                        if (r.className.includes('header')) return false;
+
                         const cells = r.querySelectorAll('td');
-                        // Filter out headers and footer/summary rows (like the one saying "Total de documentos: 56")
-                        return cells.length >= 5;
+                        return cells.length >= 2;
                     })
                     .map(r => {
-                        return Array.from(r.querySelectorAll('td')).map(td => {
+                        const cells = Array.from(r.querySelectorAll('td'));
+                        // If specifically looking for Interessados, we expect [Tyoe, Name] or similar
+                        if (titleText === 'INTERESSADOS') {
+                            // layout: [Tipo, Identificador, Nome]
+                            const tipo = cells[0] ? cells[0].innerText.trim() : '';
+                            // cells[1] is identifier, usually masked
+                            const nome = cells[2] ? cells[2].innerText.trim() : (cells[1] ? cells[1].innerText.trim() : '');
+                            return { tipo, nome };
+                        }
+
+                        return cells.map(td => {
                             if (extractLinks) {
                                 const link = td.querySelector('a[onclick], a[href]');
                                 if (link) {
@@ -342,7 +408,39 @@ export async function scrapeSIPACProcess(protocol) {
                 return results;
             }
 
-            const processData = {
+            const interessadosRaw = parseListagemTable('INTERESSADOS').map(r => ({ tipo: r.tipo, nome: r.nome }));
+            // Filter out empty interessados
+            const interessados = interessadosRaw.filter(i => i && i.nome && i.nome.trim() !== '');
+
+            const movimentacoes = parseListagemTable('MOVIMENTAÇÕES').filter(r => r.length >= 6).map(r => {
+                const fullDateStr = r[0] || '';
+                return {
+                    data: fullDateStr.split(' ')[0],
+                    horario: fullDateStr.split(' ')[1] || '',
+                    unidadeOrigem: r[1],
+                    unidadeDestino: r[2],
+                    usuarioRemetente: r[3],
+                    dataRecebimento: (r[4] || '').split(' ')[0],
+                    horarioRecebimento: (r[4] || '').split(' ')[1] || '',
+                    usuarioRecebedor: r[5],
+                    urgente: r[6] || 'Não'
+                };
+            });
+
+            // Determine Unidade Atual based on last movement destination or falling back to origin
+            let unidadeAtual = getText('Unidade de Origem:');
+            if (movimentacoes.length > 0) {
+                // The list usually comes ordered, but let's confirm logic if needed. 
+                // Assuming top-down or bottom-up, checking the most recent date is safer, 
+                // but usually the first row in "Movimentações" is the oldest. 
+                // Actually in SIPAC, usually the last one in the list is the most recent action? 
+                // Let's trust the 'Unidade de Origem' field from the header mostly, OR the last destination.
+                // A safe bet for "Current Unit" is the destination of the last movement.
+                const lastMov = movimentacoes[movimentacoes.length - 1];
+                if (lastMov) unidadeAtual = lastMov.unidadeDestino;
+            }
+
+            return {
                 numeroProcesso: getText('Processo:').split('\n')[0].trim(),
                 dataAutuacion: getText('Data de Autuação:').split(' ')[0],
                 horarioAutuacion: getText('Data de Autuação:').split(' ')[1] || '',
@@ -351,12 +449,13 @@ export async function scrapeSIPACProcess(protocol) {
                 status: getText('Status:'),
                 dataCadastro: getText('Data de Cadastro:'),
                 unidadeOrigem: getText('Unidade de Origem:'),
+                unidadeAtual: unidadeAtual, // Explicitly return this field
                 totalDocumentos: '',
                 observacao: getText('Observação:'),
                 assuntoCodigo: getText('Assunto do Processo:').split(' - ')[0],
                 assuntoDescricao: getText('Assunto do Processo:').split(' - ').slice(1).join(' - '),
                 assuntoDetalhado: getText('Assunto Detalhado:'),
-                interessados: parseListagemTable('INTERESSADOS').map(r => ({ tipo: r[0], nome: r[2] || r[1] })),
+                interessados: interessados,
                 documentos: parseListagemTable('DOCUMENTOS DO PROCESSO', true).filter(r => r.length >= 5).map(r => {
                     const findLink = r.find(col => typeof col === 'object' && col.url);
                     const getText = (val) => typeof val === 'object' ? val.text : val;
@@ -370,27 +469,12 @@ export async function scrapeSIPACProcess(protocol) {
                         url: findLink ? findLink.url : ''
                     };
                 }),
-                movimentacoes: parseListagemTable('MOVIMENTAÇÕES').filter(r => r.length >= 6).map(r => {
-                    const fullDateStr = r[0] || '';
-                    return {
-                        data: fullDateStr.split(' ')[0],
-                        horario: fullDateStr.split(' ')[1] || '',
-                        unidadeOrigem: r[1],
-                        unidadeDestino: r[2],
-                        usuarioRemetente: r[3],
-                        dataRecebimento: (r[4] || '').split(' ')[0],
-                        horarioRecebimento: (r[4] || '').split(' ')[1] || '',
-                        usuarioRecebedor: r[5],
-                        urgente: r[6] || 'Não'
-                    };
-                }),
+                movimentacoes: movimentacoes,
                 incidentes: parseDocumentosCancelados()
             };
-
-            processData.totalDocumentos = processData.documentos.length.toString();
-            return processData;
         });
 
+        result.totalDocumentos = result.documentos.length.toString();
         return result;
 
     } catch (error) {
