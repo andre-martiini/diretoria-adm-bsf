@@ -628,7 +628,7 @@ const AnnualHiringPlan: React.FC = () => {
                     <Target size={16} className="text-ifes-green" />
                     Alocação de Recursos
                   </h3>
-                  <div className="flex-1 min-h-[250px] relative">
+                  <div className="h-[300px] w-full relative">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
@@ -669,7 +669,7 @@ const AnnualHiringPlan: React.FC = () => {
                     <RefreshCw size={16} className="text-blue-500" />
                     Cronograma Mensal
                   </h3>
-                  <div className="flex-1 min-h-[250px]">
+                  <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={summary.monthlyPlan}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />

@@ -143,54 +143,92 @@ export async function scrapeSIPACProcess(protocol) {
 
     try {
         const page = await browser.newPage();
+        await page.setDefaultNavigationTimeout(60000);
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
-        // 1. Go to portal
-        await page.goto('https://sipac.ifes.edu.br/public/jsp/portal.jsf', { waitUntil: 'networkidle2', timeout: 60000 });
-
-        // 2. Click "Processos"
-        await page.evaluate(() => {
-            const el = Array.from(document.querySelectorAll('div.item.sub-item, span')).find(el => el.innerText.trim() === 'Processos');
-            if (el) el.click();
+        // Optimize: Block heavy resources
+        await page.setRequestInterception(true);
+        page.on('request', (req) => {
+            if (['image', 'stylesheet', 'font', 'media'].includes(req.resourceType())) {
+                req.abort();
+            } else {
+                req.continue();
+            }
         });
 
-        await page.waitForNavigation({ waitUntil: 'networkidle2' });
+        // 1. Go to search page directly if possible, or portal
+        console.log(`[SIPAC] Navigating to search page...`);
+        try {
+            // First try direct link to save time
+            await page.goto('https://sipac.ifes.edu.br/public/jsp/processos/processo_consulta.jsf', { waitUntil: 'domcontentloaded', timeout: 45000 });
+        } catch (e) {
+            console.log(`[SIPAC] Direct link failed, using portal fallback...`);
+            await page.goto('https://sipac.ifes.edu.br/public/jsp/portal.jsf', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-        // 3. Fill protocol (CLEANING FIRST)
+            // 2. Click "Processos"
+            console.log(`[SIPAC] Clicking 'Processos' from portal...`);
+            await Promise.all([
+                page.evaluate(() => {
+                    const el = Array.from(document.querySelectorAll('div.item.sub-item, span')).find(el => el.innerText.trim() === 'Processos');
+                    if (el) el.click();
+                }),
+                page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 60000 })
+            ]);
+        }
+
+        // 3. Ensure "Nº Processo" is selected and fill fields
+        console.log(`[SIPAC] Filling search fields for ${protocol}...`);
+        await page.waitForSelector('#n_proc_p', { timeout: 30000 }).catch(() => console.log('[SIPAC] Radio not found, but continuing...'));
+
+        await page.evaluate(() => {
+            const radio = document.getElementById('n_proc_p');
+            if (radio) {
+                radio.click();
+                radio.checked = true;
+                radio.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        });
+
         // Relaxed regex to handle dots/slashes/dashes more flexibly
         const parts = protocol.match(/(\d{5})[.\s]*(\d{6})[/\s]*(\d{4})[- \s]*(\d{2})/);
         if (!parts) throw new Error('Formato de protocolo inválido. Use XXXXX.XXXXXX/XXXX-XX');
 
         // Selecting and clearing fields to avoid the "Year 2026" problem
-        const fillField = async (selector, value) => {
-            const input = await page.$(`input[name*="${selector}"]`);
-            if (input) {
-                await input.click({ clickCount: 3 }); // Select all
-                await input.press('Backspace');
-                await input.type(value);
-            } else {
-                console.warn(`[SIPAC] Field ${selector} not found`);
-            }
-        };
+        // We use page.evaluate to set values directly as it's more robust against masks
+        await page.evaluate((p) => {
+            const findInput = (namePart) => Array.from(document.querySelectorAll('input')).find(i => i.name && i.name.includes(namePart));
 
-        await fillField('RADICAL_PROTOCOLO', parts[1]);
-        await fillField('NUM_PROTOCOLO', parts[2]);
-        await fillField('ANO_PROTOCOLO', parts[3]);
-        await fillField('DV_PROTOCOLO', parts[4]);
+            const fields = {
+                'RADICAL_PROTOCOLO': p[1],
+                'NUM_PROTOCOLO': p[2],
+                'ANO_PROTOCOLO': p[3],
+                'DV_PROTOCOLO': p[4]
+            };
+
+            for (const [name, value] of Object.entries(fields)) {
+                const input = findInput(name);
+                if (input) {
+                    input.value = value;
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                    input.dispatchEvent(new Event('blur', { bubbles: true }));
+                }
+            }
+        }, parts);
 
         // 4. Submit Search
-        const searchBtn = await page.evaluateHandle(() => {
-            // More robust matching for the search button
-            return Array.from(document.querySelectorAll('input[type="submit"]')).find(b =>
-                b.name.includes('processoForm') || b.value.toLowerCase().includes('consultar')
-            );
-        });
-        if (searchBtn && searchBtn.asElement()) {
-            await searchBtn.asElement().click();
-            await page.waitForNavigation({ waitUntil: 'networkidle2' });
-        }
+        console.log(`[SIPAC] Clicking 'Consultar'...`);
+        await Promise.all([
+            page.evaluate(() => {
+                const b = Array.from(document.querySelectorAll('input[type="submit"]')).find(b =>
+                    b.name.includes('processoForm') || b.value.toLowerCase().includes('consultar')
+                );
+                if (b) b.click();
+            }),
+            page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 90000 })
+        ]);
 
         // 5. Look for results and click "Visualizar Processo" (Lupa)
+        console.log(`[SIPAC] Checking results...`);
         const lupa = await page.evaluateHandle(() => {
             return document.querySelector('img[title="Visualizar Processo"], img[alt="Visualizar Processo"], a[id*="detalhar"]');
         });
@@ -202,9 +240,13 @@ export async function scrapeSIPACProcess(protocol) {
             throw new Error('Falha ao localizar resultado na tabela do SIPAC.');
         }
 
-        await lupa.asElement().click();
-        await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 90000 });
+        console.log(`[SIPAC] Clicking 'Visualizar Processo'...`);
+        await Promise.all([
+            lupa.asElement().click(),
+            page.waitForNavigation({ waitUntil: 'load', timeout: 120000 }) // Load here because we need all details
+        ]);
 
+        console.log(`[SIPAC] Extracting data...`);
         // 6. Extract Data from single vertical page
         const result = await page.evaluate(() => {
             const getText = (label) => {

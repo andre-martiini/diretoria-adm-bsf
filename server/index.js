@@ -124,7 +124,7 @@ function scheduleDailySync() {
   setInterval(performAutomaticSync, 24 * 60 * 60 * 1000);
 }
 
-scheduleDailySync();
+// scheduleDailySync();
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Servidor rodando em http://localhost:${PORT}`);

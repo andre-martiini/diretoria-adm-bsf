@@ -18,8 +18,8 @@ export const SIPACImporter: React.FC = () => {
         setData(null);
 
         try {
-            // For now, this will call our backend which will eventually have the scraper
-            const response = await fetch(`http://localhost:3002/api/sipac/processo/${protocol.replace(/[^0-9]/g, '')}`);
+            // Correctly calling the backend which uses query parameters
+            const response = await fetch(`http://localhost:3002/api/sipac/processo?protocolo=${protocol}`);
 
             if (!response.ok) {
                 throw new Error('Processo não encontrado ou erro no servidor SIPAC.');
