@@ -94,10 +94,18 @@ export const getStatusColor = (status: string): string => {
 
 // Helper to parse DD/MM/YYYY HH:mm or DD/MM/YYYY
 const parseDate = (dateStr: string, timeStr: string = '00:00'): Date => {
-  if (!dateStr) return new Date();
-  const [day, month, year] = dateStr.split('/').map(Number);
-  const [hour, minute] = timeStr.split(':').map(Number);
-  return new Date(year, month - 1, day, hour, minute);
+  if (!dateStr || typeof dateStr !== 'string') return new Date();
+
+  // Clean string
+  const cleanDate = dateStr.trim();
+  const cleanTime = (timeStr || '00:00').trim();
+
+  const [day, month, year] = cleanDate.split('/').map(Number);
+  const [hour, minute] = cleanTime.split(':').map(Number);
+
+  if (isNaN(day) || isNaN(month) || isNaN(year)) return new Date();
+
+  return new Date(year, month - 1, day, hour || 0, minute || 0);
 };
 
 export interface ProcessMetrics {
@@ -112,19 +120,20 @@ export const calculateProcessMetrics = (process: SIPACProcess | undefined | null
     return null;
   }
 
-  const movs = [...process.movimentacoes].reverse(); // Do início ao fim (Chronological)
-  // Assuming API returns reverse chronological (latest first), so we reverse to get start->end.
-  // Wait, let's check AnnualHiringPlan.tsx rendering logic.
-  // It says: `[...(viewingItem.dadosSIPAC.movimentacoes || [])].reverse().map...` implies the array is Latest First.
-  // So reversing it makes it Chronological (Oldest First). Correct.
+  // 1. Sort Chronologically to ensure correct duration calculation
+  const movs = [...process.movimentacoes].sort((a, b) => {
+    const dateA = parseDate(a.data, a.horario).getTime();
+    const dateB = parseDate(b.data, b.horario).getTime();
+    return dateA - dateB;
+  });
 
   // 1. Lead Time Total
   const startDate = parseDate(movs[0].data, movs[0].horario);
   const lastMov = movs[movs.length - 1];
   const endDate = parseDate(lastMov.data, lastMov.horario);
 
-  // Diferença em dias
-  const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+  // Diferença em dias (protegido contra negativo)
+  const diffTime = Math.max(0, endDate.getTime() - startDate.getTime());
   const leadTime = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
   // 2. Gargalos (Tempo por Unidade) & 3. Retrabalho (Loops)
@@ -159,7 +168,7 @@ export const calculateProcessMetrics = (process: SIPACProcess | undefined | null
 
       const destinationUnit = currentMov.unidadeDestino; // Unidade B
 
-      const timeInUnit = (exitTime.getTime() - entryTime.getTime()) / (1000 * 60 * 60 * 24);
+      const timeInUnit = Math.max(0, (exitTime.getTime() - entryTime.getTime()) / (1000 * 60 * 60 * 24));
 
       if (unitStayTimes[destinationUnit]) {
         unitStayTimes[destinationUnit] += timeInUnit;
