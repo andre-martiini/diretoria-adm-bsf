@@ -5,6 +5,8 @@ import Dashboard from './components/Dashboard';
 import AnnualHiringPlan from './components/AnnualHiringPlan';
 import PublicDashboard from './components/PublicDashboard';
 import BudgetManagement from './components/BudgetManagement';
+import { SIPACImporter } from './components/SIPACImporter';
+
 
 const App: React.FC = () => {
   return (
@@ -15,6 +17,8 @@ const App: React.FC = () => {
         <Route path="/pca" element={<AnnualHiringPlan />} />
         <Route path="/transparencia" element={<PublicDashboard />} />
         <Route path="/gestao-orcamentaria" element={<BudgetManagement />} />
+        <Route path="/sipac" element={<SIPACImporter />} />
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

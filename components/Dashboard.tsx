@@ -1,7 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import logoIfes from '../logo-ifes.png';
-import { FileText, Wallet, LogOut, ArrowRight, TrendingUp } from 'lucide-react';
+import { FileText, Wallet, LogOut, ArrowRight, TrendingUp, Search } from 'lucide-react';
+
 
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
@@ -33,7 +34,7 @@ const Dashboard: React.FC = () => {
                 <h2 className="text-2xl font-black text-slate-800 mb-8">Módulos Disponíveis</h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {/* Card 1: PCA */}
+                    {/* Card 1: Gestão de Contratações */}
                     <div
                         onClick={() => navigate('/pca')}
                         className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-ifes-green transition-all cursor-pointer group flex flex-col justify-between h-48"
@@ -42,8 +43,8 @@ const Dashboard: React.FC = () => {
                             <div className="bg-ifes-green/10 w-12 h-12 rounded-xl flex items-center justify-center text-ifes-green mb-4 group-hover:bg-ifes-green group-hover:text-white transition-colors">
                                 <FileText size={24} />
                             </div>
-                            <h3 className="text-lg font-black text-slate-800 group-hover:text-ifes-green transition-colors">Plano de Contratação Anual</h3>
-                            <p className="text-xs text-slate-400 font-medium mt-1">Gestão de demandas e monitoramento do PCA.</p>
+                            <h3 className="text-lg font-black text-slate-800 group-hover:text-ifes-green transition-colors">Gestão de Contratações</h3>
+                            <p className="text-xs text-slate-400 font-medium mt-1">Vínculo de processos SIPAC e monitoramento do PCA.</p>
                         </div>
                         <div className="flex items-center text-ifes-green text-sm font-bold mt-4">
                             <span>Acessar</span>
@@ -88,6 +89,26 @@ const Dashboard: React.FC = () => {
                             <ArrowRight size={16} className="ml-2 group-hover:translate-x-1 transition-transform" />
                         </div>
                     </div>
+
+                    {/* Card 4: Consulta SIPAC */}
+                    <div
+                        onClick={() => navigate('/sipac')}
+                        className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-500 transition-all cursor-pointer group flex flex-col justify-between h-48"
+                    >
+                        <div>
+                            <div className="bg-indigo-50 w-12 h-12 rounded-xl flex items-center justify-center text-indigo-500 mb-4 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                                <Search size={24} />
+                            </div>
+                            <h3 className="text-lg font-black text-slate-800 group-hover:text-indigo-500 transition-colors">Consulta Rápida SIPAC</h3>
+                            <p className="text-xs text-slate-400 font-medium mt-1">Busca avulsa de processos sem vínculo ao PCA.</p>
+                        </div>
+
+                        <div className="flex items-center text-indigo-500 text-sm font-bold mt-4">
+                            <span>Acessar</span>
+                            <ArrowRight size={16} className="ml-2 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                    </div>
+
                 </div>
             </main>
         </div>

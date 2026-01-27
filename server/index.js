@@ -5,6 +5,8 @@ import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { scrapeSIPACProcess } from './sipacService.js';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,6 +48,31 @@ app.get('/api/pncp/pca/:cnpj/:ano', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// Endpoint para SIPAC Scraping
+app.get('/api/sipac/processo', async (req, res) => {
+  const protocolo = req.query.protocolo;
+
+  if (!protocolo) {
+    return res.status(400).json({ error: 'Protocolo é obrigatório' });
+  }
+
+  // Format protocol properly (add dots/dashes if missing)
+  let formattedProtocol = protocolo;
+  if (protocolo.length === 17) {
+    formattedProtocol = `${protocolo.slice(0, 5)}.${protocolo.slice(5, 11)}/${protocolo.slice(11, 15)}-${protocolo.slice(15)}`;
+  }
+
+  console.log(`[SIPAC] Buscando processo: ${formattedProtocol}`);
+  try {
+    const data = await scrapeSIPACProcess(formattedProtocol);
+    res.json(data);
+  } catch (error) {
+    console.error(`[SIPAC ERROR]`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 // --- Background Sync Logic (Midnight Photograph) ---
 const CNPJ_IFES_BSF = '10838653000106';

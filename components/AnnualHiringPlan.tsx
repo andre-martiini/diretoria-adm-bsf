@@ -17,7 +17,15 @@ import {
   AlertCircle,
   Link,
   Check,
-  TrendingUp
+  TrendingUp,
+  History,
+  PencilLine,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  Info,
+  Users,
+  AlertTriangle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
@@ -55,10 +63,11 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid
 } from 'recharts';
 
-import { fetchPcaData, hasPcaInMemoryCache, fetchLocalPcaSnapshot } from '../services/pcaService';
+import { fetchPcaData, hasPcaInMemoryCache, fetchLocalPcaSnapshot, updatePcaCache } from '../services/pcaService';
 
 // Components
 import ContractTable from './ContractTable';
+import Toast, { ToastType } from './Toast';
 import logoIfes from '../logo-ifes.png';
 
 const AnnualHiringPlan: React.FC = () => {
@@ -71,17 +80,27 @@ const AnnualHiringPlan: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('Todas');
   const [selectedRisk, setSelectedRisk] = useState<string>('Todos');
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage] = useState<number>(10);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'valor', direction: 'desc' });
-  const [activeInsight, setActiveInsight] = useState<'abc' | 'monthly'>('abc');
   const [pcaMeta, setPcaMeta] = useState<{ id: string, dataPublicacao: string } | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ContractItem | null>(null);
   const [saving, setSaving] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isFetchingSIPAC, setIsFetchingSIPAC] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [viewingItem, setViewingItem] = useState<ContractItem | null>(null);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    documentos: false,
+    movimentacoes: false,
+    interessados: false,
+    incidentes: false
+  });
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [syncProgress, setSyncProgress] = useState<number>(0);
+  const [dashboardView, setDashboardView] = useState<'planning' | 'status'>('planning');
+  const [toast, setToast] = useState<{ message: string, type: ToastType } | null>(null);
 
 
   // Novos campos para item manual
@@ -137,23 +156,15 @@ const AnnualHiringPlan: React.FC = () => {
   const processedData = useMemo(() => {
     if (!data || data.length === 0) return [];
 
-    const totalVal = data.reduce((acc, i) => acc + (Number(i.valor) || 0), 0);
     const sorted = [...data].sort((a, b) => b.valor - a.valor);
-    let runningSum = 0;
 
     return sorted.map(item => {
-      runningSum += item.valor;
-      const ratio = runningSum / (totalVal || 1);
-      let abc: 'A' | 'B' | 'C' = 'C';
-      if (ratio <= 0.8) abc = 'A';
-      else if (ratio <= 0.95) abc = 'B';
-
       const daysToStart = Math.ceil((new Date(item.inicio).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
       let risk: 'Baixo' | 'Médio' | 'Alto' = 'Baixo';
       if (daysToStart < 30) risk = 'Alto';
       else if (daysToStart < 60) risk = 'Médio';
 
-      return { ...item, abcClass: abc, riskStatus: risk };
+      return { ...item, riskStatus: risk };
     });
   }, [data]);
 
@@ -177,7 +188,7 @@ const AnnualHiringPlan: React.FC = () => {
       tic: { qtd: tic.length, val: tic.reduce((acc, i) => acc + i.valor, 0) },
       services: { qtd: services.length, val: services.reduce((acc, i) => acc + i.valor, 0) },
       obras: { qtd: 0, val: 0 },
-      totalExecutado: processedData.reduce((acc, i) => acc + (i.valorExecutado || 0), 0),
+      totalExecutado: processedData.filter(i => i.protocoloSIPAC).length, // Agora conta processos vinculados
       monthlyPlan
     };
   }, [processedData]);
@@ -185,17 +196,29 @@ const AnnualHiringPlan: React.FC = () => {
   const handleSaveValues = async () => {
     if (!editingItem) return;
     setSaving(true);
+
     try {
       const docId = editingItem.isManual ? String(editingItem.id) : `${selectedYear}-${editingItem.id}`;
       const docRef = doc(db, "pca_data", docId);
 
-      await setDoc(docRef, {
-        officialId: editingItem.isManual ? null : String(editingItem.id),
+      // Sanitização de dados para o Firestore
+      // Mantemos o objeto completo do SIPAC para exibir detalhes no modal
+      const sanitizedSIPAC = editingItem.dadosSIPAC ? {
+        ...editingItem.dadosSIPAC,
+        status: String(editingItem.dadosSIPAC.status || 'N/A'),
+        assuntoDetalhado: String(editingItem.dadosSIPAC.assuntoDetalhado || ''),
+        unidadeAtual: String(editingItem.dadosSIPAC.unidadeAtual || ''),
+        ultimaMovimentacao: String(editingItem.dadosSIPAC.ultimaMovimentacao || ''),
+        ultimaAtualizacao: String(editingItem.dadosSIPAC.ultimaAtualizacao || '')
+      } : null;
+
+      const saveData = {
+        officialId: editingItem.isManual ? null : String(editingItem.id).trim(),
         ano: selectedYear,
-        valorExecutado: editingItem.valorExecutado || 0,
         isManual: editingItem.isManual || false,
         updatedAt: Timestamp.now(),
-        // Se for manual, salva os dados básicos também
+        protocoloSIPAC: String(editingItem.protocoloSIPAC || ''),
+        dadosSIPAC: sanitizedSIPAC,
         ...(editingItem.isManual ? {
           titulo: editingItem.titulo,
           categoria: editingItem.categoria,
@@ -203,16 +226,114 @@ const AnnualHiringPlan: React.FC = () => {
           inicio: editingItem.inicio,
           area: editingItem.area
         } : {})
-      }, { merge: true });
+      };
 
-      await fetchData(selectedYear);
+      console.log("💾 Salvando ID:", docId, "Data:", saveData);
+
+      // SALVA NO BANCO com Timeout de 5s para não travar a UI
+      // Se demorar, assumimos que salvou offline/cache e liberamos a interface
+      const savePromise = setDoc(docRef, saveData, { merge: true });
+      const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve('timeout'), 15000));
+
+      const result = await Promise.race([savePromise, timeoutPromise]);
+
+      if (result === 'timeout') {
+        console.warn("⚠️ Salvamento demorou > 5s. Assumindo modo offline.");
+        setToast({ message: "Salvo em modo offline (sincronização pendente).", type: "warning" });
+      } else {
+        console.log("✅ Salvo com sucesso no Firestore!");
+        setToast({ message: "Processo vinculado com sucesso!", type: "success" });
+      }
+
+      // ATUALIZAÇÃO OTIMISTA: Reflete na tabela na hora
+      setData(prevData => prevData.map(item =>
+        String(item.id) === String(editingItem.id) ? { ...item, ...editingItem } : item
+      ));
+
+      // Se estivemos visualizando este item nos detalhes, atualizamos lá também
+      if (viewingItem && String(viewingItem.id) === String(editingItem.id)) {
+        setViewingItem({ ...viewingItem, ...editingItem });
+      }
+
+      // ATUALIZA O CACHE PERSISTENTE (MEMÓRIA)
+      updatePcaCache(selectedYear, String(editingItem.id), {
+        protocoloSIPAC: String(editingItem.protocoloSIPAC || ''),
+        dadosSIPAC: sanitizedSIPAC
+      });
+
+      // FECHA O MODAL
       setIsEditModalOpen(false);
+      setSaving(false);
+
+      // AUTO-OPEN DETAILS if protocol is valid and newly searched
+      if (editingItem.protocoloSIPAC && editingItem.protocoloSIPAC.length >= 15 && editingItem.dadosSIPAC) {
+        setViewingItem(editingItem);
+        setTimeout(() => setIsDetailsModalOpen(true), 300);
+      }
+
     } catch (err) {
-      console.error("Erro ao salvar:", err);
-      alert("Erro ao salvar dados no Firestore.");
-    } finally {
+      console.error("❌ Erro ao salvar:", err);
+      // EXIBE ALERTA DE ERRO
+      alert(`Erro ao salvar no banco de dados: ${err instanceof Error ? err.message : String(err)}`);
       setSaving(false);
     }
+  };
+
+  const handleUpdateSIPACItem = async (item: ContractItem, isFromDetails: boolean = false) => {
+    if (!item.protocoloSIPAC) return;
+
+    setIsFetchingSIPAC(true);
+    try {
+      const response = await fetch(`${LOCAL_API_SERVER}/api/sipac/processo?protocolo=${item.protocoloSIPAC}`);
+      if (!response.ok) throw new Error('Falha ao buscar dados no SIPAC');
+
+      const sipacData = await response.json();
+      const updatedItem = {
+        ...item,
+        dadosSIPAC: {
+          ...sipacData,
+          ultimaAtualizacao: new Date().toLocaleString()
+        }
+      };
+
+      if (isFromDetails) {
+        setViewingItem(updatedItem);
+        // Se visualizando nos detalhes, também salvamos automaticamente no banco para persistir o snapshot
+        const docId = item.isManual ? String(item.id) : `${selectedYear}-${item.id}`;
+        const docRef = doc(db, "pca_data", docId);
+
+        await setDoc(docRef, {
+          protocoloSIPAC: String(item.protocoloSIPAC),
+          dadosSIPAC: updatedItem.dadosSIPAC,
+          updatedAt: Timestamp.now()
+        }, { merge: true });
+
+        // Atualiza na lista local e cache
+        setData(prev => prev.map(i => String(i.id) === String(item.id) ? updatedItem : i));
+        updatePcaCache(selectedYear, String(item.id), { dadosSIPAC: updatedItem.dadosSIPAC });
+
+        setToast({ message: "Dados do SIPAC atualizados com sucesso!", type: "success" });
+      } else {
+        setEditingItem(updatedItem);
+      }
+    } catch (err) {
+      console.error("Erro ao buscar SIPAC:", err);
+      alert("Não foi possível localizar o processo no SIPAC.");
+    } finally {
+      setIsFetchingSIPAC(false);
+    }
+  };
+
+  const handleFetchSIPAC = () => {
+    if (editingItem) handleUpdateSIPACItem(editingItem);
+  };
+
+  const formatProtocolo = (val: string) => {
+    const v = val.replace(/\D/g, '').slice(0, 17);
+    if (v.length > 15) return `${v.slice(0, 5)}.${v.slice(5, 11)}/${v.slice(11, 15)}-${v.slice(15)}`;
+    if (v.length > 11) return `${v.slice(0, 5)}.${v.slice(5, 11)}/${v.slice(11)}`;
+    if (v.length > 5) return `${v.slice(0, 5)}.${v.slice(5)}`;
+    return v;
   };
 
   const handleAddManualItem = async () => {
@@ -234,6 +355,7 @@ const AnnualHiringPlan: React.FC = () => {
         inicio: new Date().toISOString().split('T')[0],
         area: 'Diretoria de Adm. e Planejamento'
       });
+      setToast({ message: "Demanda manual registrada com sucesso!", type: "success" });
     } catch (err) {
       console.error("Erro ao adicionar:", err);
     } finally {
@@ -246,6 +368,7 @@ const AnnualHiringPlan: React.FC = () => {
     try {
       await deleteDoc(doc(db, "pca_data", id));
       await fetchData(selectedYear);
+      setToast({ message: "Item excluído com sucesso!", type: "success" });
     } catch (err) {
       console.error("Erro ao deletar:", err);
     }
@@ -256,26 +379,6 @@ const AnnualHiringPlan: React.FC = () => {
     { name: 'Serviços', value: summary.services.val, fill: '#f59e0b' },
     { name: 'TIC', value: summary.tic.val, fill: '#3b82f6' }
   ], [summary]);
-
-  const abcChartData = useMemo(() => {
-    const sorted = [...processedData].sort((a, b) => b.valor - a.valor);
-    let cumulativeValue = 0;
-    const totalValue = summary.totalValue || 1;
-
-    return sorted.map((item, index) => {
-      cumulativeValue += item.valor;
-      return {
-        index,
-        label: `Item ${index + 1}`,
-        valor: item.valor,
-        acumulado: (cumulativeValue / totalValue) * 100,
-        classe: item.abcClass,
-        fill: item.abcClass === 'A' ? '#0f172a' :
-          item.abcClass === 'B' ? '#2f9e41' :
-            '#e2e8f0'
-      };
-    });
-  }, [processedData, summary.totalValue]);
 
   const filteredData = useMemo(() => {
     let result = [...processedData];
@@ -312,8 +415,17 @@ const AnnualHiringPlan: React.FC = () => {
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
+  const closeToast = () => setToast(null);
+
   return (
     <div className="min-h-screen border-t-4 border-ifes-green bg-slate-50/30 relative">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={closeToast}
+        />
+      )}
       {/* Overlay de carregamento PNCP */}
       {loading && (
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/70 backdrop-blur-xl animate-in fade-in duration-300">
@@ -378,7 +490,7 @@ const AnnualHiringPlan: React.FC = () => {
             <div className="flex items-center gap-3 sm:gap-4 shrink-0">
               <img src={logoIfes} alt="Logo IFES" className="h-12 sm:h-16 w-auto object-contain" />
               <div className="flex flex-col border-l border-slate-100 pl-3 sm:pl-4">
-                <span className="text-sm sm:text-lg font-black text-ifes-green uppercase leading-none tracking-tight">Gestão de PCA</span>
+                <span className="text-sm sm:text-lg font-black text-ifes-green uppercase leading-none tracking-tight">Gestão de Contratações</span>
                 <span className="text-[8px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Campus BSF</span>
               </div>
             </div>
@@ -443,184 +555,147 @@ const AnnualHiringPlan: React.FC = () => {
 
       <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
 
-        {/* Zona 1: KPIs */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6 font-sans">
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Inv. Planejado Total</p>
-                <h3 className="text-3xl font-black text-slate-900">{formatCurrency(summary.totalValue)}</h3>
-              </div>
-              <div className="bg-ifes-green/10 p-2 rounded-lg text-ifes-green">
-                <DollarSign size={20} />
-              </div>
+        {/* Carousel Dashboard */}
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden relative font-sans">
+
+          {/* Header do Carousel */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white">
+            <button
+              onClick={() => setDashboardView(prev => prev === 'planning' ? 'status' : 'planning')}
+              className="p-2 hover:bg-slate-50 rounded-full text-slate-400 hover:text-ifes-green transition-colors"
+            >
+              <ChevronLeft size={24} />
+            </button>
+
+            <div className="text-center">
+              <h2 className="text-xl font-black text-slate-800 tracking-tight">
+                {dashboardView === 'planning' ? 'Plano de Contratação Anual' : 'Gestão de Processos (Status)'}
+              </h2>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                {dashboardView === 'planning' ? 'Visão Geral do Planejamento e Alocação' : 'Monitoramento de Fluxos e Prazos'}
+              </p>
             </div>
-            <div className="mt-6">
-              <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase mb-1">
-                <span>Execução Financeira (Geral)</span>
-                <span>{((summary.totalExecutado / (summary.totalValue || 1)) * 100).toFixed(1)}%</span>
-              </div>
-              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-ifes-green transition-all duration-500"
-                  style={{ width: `${(summary.totalExecutado / (summary.totalValue || 1)) * 100}%` }}
-                ></div>
-              </div>
-            </div>
+
+            <button
+              onClick={() => setDashboardView(prev => prev === 'planning' ? 'status' : 'planning')}
+              className="p-2 hover:bg-slate-50 rounded-full text-slate-400 hover:text-ifes-green transition-colors"
+            >
+              <ChevronRight size={24} />
+            </button>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Total Pago (Acumulado)</p>
-                <h3 className="text-3xl font-black text-slate-900">{formatCurrency(summary.totalExecutado)}</h3>
-              </div>
-              <div className="bg-emerald-50 p-2 rounded-lg text-emerald-500">
-                <Package size={20} />
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-2 mt-6">
-              <div className="bg-emerald-50 p-2 rounded-lg text-center border border-emerald-100">
-                <span className="block text-[8px] font-black text-emerald-700 uppercase leading-tight">Bens</span>
-                <span className="text-xs font-black text-emerald-600">{summary.materials.qtd}</span>
-              </div>
-              <div className="bg-amber-50 p-2 rounded-lg text-center border border-amber-100">
-                <span className="block text-[8px] font-black text-amber-700 uppercase leading-tight">Serv.</span>
-                <span className="text-xs font-black text-amber-600">{summary.services.qtd}</span>
-              </div>
-              <div className="bg-blue-50 p-2 rounded-lg text-center border border-blue-100">
-                <span className="block text-[8px] font-black text-blue-700 uppercase leading-tight">TIC</span>
-                <span className="text-xs font-black text-blue-600">{summary.tic.qtd}</span>
-              </div>
-            </div>
-          </div>
-        </section>
+          <div className="p-6 bg-slate-50/30 min-h-[400px]">
+            {dashboardView === 'planning' ? (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in slide-in-from-right-4 duration-300">
 
-        {/* Zona 2 e 3: Gráficos */}
-        <div className="grid lg:grid-cols-2 gap-8 font-sans">
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <h3 className="text-lg font-extrabold text-slate-800 mb-2">Mapa de Alocação de Recursos</h3>
-            <p className="text-xs text-slate-400 font-medium mb-6">Proporção visual por categoria de gasto</p>
-            <div className="h-80 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={chartData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={5}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} cornerRadius={4} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(v: number) => formatCurrency(v)}
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="grid grid-cols-3 gap-4 mt-6">
-              {chartData.map(item => (
-                <div key={item.name} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 transition-colors">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.fill }}></div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-slate-400 uppercase leading-none mb-1">{item.name}</span>
-                    <span className="text-xs font-bold text-slate-800">{(item.value / summary.totalValue * 100).toFixed(1)}%</span>
+                {/* Coluna 1: KPI Planejado Total */}
+                <div className="lg:col-span-3 flex flex-col gap-6">
+                  <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-center h-full relative overflow-hidden group hover:border-ifes-green/30 transition-all">
+                    <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
+                      <DollarSign size={80} className="text-ifes-green" />
+                    </div>
+
+                    <div className="relative z-10">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Inv. Planejado Total</p>
+                      <h3 className="text-3xl font-black text-slate-900 mb-6">{formatCurrency(summary.totalValue)}</h3>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-[9px] font-black text-slate-400 uppercase">
+                          <span>Itens Vinculados</span>
+                          <span>{((summary.totalExecutado / (summary.totalItems || 1)) * 100).toFixed(0)}%</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-ifes-green transition-all duration-500"
+                            style={{ width: `${(summary.totalExecutado / (summary.totalItems || 1)) * 100}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
 
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-lg font-extrabold text-slate-800">
-                  {activeInsight === 'abc' ? 'Curva ABC (Pareto)' : 'Cronograma Mensal'}
-                </h3>
-                <p className="text-xs text-slate-400 font-medium">
-                  {activeInsight === 'abc' ? 'Distribuição acumulada do investimento' : 'Previsão de empenho por mês'}
-                </p>
-              </div>
-              <div className="flex bg-slate-100 p-1 rounded-xl">
-                <button
-                  onClick={() => setActiveInsight('abc')}
-                  className={`p-2 rounded-lg transition-all ${activeInsight === 'abc' ? 'bg-white shadow-sm text-ifes-green' : 'text-slate-400 hover:text-slate-600'}`}
-                  title="Curva ABC"
-                >
-                  <Target size={18} />
-                </button>
-                <button
-                  onClick={() => setActiveInsight('monthly')}
-                  className={`p-2 rounded-lg transition-all ${activeInsight === 'monthly' ? 'bg-white shadow-sm text-ifes-green' : 'text-slate-400 hover:text-slate-600'}`}
-                  title="Cronograma Mensal"
-                >
-                  <RefreshCw size={18} />
-                </button>
-              </div>
-            </div>
-
-            <div className="h-80 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                {activeInsight === 'abc' ? (
-                  <BarChart data={abcChartData} barCategoryGap={0}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis hide dataKey="index" />
-                    <YAxis
-                      tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }}
-                      tickFormatter={(v) => `${v}%`}
-                      domain={[0, 100]}
-                    />
-                    <Tooltip
-                      formatter={(value: number) => [`${value.toFixed(1)}%`, 'Acumulado']}
-                      labelStyle={{ display: 'none' }}
-                    />
-                    <Bar dataKey="acumulado">
-                      {abcChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                {/* Coluna 2: Gráfico de Pizza (Alocação) */}
+                <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+                  <h3 className="text-sm font-black text-slate-800 mb-4 flex items-center gap-2">
+                    <Target size={16} className="text-ifes-green" />
+                    Alocação de Recursos
+                  </h3>
+                  <div className="flex-1 min-h-[250px] relative">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={chartData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={80}
+                          paddingAngle={5}
+                          dataKey="value"
+                          stroke="none"
+                        >
+                          {chartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} cornerRadius={4} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(v: number) => formatCurrency(v)}
+                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    {/* Legend Overlay */}
+                    <div className="absolute bottom-0 right-0 flex flex-col gap-2 bg-white/90 p-2 rounded-xl border border-slate-100 backdrop-blur-sm text-[10px]">
+                      {chartData.map(item => (
+                        <div key={item.name} className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.fill }} />
+                          <span className="font-bold text-slate-600">{item.name}</span>
+                        </div>
                       ))}
-                    </Bar>
-                  </BarChart>
-                ) : (
-                  <BarChart data={summary.monthlyPlan}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis
-                      dataKey="month"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }}
-                    />
-                    <YAxis hide />
-                    <Tooltip
-                      formatter={(v: number) => formatCurrency(v)}
-                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                    />
-                    <Bar
-                      dataKey="value"
-                      fill="#2f9e41"
-                      radius={[6, 6, 0, 0]}
-                      barSize={24}
-                    />
-                  </BarChart>
-                )}
-              </ResponsiveContainer>
-            </div>
-            {activeInsight === 'abc' && (
-              <div className="mt-4 flex gap-4 justify-center">
-                <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
-                  <div className="w-2 h-2 rounded-full bg-slate-800"></div> Classe A (80%)
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
-                  <div className="w-2 h-2 rounded-full bg-ifes-green"></div> Classe B (15%)
+
+                {/* Coluna 3: Cronograma Mensal (Substituindo Curva ABC) */}
+                <div className="lg:col-span-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+                  <h3 className="text-sm font-black text-slate-800 mb-4 flex items-center gap-2">
+                    <RefreshCw size={16} className="text-blue-500" />
+                    Cronograma Mensal
+                  </h3>
+                  <div className="flex-1 min-h-[250px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={summary.monthlyPlan}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis
+                          dataKey="month"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }}
+                        />
+                        <Tooltip
+                          formatter={(v: number) => formatCurrency(v)}
+                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                        />
+                        <Bar
+                          dataKey="value"
+                          fill="#2f9e41"
+                          radius={[4, 4, 0, 0]}
+                          barSize={16}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
-                  <div className="w-2 h-2 rounded-full bg-slate-300"></div> Classe C (5%)
+
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center min-h-[400px] text-slate-300 gap-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div className="bg-slate-100 p-6 rounded-full">
+                  <RefreshCw size={48} className="animate-spin-slow" />
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-black uppercase tracking-widest">Em Construção</p>
+                  <p className="text-xs font-bold text-slate-400">Módulo de monitoramento de status em desenvolvimento</p>
                 </div>
               </div>
             )}
@@ -688,6 +763,10 @@ const AnnualHiringPlan: React.FC = () => {
               setEditingItem(item);
               setIsEditModalOpen(true);
             }}
+            onViewDetails={(item) => {
+              setViewingItem(item);
+              setIsDetailsModalOpen(true);
+            }}
           />
 
           {!loading && totalPages > 1 && (
@@ -725,8 +804,8 @@ const AnnualHiringPlan: React.FC = () => {
           <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-slate-200 overflow-hidden font-sans">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <div>
-                <h3 className="text-xl font-black text-slate-800 tracking-tight">Atualizar Status</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Gestão de Empenho e Execução</p>
+                <h3 className="text-xl font-black text-slate-800 tracking-tight">Vincular Processo</h3>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Integração SIPAC • Monitoramento Real</p>
               </div>
               <button onClick={() => setIsEditModalOpen(false)} className="p-2 hover:bg-white rounded-xl transition-colors text-slate-400 hover:text-red-500">
                 <X size={20} />
@@ -744,19 +823,53 @@ const AnnualHiringPlan: React.FC = () => {
               </div>
 
               <div className="space-y-4">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Valor Total Pago (Acumulado)</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">R$</span>
-                  <input
-                    type="number"
-                    className="w-full pl-9 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-lg font-black text-emerald-600 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all shadow-sm"
-                    value={editingItem.valorExecutado}
-                    onChange={(e) => setEditingItem({ ...editingItem, valorExecutado: Number(e.target.value) })}
-                  />
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Número do Protocolo SIPAC</label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                    <input
+                      type="text"
+                      placeholder="00000.000000/0000-00"
+                      maxLength={20}
+                      className="w-full pl-11 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-black text-slate-700 outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-sm"
+                      value={editingItem.protocoloSIPAC || ''}
+                      onChange={(e) => setEditingItem({ ...editingItem, protocoloSIPAC: formatProtocolo(e.target.value) })}
+                    />
+                  </div>
+                  <button
+                    onClick={handleFetchSIPAC}
+                    disabled={isFetchingSIPAC || !editingItem.protocoloSIPAC}
+                    className="px-6 bg-blue-600 text-white rounded-2xl font-black text-xs hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {isFetchingSIPAC ? <RefreshCw size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                    Buscar
+                  </button>
                 </div>
-                <p className="text-[10px] font-bold text-slate-400 italic px-1 leading-relaxed">
-                  * Insira o valor total que já foi efetivamente pago para este processo até o momento.
-                </p>
+
+                {editingItem.dadosSIPAC && (
+                  <div className="bg-blue-50/50 rounded-2xl p-4 border border-blue-100 animate-in slide-in-from-top-2 duration-300">
+                    <div className="flex justify-between items-start mb-3">
+                      <span className="text-[10px] font-black text-blue-600 uppercase tracking-tighter">Dados Encontrados</span>
+                      <span className="text-[8px] font-bold text-slate-400">Atualizado em: {editingItem.dadosSIPAC.ultimaAtualizacao}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <span className="block text-[8px] font-black text-slate-400 uppercase">Status Atual</span>
+                        <span className="text-xs font-black text-slate-700">{editingItem.dadosSIPAC.status}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[8px] font-black text-slate-400 uppercase">Unidade Atual</span>
+                        <span className="text-xs font-black text-slate-700">{editingItem.dadosSIPAC.unidadeAtual}</span>
+                      </div>
+                      <div className="col-span-2 pt-2 border-t border-blue-50">
+                        <span className="block text-[8px] font-black text-slate-400 uppercase">Assunto Detalhado</span>
+                        <span className="text-xs font-bold text-slate-600 leading-tight">
+                          {editingItem.dadosSIPAC.assuntoDetalhado || 'Não informado'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {editingItem.isManual && (
@@ -784,11 +897,11 @@ const AnnualHiringPlan: React.FC = () => {
               </button>
               <button
                 onClick={handleSaveValues}
-                disabled={saving}
+                disabled={saving || (!!editingItem.protocoloSIPAC && !editingItem.dadosSIPAC)}
                 className="flex-1 px-6 py-3 bg-ifes-green text-white rounded-2xl text-sm font-black hover:bg-emerald-600 transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {saving ? <RefreshCw size={18} className="animate-spin" /> : <Save size={18} />}
-                Salvar Alterações
+                {!!editingItem.protocoloSIPAC && !editingItem.dadosSIPAC ? 'Busque antes de salvar' : 'Confirmar Vínculo'}
               </button>
             </div>
           </div>
@@ -894,6 +1007,402 @@ const AnnualHiringPlan: React.FC = () => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {/* Modal de Detalhes SIPAC - FULL PAGE EDITION */}
+      {isDetailsModalOpen && viewingItem && viewingItem.dadosSIPAC && (
+        <div className="fixed inset-0 z-[70] bg-slate-50 flex flex-col font-sans animate-in fade-in duration-300">
+          {/* Header Superior Fixo */}
+          <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shadow-sm shrink-0">
+            <div className="flex items-center gap-4">
+              <div className="bg-blue-600 p-2.5 rounded-2xl shadow-lg shadow-blue-200">
+                <Search size={24} className="text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+                  Processo {viewingItem.dadosSIPAC.numeroProcesso}
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase ${viewingItem.dadosSIPAC.status.includes('ATIVO') ? 'bg-green-100 text-green-700' :
+                    viewingItem.dadosSIPAC.status.includes('TRAMITAÇÃO') ? 'bg-blue-100 text-blue-700' :
+                      'bg-slate-100 text-slate-500'
+                    }`}>
+                    {viewingItem.dadosSIPAC.status}
+                  </span>
+                </h2>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sincronizado via SIPAC em {viewingItem.dadosSIPAC.ultimaAtualizacao}</span>
+                  <div className="w-1 h-1 bg-slate-300 rounded-full" />
+                  <span className="text-[10px] font-bold text-blue-600 uppercase italic">{viewingItem.area}</span>
+                  <div className="w-1 h-1 bg-slate-300 rounded-full" />
+                  <button
+                    onClick={() => handleUpdateSIPACItem(viewingItem, true)}
+                    disabled={isFetchingSIPAC}
+                    className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-full text-[9px] font-black uppercase transition-all disabled:opacity-50"
+                  >
+                    <RefreshCw size={10} className={isFetchingSIPAC ? 'animate-spin' : ''} />
+                    {isFetchingSIPAC ? 'Atualizando...' : 'Atualizar Dados AGORA'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  setIsDetailsModalOpen(false);
+                  setEditingItem(viewingItem);
+                  setIsEditModalOpen(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-black text-slate-600 hover:bg-slate-50 transition-all shadow-sm"
+              >
+                <PencilLine size={16} />
+                Editar Vínculo
+              </button>
+              <button
+                onClick={() => setIsDetailsModalOpen(false)}
+                className="p-2.5 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all text-slate-400 bg-white border border-slate-100"
+              >
+                <X size={24} />
+              </button>
+            </div>
+          </header>
+
+          <main className="flex-1 overflow-y-auto px-8 py-10">
+            <div className="max-w-6xl mx-auto space-y-8 pb-20">
+
+              {/* Grid 1: Informações Básicas e Resumo */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Card do PCA */}
+                <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200 p-8 shadow-sm flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <Target className="text-blue-600" size={20} />
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Contexto do Planejamento</span>
+                    </div>
+                    <h3 className="text-2xl font-black text-slate-800 leading-tight mb-4">
+                      {viewingItem.titulo}
+                    </h3>
+                    <div className="flex items-center gap-6">
+                      <div>
+                        <span className="block text-[8px] font-black text-slate-300 uppercase mb-1">Valor Estimado</span>
+                        <span className="text-lg font-black text-slate-700 font-mono">{formatCurrency(viewingItem.valor)}</span>
+                      </div>
+                      <div className="w-px h-8 bg-slate-100" />
+                      <div>
+                        <span className="block text-[8px] font-black text-slate-300 uppercase mb-1">Categoria</span>
+                        <span className="text-sm font-bold text-slate-600 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">{viewingItem.categoria}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-8 pt-6 border-t border-dashed border-slate-100">
+                    <span className="block text-[10px] font-black text-slate-400 uppercase mb-3">Objeto do Processo (SIPAC)</span>
+                    <p className="text-sm text-slate-600 font-medium leading-relaxed italic border-l-4 border-blue-200 pl-4 bg-blue-50/20 py-2 rounded-r-xl">
+                      "{viewingItem.dadosSIPAC.assuntoDetalhado || 'Sem descrição detalhada'}"
+                    </p>
+                  </div>
+                </div>
+
+                {/* Card de Status Rápido */}
+                <div className="bg-slate-900 rounded-3xl p-8 text-white shadow-xl shadow-slate-200 flex flex-col justify-between relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-8 opacity-10">
+                    <RefreshCw size={120} />
+                  </div>
+                  <div className="relative z-10">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 block">Resumo Executivo</span>
+                    <div className="space-y-6">
+                      <div>
+                        <span className="block text-[8px] font-black text-slate-500 uppercase mb-2">Unidade sob Custódia</span>
+                        <p className="text-sm font-black text-blue-400">
+                          {viewingItem.dadosSIPAC.movimentacoes && viewingItem.dadosSIPAC.movimentacoes.length > 0
+                            ? viewingItem.dadosSIPAC.movimentacoes[0].unidadeDestino
+                            : viewingItem.dadosSIPAC.unidadeOrigem}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="block text-[8px] font-black text-slate-500 uppercase mb-2">Última Movimentação</span>
+                        <p className="text-xs font-bold text-slate-300">
+                          {viewingItem.dadosSIPAC.movimentacoes && viewingItem.dadosSIPAC.movimentacoes.length > 0
+                            ? `${viewingItem.dadosSIPAC.movimentacoes[0].data} às ${viewingItem.dadosSIPAC.movimentacoes[0].horario}`
+                            : 'Processo recém autuado'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="relative z-10 bg-white/5 p-4 rounded-2xl border border-white/10 mt-8">
+                    <span className="text-[9px] font-black text-slate-400 uppercase mb-2 block">Natureza</span>
+                    <span className="text-xs font-black uppercase tracking-widest text-emerald-400">{viewingItem.dadosSIPAC.natureza || 'OSTENSIVO'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Seção 2: Identificação Completa do Processo (SIPAC) */}
+              <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
+                <div className="flex items-center gap-2 mb-6">
+                  <Info className="text-blue-600" size={20} />
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Identificação Completa do Processo</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-y-8 gap-x-12">
+                  <div>
+                    <span className="block text-[8px] font-black text-slate-400 uppercase mb-1">Número do Processo</span>
+                    <span className="text-sm font-black text-slate-700 font-mono tracking-tighter">{viewingItem.dadosSIPAC.numeroProcesso}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] font-black text-slate-400 uppercase mb-1">Data de Autuação</span>
+                    <span className="text-sm font-bold text-slate-700">{viewingItem.dadosSIPAC.dataAutuacion} {viewingItem.dadosSIPAC.horarioAutuacion}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] font-black text-slate-400 uppercase mb-1">Usuário de Autuação</span>
+                    <span className="text-xs font-bold text-slate-600 uppercase italic">{viewingItem.dadosSIPAC.usuarioAutuacion}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] font-black text-slate-400 uppercase mb-1">Data de Cadastro</span>
+                    <span className="text-sm font-bold text-slate-700">{viewingItem.dadosSIPAC.dataCadastro}</span>
+                  </div>
+
+                  <div className="lg:col-span-2">
+                    <span className="block text-[8px] font-black text-slate-400 uppercase mb-1">Assunto do Processo</span>
+                    <span className="text-xs font-bold text-slate-700 uppercase">
+                      <span className="text-blue-600 font-black mr-2">{viewingItem.dadosSIPAC.assuntoCodigo}</span>
+                      {viewingItem.dadosSIPAC.assuntoDescricao}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] font-black text-slate-400 uppercase mb-1">Status Atual</span>
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${viewingItem.dadosSIPAC.status.includes('ATIVO') ? 'bg-green-100 text-green-700' :
+                      viewingItem.dadosSIPAC.status.includes('TRAMITAÇÃO') ? 'bg-blue-100 text-blue-700' :
+                        'bg-slate-100 text-slate-500'
+                      }`}>
+                      {viewingItem.dadosSIPAC.status}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] font-black text-slate-400 uppercase mb-1">Natureza</span>
+                    <span className="text-[10px] font-black text-slate-700 uppercase">{viewingItem.dadosSIPAC.natureza}</span>
+                  </div>
+
+                  <div className="lg:col-span-2">
+                    <span className="block text-[8px] font-black text-slate-400 uppercase mb-1">Unidade de Origem</span>
+                    <span className="text-xs font-bold text-slate-600 uppercase">{viewingItem.dadosSIPAC.unidadeOrigem}</span>
+                  </div>
+                  <div className="lg:col-span-2">
+                    <span className="block text-[8px] font-black text-slate-400 uppercase mb-1">Assunto Detalhado</span>
+                    <p className="text-xs font-medium text-slate-500 italic">"{viewingItem.dadosSIPAC.assuntoDetalhado}"</p>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-4">
+
+                {/* 1. Interessados */}
+                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden transition-all">
+                  <button
+                    onClick={() => setExpandedSections(p => ({ ...p, interessados: !p.interessados }))}
+                    className="w-full px-8 py-5 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600">
+                        <Users size={20} />
+                      </div>
+                      <span className="font-black text-slate-800 uppercase text-xs tracking-widest">Interessados e Responsáveis</span>
+                      <span className="bg-indigo-100 text-indigo-700 text-[10px] font-black px-2 py-0.5 rounded-full">{(viewingItem.dadosSIPAC.interessados || []).length}</span>
+                    </div>
+                    {expandedSections.interessados ? <ChevronUp size={20} className="text-slate-300" /> : <ChevronDown size={20} className="text-slate-300" />}
+                  </button>
+                  {expandedSections.interessados && (
+                    <div className="px-8 pb-8 animate-in slide-in-from-top-2 duration-300">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {(viewingItem.dadosSIPAC.interessados || []).map((interessado, i) => (
+                          <div key={i} className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                            <span className="text-[10px] font-black text-slate-400 uppercase mb-1 block">{interessado.tipo}</span>
+                            <p className="text-sm font-bold text-slate-700">{interessado.nome}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Documentos do Processo */}
+                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden transition-all">
+                  <button
+                    onClick={() => setExpandedSections(p => ({ ...p, documentos: !p.documentos }))}
+                    className="w-full px-8 py-5 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="bg-blue-50 p-2 rounded-xl text-blue-600">
+                        <FileText size={20} />
+                      </div>
+                      <span className="font-black text-slate-800 uppercase text-xs tracking-widest">Documentos e Atas</span>
+                      <span className="bg-blue-100 text-blue-700 text-[10px] font-black px-2 py-0.5 rounded-full">{(viewingItem.dadosSIPAC.documentos || []).length}</span>
+                    </div>
+                    {expandedSections.documentos ? <ChevronUp size={20} className="text-slate-300" /> : <ChevronDown size={20} className="text-slate-300" />}
+                  </button>
+                  {expandedSections.documentos && (
+                    <div className="px-8 pb-8 animate-in slide-in-from-top-2 duration-300">
+                      <div className="overflow-hidden border border-slate-100 rounded-2xl">
+                        <table className="w-full text-left">
+                          <thead className="bg-slate-50/50">
+                            <tr>
+                              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Ordem</th>
+                              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Tipo de Documento</th>
+                              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Data</th>
+                              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Origem</th>
+                              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Natureza</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {(viewingItem.dadosSIPAC.documentos || []).map((doc, i) => (
+                              <tr key={i} className="hover:bg-slate-50 transition-colors">
+                                <td className="px-6 py-4 text-xs font-black text-slate-400">#{doc.ordem}</td>
+                                <td className="px-6 py-4">
+                                  <span className="text-xs font-bold text-slate-800">{doc.tipo}</span>
+                                </td>
+                                <td className="px-6 py-4 text-xs text-slate-600 font-medium">{doc.data}</td>
+                                <td className="px-6 py-4 text-xs text-slate-600 font-medium uppercase">{doc.unidadeOrigem}</td>
+                                <td className="px-6 py-4 text-xs text-slate-500 font-bold uppercase">{doc.natureza || 'OSTENSIVO'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Movimentações */}
+                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden transition-all">
+                  <button
+                    onClick={() => setExpandedSections(p => ({ ...p, movimentacoes: !p.movimentacoes }))}
+                    className="w-full px-8 py-5 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="bg-emerald-50 p-2 rounded-xl text-emerald-600">
+                        <History size={20} />
+                      </div>
+                      <span className="font-black text-slate-800 uppercase text-xs tracking-widest">Histórico de Tramitação</span>
+                      <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-2 py-0.5 rounded-full">{(viewingItem.dadosSIPAC.movimentacoes || []).length}</span>
+                    </div>
+                    {expandedSections.movimentacoes ? <ChevronUp size={20} className="text-slate-300" /> : <ChevronDown size={20} className="text-slate-300" />}
+                  </button>
+                  {expandedSections.movimentacoes && (
+                    <div className="px-8 pb-8 animate-in slide-in-from-top-2 duration-300">
+                      <div className="relative pl-8 space-y-6 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
+                        {[...(viewingItem.dadosSIPAC.movimentacoes || [])].reverse().map((mov, i) => (
+                          <div key={i} className="relative">
+                            <div className="absolute left-[-21px] top-1.5 w-2 h-2 rounded-full bg-white border-2 border-emerald-500 z-10" />
+                            <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+                              <div className="flex items-center justify-between border-b border-slate-50 pb-3">
+                                <div className="flex items-center gap-4">
+                                  <div className="shrink-0 flex flex-col items-center bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
+                                    <span className="text-[10px] font-black text-slate-700 leading-none">{mov.data}</span>
+                                    <span className="text-[8px] font-bold text-slate-400 mt-1 uppercase">{mov.horario}</span>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <span className="text-xs font-bold text-slate-700 uppercase">{mov.unidadeOrigem}</span>
+                                    <ChevronRight size={14} className="text-slate-300" />
+                                    <span className="text-xs font-black text-blue-600 uppercase">{mov.unidadeDestino}</span>
+                                  </div>
+                                </div>
+                                {mov.urgente && mov.urgente.toLowerCase().includes('sim') && (
+                                  <span className="bg-red-50 text-red-600 text-[8px] font-black px-2 py-1 rounded-lg border border-red-100 animate-pulse">URGENTE</span>
+                                )}
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-1">
+                                <div className="space-y-1">
+                                  <span className="text-[8px] font-black text-slate-300 uppercase block">Enviado por (Remetente)</span>
+                                  <p className="text-[11px] font-bold text-slate-600 uppercase italic">
+                                    {mov.usuarioRemetente || 'Não informado'}
+                                  </p>
+                                </div>
+                                <div className="space-y-1">
+                                  <span className="text-[8px] font-black text-slate-300 uppercase block">Recebimento</span>
+                                  <p className="text-[11px] font-bold text-slate-800 uppercase italic">
+                                    {mov.usuarioRecebedor ? mov.usuarioRecebedor : 'PENDENTE DE RECEBIMENTO'}
+                                  </p>
+                                  {mov.dataRecebimento && (
+                                    <p className="text-[9px] font-medium text-slate-400">
+                                      Confirmado em {mov.dataRecebimento} às {mov.horarioRecebimento}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 4. Incidentes (Opcional) */}
+                {viewingItem.dadosSIPAC.incidentes && viewingItem.dadosSIPAC.incidentes.length > 0 && (
+                  <div className="bg-white rounded-3xl border border-red-200 shadow-sm overflow-hidden transition-all">
+                    <button
+                      onClick={() => setExpandedSections(p => ({ ...p, incidentes: !p.incidentes }))}
+                      className="w-full px-8 py-5 flex items-center justify-between hover:bg-red-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="bg-red-50 p-2 rounded-xl text-red-600">
+                          <AlertTriangle size={20} />
+                        </div>
+                        <span className="font-black text-red-800 uppercase text-xs tracking-widest">Documentos Cancelados / Incidentes</span>
+                        <span className="bg-red-100 text-red-700 text-[10px] font-black px-2 py-0.5 rounded-full">{(viewingItem.dadosSIPAC.incidentes || []).length}</span>
+                      </div>
+                      {expandedSections.incidentes ? <ChevronUp size={20} className="text-red-300" /> : <ChevronDown size={20} className="text-red-300" />}
+                    </button>
+                    {expandedSections.incidentes && (
+                      <div className="px-8 pb-8 animate-in slide-in-from-top-2 duration-300">
+                        <div className="space-y-3">
+                          {(viewingItem.dadosSIPAC.incidentes || []).map((inc, i) => (
+                            <div key={i} className="bg-red-50/30 rounded-3xl border border-red-100 p-6 space-y-4">
+                              <div className="flex justify-between items-center border-b border-red-100/50 pb-3">
+                                <div>
+                                  <span className="text-[8px] font-black text-red-400 uppercase block mb-1">Documento Cancelado</span>
+                                  <span className="text-xs font-black text-red-800 uppercase">{inc.tipoDocumento} • {inc.numeroDocumento}</span>
+                                </div>
+                                <div className="text-right">
+                                  <span className="text-[8px] font-black text-red-400 uppercase block mb-1">Data do Cancelamento</span>
+                                  <span className="text-xs font-bold text-red-600">{inc.dataCancelamento}</span>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-1">
+                                  <span className="text-[8px] font-black text-slate-400 uppercase block">Solicitado por</span>
+                                  <p className="text-xs font-bold text-slate-700 uppercase italic">{inc.usuarioSolicitacao}</p>
+                                  <p className="text-[9px] font-medium text-slate-400 uppercase">Em {inc.dataSolicitacao}</p>
+                                </div>
+                                <div className="space-y-1">
+                                  <span className="text-[8px] font-black text-slate-400 uppercase block">Cancelado por</span>
+                                  <p className="text-xs font-bold text-slate-700 uppercase italic">{inc.usuarioCancelamento}</p>
+                                  <p className="text-[9px] font-medium text-slate-400 uppercase">Em {inc.dataCancelamento}</p>
+                                </div>
+                              </div>
+
+                              <div className="bg-white/60 p-4 rounded-2xl border border-red-100/50">
+                                <span className="text-[8px] font-black text-red-400 uppercase block mb-2">Justificativa do Cancelamento</span>
+                                <p className="text-xs text-slate-600 leading-relaxed italic font-medium">"{inc.justificativa}"</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+              </div>
+
+              {/* Rodapé Interno */}
+              <div className="flex items-center justify-center pt-10 text-slate-400 gap-4">
+                <Info size={16} />
+                <p className="text-xs font-bold italic tracking-wide">
+                  Os dados acima são extraídos dinamicamente do portal público do SIPAC/IFES.
+                </p>
+              </div>
+
+            </div>
+          </main>
         </div>
       )}
     </div>

@@ -37,7 +37,7 @@ export const fetchLocalPcaSnapshot = async (year: string): Promise<ContractItem[
             const jsonData = await response.json();
             const raw = jsonData.data || (Array.isArray(jsonData) ? jsonData : []);
             return raw.map((item: any, index: number) => {
-                const officialId = String(item.id || item.numeroItem || index);
+                const officialId = String(item.id || item.numeroItem || index).trim();
                 const pncpCategory = String(item.categoriaItemPcaNome || item.nomeClassificacao || '').toLowerCase();
                 let categoria = Category.Bens;
                 if (pncpCategory.includes('serviç') || pncpCategory.includes('obra')) {
@@ -85,7 +85,7 @@ export const fetchPcaData = async (
 
     const yearNum = Number(year);
     const cacheRef = doc(db, "pca_cache", year);
-    const itemsQuery = query(collection(db, "pca_data"), where("ano", "in", [year, yearNum]));
+    const itemsQuery = query(collection(db, "pca_data"), where("ano", "in", [String(year), Number(year)]));
 
     let rawOfficialItems: any[] = [];
     let firestoreManualItems: ContractItem[] = [];
@@ -112,59 +112,53 @@ export const fetchPcaData = async (
     rawOfficialItems = await tryLocalJson();
     console.log(`[PCA Service] Snapshot local carregado: ${rawOfficialItems.length} itens.`);
 
-    // 4. Se não estiver forçando sincronização com a PNCP, buscar atualizações no Firestore (Manual + Cache)
+    // 4. Buscar no Firestore
     try {
         report(20);
-
-        // Timeout de 2 segundos para o Firestore para não travar a experiência do usuário
-        const firestorePromise = Promise.all([
+        const [cacheSnap, suppSnap] = await Promise.all([
             getDoc(cacheRef).catch(() => null),
             getDocs(itemsQuery).catch(() => null)
         ]);
 
-        const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000));
+        if (cacheSnap?.exists()) {
+            cacheMetadata = cacheSnap.data();
+            if (cacheMetadata.items && (rawOfficialItems.length === 0 || forceSync)) {
+                rawOfficialItems = cacheMetadata.items;
+                console.log(`[PCA Service] Usando cache do Firestore (${rawOfficialItems.length} itens)`);
+            }
+        }
 
-        const results = await Promise.race([firestorePromise, timeoutPromise]);
-
-        if (results) {
-            const [cacheSnap, suppSnap] = results;
-
-            if (cacheSnap?.exists()) {
-                cacheMetadata = cacheSnap.data();
-                // Se o cache do Firestore for mais novo ou se o local falhou, usamos ele
-                if (cacheMetadata.items && (rawOfficialItems.length === 0 || forceSync)) {
-                    rawOfficialItems = cacheMetadata.items;
-                    console.log(`[PCA Service] Usando cache do Firestore (${rawOfficialItems.length} itens)`);
+        if (suppSnap && !suppSnap.empty) {
+            console.log(`[PCA Service] Documentos encontrados: ${suppSnap.size}`);
+            suppSnap.forEach((doc) => {
+                const d = doc.data();
+                if (d.isManual) {
+                    firestoreManualItems.push({
+                        id: doc.id,
+                        titulo: d.titulo || "Item Manual",
+                        categoria: d.categoria,
+                        valor: Number(d.valor || 0),
+                        valorExecutado: Number(d.valorExecutado || 0),
+                        inicio: d.inicio || new Date().toISOString(),
+                        area: d.area || "Manual",
+                        protocoloSIPAC: d.protocoloSIPAC || '',
+                        dadosSIPAC: d.dadosSIPAC || null,
+                        isManual: true,
+                        ano: String(year)
+                    } as any);
+                } else if (d.officialId) {
+                    firestoreDataUpdates[String(d.officialId)] = d;
                 }
-            }
-
-            if (suppSnap) {
-                suppSnap.forEach((doc) => {
-                    const d = doc.data();
-                    if (d.isManual) {
-                        firestoreManualItems.push({
-                            id: doc.id,
-                            titulo: d.titulo || "Item Manual",
-                            categoria: d.categoria,
-                            valor: Number(d.valor || 0),
-                            valorExecutado: Number(d.valorExecutado || 0),
-                            inicio: d.inicio || new Date().toISOString(),
-                            area: d.area || "Manual",
-                            isManual: true,
-                            ano: String(year)
-                        } as any);
-                    } else {
-                        firestoreDataUpdates[String(d.officialId)] = d;
-                    }
-                });
-                console.log(`[PCA Service] ${firestoreManualItems.length} itens manuais e ${Object.keys(firestoreDataUpdates).length} atualizações oficiais encontradas.`);
-            }
+            });
+        } else {
+            console.log(`[PCA Service] Nenhum documento retornado na query para o ano ${year}`);
+            // Backup: Tentar sem Filtro se for erro de índice/tipo (apenas para debug se necessário, mas vamos confiar na query por agora)
         }
     } catch (fsErr) {
         console.error("[PCA Service] Erro ao carregar dados do Firestore:", fsErr);
     }
 
-    // 5. LIVE SYNC (Somente se explicitamente solicitado ou se tudo estiver vazio)
+    // 5. LIVE SYNC (PNCP)
     const shouldSyncNow = forceSync || (rawOfficialItems.length === 0 && !skipSync);
     if (shouldSyncNow) {
         try {
@@ -188,7 +182,7 @@ export const fetchPcaData = async (
                     }
                 }
 
-                // Salva no Firestore para as próximas vezes
+                // Salva no Firestore
                 setDoc(cacheRef, {
                     items: rawOfficialItems,
                     updatedAt: Timestamp.now(),
@@ -202,9 +196,9 @@ export const fetchPcaData = async (
 
     report(90);
 
-    // 6. Mapeamento Final e Unificação
+    // 6. Mapeamento Final
     const mappedOfficial = rawOfficialItems.map((item: any, index: number) => {
-        const officialId = String(item.id || item.numeroItem || index);
+        const officialId = String(item.id || item.numeroItem || index).trim();
         const pncpCategory = String(item.categoriaItemPcaNome || item.nomeClassificacao || '').toLowerCase();
 
         let categoria = Category.Bens;
@@ -226,6 +220,8 @@ export const fetchPcaData = async (
             inicio: item.dataDesejada || new Date().toISOString().split('T')[0],
             fim: item.dataFim || '',
             area: item.nomeUnidade || "IFES - BSF",
+            protocoloSIPAC: extra.protocoloSIPAC || '',
+            dadosSIPAC: extra.dadosSIPAC || null,
             isManual: false,
             ano: String(year)
         };
@@ -252,11 +248,20 @@ export const fetchPcaData = async (
         pcaMeta
     };
 
-    // Atualiza cache em memória
     inMemoryCache[year] = result;
-
-    console.log(`[PCA Service] ✅ Carregamento finalizado para ${year}. Total: ${finalData.length} itens.`);
+    console.log(`[PCA Service] ✅ Finalizado. Total: ${finalData.length} itens.`);
     report(100);
-
     return result;
+};
+
+export const updatePcaCache = (year: string, itemId: string | number, newData: any) => {
+    if (inMemoryCache[year] && inMemoryCache[year].data) {
+        const index = inMemoryCache[year].data.findIndex((i: any) => String(i.id) === String(itemId));
+        if (index !== -1) {
+            inMemoryCache[year].data[index] = {
+                ...inMemoryCache[year].data[index],
+                ...newData
+            };
+        }
+    }
 };

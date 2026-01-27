@@ -19,6 +19,11 @@ export interface ContractItem {
   riskStatus?: 'Baixo' | 'Médio' | 'Alto';
   isManual?: boolean;
   ano?: string;
+  // Integração SIPAC
+  protocoloSIPAC?: string;
+  dadosSIPAC?: SIPACProcess & {
+    ultimaAtualizacao?: string;
+  };
 }
 
 export interface SummaryData {
@@ -57,4 +62,66 @@ export interface BudgetRecord {
   empenhado: number;
   executadoRP: number;
   executado: number;
+}
+
+export interface SIPACDocument {
+  ordem: string;
+  tipo: string;
+  data: string;
+  unidadeOrigem: string;
+  natureza: string;
+  statusVisualizacao: string; // Link or text
+  url?: string;
+}
+
+export interface SIPACMovement {
+  data: string;
+  horario: string;
+  unidadeOrigem: string;
+  unidadeDestino: string;
+  usuarioRemetente: string;
+  dataRecebimento: string;
+  horarioRecebimento: string;
+  usuarioRecebedor: string;
+  urgente?: string;
+}
+
+export interface SIPACIncident {
+  numeroDocumento: string;
+  tipoDocumento: string;
+  usuarioSolicitacao: string;
+  dataSolicitacao: string;
+  usuarioCancelamento: string;
+  dataCancelamento: string;
+  justificativa: string;
+}
+
+export interface SIPACProcess {
+  // Cabeçalho e Identificação
+  numeroProcesso: string;
+  dataAutuacion: string;
+  horarioAutuacion: string;
+  usuarioAutuacion: string;
+  natureza: string;
+  status: string;
+  dataCadastro: string;
+  unidadeOrigem: string;
+  totalDocumentos: string;
+  observacao: string;
+
+  // Classificação Temática
+  assuntoCodigo: string;
+  assuntoDescricao: string;
+  assuntoDetalhado: string;
+
+  // Interessados
+  interessados: {
+    tipo: string;
+    nome: string;
+  }[];
+
+  // Listas
+  documentos: SIPACDocument[];
+  movimentacoes: SIPACMovement[];
+  incidentes: SIPACIncident[];
 }
