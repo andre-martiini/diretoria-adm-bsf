@@ -17,7 +17,7 @@ import {
 import {
     CNPJ_IFES_BSF,
     PCA_YEARS_MAP,
-    LOCAL_API_SERVER
+    API_SERVER_URL
 } from '../constants';
 
 // In-memory cache for the current session
@@ -55,7 +55,8 @@ export const fetchLocalPcaSnapshot = async (year: string): Promise<ContractItem[
                     fim: item.dataFim || '',
                     area: item.nomeUnidade || "IFES - BSF",
                     isManual: false,
-                    ano: String(year)
+                    ano: String(year),
+                    identificadorFuturaContratacao: item.grupoContratacaoCodigo || ''
                 };
             });
         }
@@ -143,6 +144,7 @@ export const fetchPcaData = async (
                         area: d.area || "Manual",
                         protocoloSIPAC: d.protocoloSIPAC || '',
                         dadosSIPAC: d.dadosSIPAC || null,
+                        identificadorFuturaContratacao: d.identificadorFuturaContratacao || '',
                         isManual: true,
                         ano: String(year)
                     } as any);
@@ -165,7 +167,7 @@ export const fetchPcaData = async (
             console.log(`[PCA Service] 📡 Realizando Sincronização LIVE com PNCP...`);
             const seq = PCA_YEARS_MAP[year] || '12';
             const pageSize = 100;
-            const firstUrl = `${LOCAL_API_SERVER}/api/pncp/pca/${CNPJ_IFES_BSF}/${year}?tamanhoPagina=${pageSize}&sequencial=${seq}&pagina=1`;
+            const firstUrl = `${API_SERVER_URL}/api/pncp/pca/${CNPJ_IFES_BSF}/${year}?tamanhoPagina=${pageSize}&sequencial=${seq}&pagina=1`;
             const firstRes = await fetch(firstUrl);
 
             if (firstRes.ok) {
@@ -174,7 +176,7 @@ export const fetchPcaData = async (
                 const totalPages = firstData.totalPaginas || 1;
 
                 for (let p = 2; p <= totalPages; p++) {
-                    const res = await fetch(`${LOCAL_API_SERVER}/api/pncp/pca/${CNPJ_IFES_BSF}/${year}?tamanhoPagina=${pageSize}&sequencial=${seq}&pagina=${p}`);
+                    const res = await fetch(`${API_SERVER_URL}/api/pncp/pca/${CNPJ_IFES_BSF}/${year}?tamanhoPagina=${pageSize}&sequencial=${seq}&pagina=${p}`);
                     if (res.ok) {
                         const pageData = await res.json();
                         rawOfficialItems = [...rawOfficialItems, ...(pageData.data || [])];
@@ -222,6 +224,7 @@ export const fetchPcaData = async (
             area: item.nomeUnidade || "IFES - BSF",
             protocoloSIPAC: extra.protocoloSIPAC || '',
             dadosSIPAC: extra.dadosSIPAC || null,
+            identificadorFuturaContratacao: extra.identificadorFuturaContratacao || item.grupoContratacaoCodigo || '',
             isManual: false,
             ano: String(year)
         };

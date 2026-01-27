@@ -153,7 +153,7 @@ export const calculateProcessMetrics = (process: SIPACProcess | undefined | null
     // Tempo em B = t2 - t1.
 
     if (i < movs.length - 1) {
-      const nextMov = movs[i+1];
+      const nextMov = movs[i + 1];
       const entryTime = parseDate(currentMov.data, currentMov.horario); // Saiu de A, Entrou em B
       const exitTime = parseDate(nextMov.data, nextMov.horario); // Saiu de B
 
@@ -224,6 +224,8 @@ export const generateSankeyData = (items: ContractItem[]) => {
     movs.forEach(m => {
       const source = m.unidadeOrigem;
       const target = m.unidadeDestino;
+
+      if (!source || !target || source === target) return;
 
       if (!nodes.includes(source)) nodes.push(source);
       if (!nodes.includes(target)) nodes.push(target);

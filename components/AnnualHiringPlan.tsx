@@ -39,7 +39,8 @@ import {
   setDoc,
   addDoc,
   deleteDoc,
-  Timestamp
+  Timestamp,
+  writeBatch
 } from 'firebase/firestore';
 import {
   ContractItem,
@@ -52,7 +53,7 @@ import {
   PCA_YEARS_MAP,
   DEFAULT_YEAR,
   FALLBACK_DATA,
-  LOCAL_API_SERVER
+  API_SERVER_URL
 } from '../constants';
 import {
   formatCurrency,
@@ -82,6 +83,7 @@ const AnnualHiringPlan: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('Todas');
   const [statusFilter, setStatusFilter] = useState<string>('Todos');
   const [processFilter, setProcessFilter] = useState<string>('Todos');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage] = useState<number>(10);
@@ -208,85 +210,145 @@ const AnnualHiringPlan: React.FC = () => {
   const handleSaveValues = async () => {
     if (!editingItem) return;
     setSaving(true);
+    setToast(null);
 
     try {
-      const docId = editingItem.isManual ? String(editingItem.id) : `${selectedYear}-${editingItem.id}`;
-      const docRef = doc(db, "pca_data", docId);
+      // Caso 1: Aglomeração de múltiplos itens
+      if (editingItem.id === 'bulk-selection') {
+        const batch = writeBatch(db);
+        const selectedItems = data.filter(i => selectedIds.includes(String(i.id)));
 
-      // Sanitização de dados para o Firestore
-      // Mantemos o objeto completo do SIPAC para exibir detalhes no modal
-      const sanitizedSIPAC = editingItem.dadosSIPAC ? {
-        ...editingItem.dadosSIPAC,
-        status: String(editingItem.dadosSIPAC.status || 'N/A'),
-        assuntoDetalhado: String(editingItem.dadosSIPAC.assuntoDetalhado || ''),
-        unidadeAtual: String(editingItem.dadosSIPAC.unidadeAtual || ''),
-        ultimaMovimentacao: String(editingItem.dadosSIPAC.ultimaMovimentacao || ''),
-        ultimaAtualizacao: String(editingItem.dadosSIPAC.ultimaAtualizacao || '')
-      } : null;
+        const sanitizedSIPAC = editingItem.dadosSIPAC ? {
+          ...editingItem.dadosSIPAC,
+          ultimaAtualizacao: new Date().toLocaleString()
+        } : null;
 
-      const saveData = {
-        officialId: editingItem.isManual ? null : String(editingItem.id).trim(),
-        ano: selectedYear,
-        isManual: editingItem.isManual || false,
-        updatedAt: Timestamp.now(),
-        protocoloSIPAC: String(editingItem.protocoloSIPAC || ''),
-        dadosSIPAC: sanitizedSIPAC,
-        ...(editingItem.isManual ? {
-          titulo: editingItem.titulo,
-          categoria: editingItem.categoria,
-          valor: editingItem.valor,
-          inicio: editingItem.inicio,
-          area: editingItem.area
-        } : {})
-      };
+        for (const item of selectedItems) {
+          const docId = item.isManual ? String(item.id) : `${selectedYear}-${item.id}`;
+          const docRef = doc(db, "pca_data", docId);
+          batch.set(docRef, {
+            protocoloSIPAC: editingItem.protocoloSIPAC,
+            dadosSIPAC: sanitizedSIPAC,
+            updatedAt: Timestamp.now(),
+            ano: selectedYear,
+            isManual: item.isManual || false,
+            officialId: item.isManual ? null : String(item.id).trim()
+          }, { merge: true });
+        }
 
-      console.log("💾 Salvando ID:", docId, "Data:", saveData);
+        await batch.commit();
 
-      // SALVA NO BANCO com Timeout de 5s para não travar a UI
-      // Se demorar, assumimos que salvou offline/cache e liberamos a interface
-      const savePromise = setDoc(docRef, saveData, { merge: true });
-      const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve('timeout'), 15000));
+        setData(prev => prev.map(item =>
+          selectedIds.includes(String(item.id))
+            ? { ...item, protocoloSIPAC: editingItem.protocoloSIPAC, dadosSIPAC: sanitizedSIPAC }
+            : item
+        ));
 
-      const result = await Promise.race([savePromise, timeoutPromise]);
-
-      if (result === 'timeout') {
-        console.warn("⚠️ Salvamento demorou > 5s. Assumindo modo offline.");
-        setToast({ message: "Salvo em modo offline (sincronização pendente).", type: "warning" });
+        setToast({ message: `${selectedIds.length} itens vinculados com sucesso!`, type: "success" });
+        setSelectedIds([]);
       } else {
-        console.log("✅ Salvo com sucesso no Firestore!");
+        // Caso 2: Individual
+        const docId = editingItem.isManual ? String(editingItem.id) : `${selectedYear}-${editingItem.id}`;
+        const docRef = doc(db, "pca_data", docId);
+
+        const sanitizedSIPAC = editingItem.dadosSIPAC ? {
+          ...editingItem.dadosSIPAC,
+          status: String(editingItem.dadosSIPAC.status || 'N/A'),
+          assuntoDetalhado: String(editingItem.dadosSIPAC.assuntoDetalhado || ''),
+          unidadeAtual: String(editingItem.dadosSIPAC.unidadeAtual || ''),
+          ultimaMovimentacao: String(editingItem.dadosSIPAC.ultimaMovimentacao || ''),
+          ultimaAtualizacao: String(editingItem.dadosSIPAC.ultimaAtualizacao || '')
+        } : null;
+
+        const saveData = {
+          officialId: editingItem.isManual ? null : String(editingItem.id).trim(),
+          ano: selectedYear,
+          isManual: editingItem.isManual || false,
+          updatedAt: Timestamp.now(),
+          protocoloSIPAC: String(editingItem.protocoloSIPAC || ''),
+          dadosSIPAC: sanitizedSIPAC,
+          ...(editingItem.isManual ? {
+            titulo: editingItem.titulo,
+            categoria: editingItem.categoria,
+            valor: editingItem.valor,
+            inicio: editingItem.inicio,
+            area: editingItem.area
+          } : {})
+        };
+
+        await setDoc(docRef, saveData, { merge: true });
+
+        setData(prevData => prevData.map(item =>
+          String(item.id) === String(editingItem.id) ? { ...item, ...editingItem, dadosSIPAC: sanitizedSIPAC } : item
+        ));
+
         setToast({ message: "Processo vinculado com sucesso!", type: "success" });
       }
 
-      // ATUALIZAÇÃO OTIMISTA: Reflete na tabela na hora
-      setData(prevData => prevData.map(item =>
-        String(item.id) === String(editingItem.id) ? { ...item, ...editingItem } : item
-      ));
-
-      // Se estivemos visualizando este item nos detalhes, atualizamos lá também
-      if (viewingItem && String(viewingItem.id) === String(editingItem.id)) {
-        setViewingItem({ ...viewingItem, ...editingItem });
-      }
-
-      // ATUALIZA O CACHE PERSISTENTE (MEMÓRIA)
-      updatePcaCache(selectedYear, String(editingItem.id), {
-        protocoloSIPAC: String(editingItem.protocoloSIPAC || ''),
-        dadosSIPAC: sanitizedSIPAC
-      });
-
-      // FECHA O MODAL
       setIsEditModalOpen(false);
       setSaving(false);
-
-      // AUTO-OPEN DETAILS if protocol is valid and newly searched
-      if (editingItem.protocoloSIPAC && editingItem.protocoloSIPAC.length >= 15 && editingItem.dadosSIPAC) {
-        setViewingItem(editingItem);
-        setTimeout(() => setIsDetailsModalOpen(true), 300);
-      }
-
     } catch (err) {
       console.error("❌ Erro ao salvar:", err);
       // EXIBE ALERTA DE ERRO
       alert(`Erro ao salvar no banco de dados: ${err instanceof Error ? err.message : String(err)}`);
+      setSaving(false);
+    }
+  };
+
+  const handleBulkLink = () => {
+    const selectedItems = data.filter(i => selectedIds.includes(String(i.id)));
+    if (selectedItems.length === 0) return;
+
+    const totalValue = selectedItems.reduce((acc, i) => acc + i.valor, 0);
+    const dummyItem: ContractItem = {
+      id: 'bulk-selection',
+      titulo: `Aglomeração de ${selectedItems.length} itens selecionados`,
+      valor: totalValue,
+      categoria: selectedItems[0]?.categoria || Category.Bens,
+      inicio: selectedItems[0]?.inicio || new Date().toISOString(),
+      fim: '',
+      area: 'Múltiplas Áreas',
+      isManual: false,
+      protocoloSIPAC: '',
+      dadosSIPAC: null
+    };
+
+    setEditingItem(dummyItem);
+    setIsEditModalOpen(true);
+  };
+
+  const handleUnlinkProcess = async (item: ContractItem) => {
+    if (!window.confirm("Deseja realmente remover o vínculo com este processo SIPAC?")) return;
+
+    setSaving(true);
+    try {
+      const docId = item.isManual ? String(item.id) : `${selectedYear}-${item.id}`;
+      const docRef = doc(db, "pca_data", docId);
+
+      const saveData = {
+        protocoloSIPAC: '',
+        dadosSIPAC: null,
+        updatedAt: Timestamp.now()
+      };
+
+      await setDoc(docRef, saveData, { merge: true });
+
+      // Otimista
+      setData(prevData => prevData.map(i =>
+        String(i.id) === String(item.id) ? { ...i, protocoloSIPAC: '', dadosSIPAC: null } : i
+      ));
+
+      if (viewingItem && String(viewingItem.id) === String(item.id)) {
+        setViewingItem({ ...viewingItem, protocoloSIPAC: '', dadosSIPAC: null });
+        setIsDetailsModalOpen(false); // Close details as there's no process now
+      }
+
+      setToast({ message: "Vínculo removido com sucesso!", type: "success" });
+      setIsEditModalOpen(false);
+    } catch (err) {
+      console.error("Erro ao desvincular:", err);
+      setToast({ message: "Erro ao remover vínculo.", type: "error" });
+    } finally {
       setSaving(false);
     }
   };
@@ -296,7 +358,7 @@ const AnnualHiringPlan: React.FC = () => {
 
     setIsFetchingSIPAC(true);
     try {
-      const response = await fetch(`${LOCAL_API_SERVER}/api/sipac/processo?protocolo=${item.protocoloSIPAC}`);
+      const response = await fetch(`${API_SERVER_URL}/api/sipac/processo?protocolo=${item.protocoloSIPAC}`);
       if (!response.ok) throw new Error('Falha ao buscar dados no SIPAC');
 
       const sipacData = await response.json();
@@ -392,65 +454,110 @@ const AnnualHiringPlan: React.FC = () => {
     { name: 'TIC', value: summary.tic.val, fill: '#3b82f6' }
   ], [summary]);
 
-  const filteredData = useMemo(() => {
-    let result = [...processedData];
-
-    if (selectedCategory !== 'Todas') {
-      result = result.filter(item => item.categoria === selectedCategory);
-    }
-
-    if (statusFilter !== 'Todos') {
-      result = result.filter(item => item.computedStatus === statusFilter);
-    }
-
+  // --- LÓGICA DE AGREGAÇÃO (NÍVEL DE EXECUÇÃO E PLANEJAMENTO) ---
+  const aggregatedData = useMemo(() => {
+    // 1. Filtragem Inicial (Filtros de UI)
+    let base = [...processedData];
+    if (selectedCategory !== 'Todas') base = base.filter(i => i.categoria === selectedCategory);
+    if (statusFilter !== 'Todos') base = base.filter(i => i.computedStatus === statusFilter);
     if (processFilter !== 'Todos') {
-      if (processFilter === 'Com Processo') {
-        result = result.filter(item => item.protocoloSIPAC && item.protocoloSIPAC.length > 5);
-      } else if (processFilter === 'Sem Processo') {
-        result = result.filter(item => !item.protocoloSIPAC || item.protocoloSIPAC.length <= 5);
-      }
+      if (processFilter === 'Com Processo') base = base.filter(i => i.protocoloSIPAC && i.protocoloSIPAC.length > 5);
+      else if (processFilter === 'Sem Processo') base = base.filter(i => !i.protocoloSIPAC || i.protocoloSIPAC.length <= 5);
     }
-
     if (searchTerm) {
       const low = searchTerm.toLowerCase();
-      result = result.filter(item =>
-        item.titulo.toLowerCase().includes(low) ||
-        item.area.toLowerCase().includes(low)
-      );
+      base = base.filter(i => i.titulo.toLowerCase().includes(low) || i.area.toLowerCase().includes(low));
     }
 
-    const sorted = result.sort((a, b) => {
-      // Handle derived fields for sorting
-      let aVal, bVal;
+    // 2. Agrupamento por Protocolo SIPAC (Prioridade 1 - Execução)
+    const sipacGroups: Record<string, ContractItem[]> = {};
+    const notInSipac: ContractItem[] = [];
 
-      if (sortConfig.key === 'protocoloSIPAC') {
-        aVal = a.protocoloSIPAC || '';
-        bVal = b.protocoloSIPAC || '';
+    base.forEach(item => {
+      if (item.protocoloSIPAC && item.protocoloSIPAC.length > 5) {
+        if (!sipacGroups[item.protocoloSIPAC]) sipacGroups[item.protocoloSIPAC] = [];
+        sipacGroups[item.protocoloSIPAC].push(item);
       } else {
-        aVal = a[sortConfig.key] || '';
-        bVal = b[sortConfig.key] || '';
+        notInSipac.push(item);
       }
-
-      // Handle nulls/empty for protocol
-      if (sortConfig.key === 'protocoloSIPAC') {
-        if (!aVal && bVal) return 1; // Nulls last
-        if (aVal && !bVal) return -1;
-      }
-
-      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
     });
 
-    return sorted;
+    // 3. Agrupamento por IFC (Prioridade 2 - Planejamento)
+    const ifcGroups: Record<string, ContractItem[]> = {};
+    const individuals: ContractItem[] = [];
+
+    notInSipac.forEach(item => {
+      if (item.identificadorFuturaContratacao) {
+        if (!ifcGroups[item.identificadorFuturaContratacao]) ifcGroups[item.identificadorFuturaContratacao] = [];
+        ifcGroups[item.identificadorFuturaContratacao].push(item);
+      } else {
+        individuals.push(item);
+      }
+    });
+
+    // 4. Construção das Linhas de Exibição (Display Rows)
+    const resultRows: ContractItem[] = [];
+
+    // Processar Grupos SIPAC
+    Object.entries(sipacGroups).forEach(([proto, items]) => {
+      if (items.length === 1) {
+        resultRows.push(items[0]);
+      } else {
+        const first = items[0];
+        resultRows.push({
+          ...first,
+          id: `group-sipac-${proto}`,
+          titulo: first.titulo,
+          valor: items.reduce((acc, i) => acc + i.valor, 0),
+          isGroup: true,
+          itemCount: items.length,
+          childItems: items
+        });
+      }
+    });
+
+    // Processar Grupos IFC
+    Object.entries(ifcGroups).forEach(([ifc, items]) => {
+      if (items.length === 1) {
+        resultRows.push(items[0]);
+      } else {
+        const first = items[0];
+        resultRows.push({
+          ...first,
+          id: `group-ifc-${ifc}`,
+          titulo: first.titulo,
+          valor: items.reduce((acc, i) => acc + i.valor, 0),
+          isGroup: true,
+          itemCount: items.length,
+          childItems: items
+        });
+      }
+    });
+
+    // Adicionar Indivíduos
+    resultRows.push(...individuals);
+
+    // 5. Ordenação Final
+    return resultRows.sort((a, b) => {
+      let aVal = a[sortConfig.key] || '';
+      let bVal = b[sortConfig.key] || '';
+
+      if (sortConfig.key === 'valor') {
+        return sortConfig.direction === 'desc' ? Number(bVal) - Number(aVal) : Number(aVal) - Number(bVal);
+      }
+
+      if (String(aVal).toLowerCase() < String(bVal).toLowerCase()) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (String(aVal).toLowerCase() > String(bVal).toLowerCase()) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
   }, [processedData, searchTerm, selectedCategory, statusFilter, processFilter, sortConfig]);
 
   const pagedData = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
-    return filteredData.slice(start, start + itemsPerPage);
-  }, [filteredData, currentPage]);
+    return aggregatedData.slice(start, start + itemsPerPage);
+  }, [aggregatedData, currentPage]);
 
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const totalPages = Math.ceil(aggregatedData.length / itemsPerPage);
 
   const closeToast = () => setToast(null);
 
@@ -806,6 +913,39 @@ const AnnualHiringPlan: React.FC = () => {
               setSortConfig({ key, direction });
             }}
             sortConfig={sortConfig}
+            selectedIds={selectedIds}
+            onToggleSelection={(id) => {
+              // Encontrar o item ou grupo correspondente
+              const item = aggregatedData.find(i => String(i.id) === id);
+              if (!item) return;
+
+              if (item.isGroup && item.childItems) {
+                const childIds = item.childItems.map(c => String(c.id));
+                const allSelected = childIds.every(cid => selectedIds.includes(cid));
+
+                if (allSelected) {
+                  setSelectedIds(prev => prev.filter(pid => !childIds.includes(pid)));
+                } else {
+                  setSelectedIds(prev => Array.from(new Set([...prev, ...childIds])));
+                }
+              } else {
+                setSelectedIds(prev =>
+                  prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+                );
+              }
+            }}
+            onToggleAll={() => {
+              const allIdsInPage = pagedData.flatMap(item =>
+                item.isGroup && item.childItems ? item.childItems.map(c => String(c.id)) : [String(item.id)]
+              );
+              const allSelected = allIdsInPage.every(id => selectedIds.includes(id));
+
+              if (allSelected) {
+                setSelectedIds(prev => prev.filter(id => !allIdsInPage.includes(id)));
+              } else {
+                setSelectedIds(prev => Array.from(new Set([...prev, ...allIdsInPage])));
+              }
+            }}
             onEdit={(item) => {
               setEditingItem(item);
               setIsEditModalOpen(true);
@@ -860,12 +1000,28 @@ const AnnualHiringPlan: React.FC = () => {
             </div>
 
             <div className="p-8 space-y-6">
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Item Selecionado</p>
-                <p className="text-sm font-bold text-slate-700 line-clamp-2">{editingItem.titulo}</p>
-                <div className="mt-4 flex justify-between items-center">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Valor Planejado</span>
-                  <span className="text-lg font-black text-ifes-green">{formatCurrency(editingItem.valor)}</span>
+              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                <p className="text-[10px] font-black text-slate-400 uppercase mb-3 tracking-widest">Itens Selecionados para Vínculo</p>
+
+                <div className="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                  {(editingItem.isGroup || editingItem.id === 'bulk-selection') ? (
+                    (editingItem.childItems || (editingItem.id === 'bulk-selection' ? data.filter(i => selectedIds.includes(String(i.id))) : [])).map((item, idx) => (
+                      <div key={idx} className="flex justify-between items-start gap-4 pb-2 border-b border-slate-200/50 last:border-0">
+                        <p className="text-xs font-bold text-slate-700 leading-tight flex-1">{item.titulo}</p>
+                        <span className="text-[11px] font-black text-slate-500 font-mono whitespace-nowrap">{formatCurrency(item.valor)}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm font-bold text-slate-700 flex-1">{editingItem.titulo}</p>
+                      <span className="text-sm font-black text-slate-500 font-mono">{formatCurrency(editingItem.valor)}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-4 pt-4 border-t-2 border-dashed border-slate-200 flex justify-between items-center">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor Total da Contratação</span>
+                  <span className="text-xl font-black text-ifes-green tabular-nums">{formatCurrency(editingItem.valor)}</span>
                 </div>
               </div>
 
@@ -891,6 +1047,15 @@ const AnnualHiringPlan: React.FC = () => {
                     {isFetchingSIPAC ? <RefreshCw size={16} className="animate-spin" /> : <RefreshCw size={16} />}
                     Buscar
                   </button>
+                  {editingItem.protocoloSIPAC && editingItem.dadosSIPAC && (
+                    <button
+                      onClick={() => handleUnlinkProcess(editingItem)}
+                      className="px-4 bg-red-50 text-red-600 rounded-2xl font-black text-xs hover:bg-red-600 hover:text-white transition-all flex items-center gap-2 border border-red-100 shadow-sm"
+                    >
+                      <Trash2 size={16} />
+                      Desvincular
+                    </button>
+                  )}
                 </div>
 
                 {editingItem.dadosSIPAC && (
@@ -1102,6 +1267,13 @@ const AnnualHiringPlan: React.FC = () => {
                 Editar Vínculo
               </button>
               <button
+                onClick={() => handleUnlinkProcess(viewingItem)}
+                className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-100 rounded-xl text-xs font-black text-red-600 hover:bg-red-600 hover:text-white transition-all shadow-sm group"
+              >
+                <Link size={16} className="rotate-45" />
+                Desvincular
+              </button>
+              <button
                 onClick={() => setIsDetailsModalOpen(false)}
                 className="p-2.5 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all text-slate-400 bg-white border border-slate-100"
               >
@@ -1135,6 +1307,17 @@ const AnnualHiringPlan: React.FC = () => {
                         <span className="block text-[8px] font-black text-slate-300 uppercase mb-1">Categoria</span>
                         <span className="text-sm font-bold text-slate-600 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">{viewingItem.categoria}</span>
                       </div>
+                      {viewingItem.identificadorFuturaContratacao && (
+                        <>
+                          <div className="w-px h-8 bg-slate-100" />
+                          <div>
+                            <span className="block text-[8px] font-black text-slate-300 uppercase mb-1">Cód. Futura Contratação (IFC)</span>
+                            <span className="text-sm font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-lg border border-blue-100 font-mono italic lowercase">
+                              {viewingItem.identificadorFuturaContratacao}
+                            </span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -1444,6 +1627,39 @@ const AnnualHiringPlan: React.FC = () => {
 
             </div>
           </main>
+        </div>
+      )}
+
+      {/* Barra de Ações em Massa */}
+      {selectedIds.length > 0 && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom-10 duration-500">
+          <div className="bg-slate-900/90 backdrop-blur-md text-white px-8 py-4 rounded-[32px] shadow-2xl border border-white/10 flex items-center gap-8 min-w-[500px] justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-ifes-green rounded-2xl flex items-center justify-center text-white font-black shadow-lg">
+                {selectedIds.length}
+              </div>
+              <div>
+                <p className="text-xs font-black uppercase tracking-widest text-slate-400 leading-none mb-1">Itens Selecionados</p>
+                <p className="text-sm font-bold text-white">Pronto para aglomerar em processo único</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setSelectedIds([])}
+                className="px-4 py-2 text-xs font-black text-slate-400 hover:text-white transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleBulkLink}
+                className="bg-ifes-green hover:bg-emerald-500 text-white px-6 py-2.5 rounded-2xl text-xs font-black transition-all shadow-lg flex items-center gap-2 active:scale-95"
+              >
+                <Link size={16} />
+                Vincular Processo Único
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

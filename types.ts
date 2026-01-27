@@ -25,6 +25,10 @@ export interface ContractItem {
     ultimaAtualizacao?: string;
   };
   computedStatus?: string;
+  identificadorFuturaContratacao?: string;
+  isGroup?: boolean;
+  itemCount?: number;
+  childItems?: ContractItem[];
 }
 
 export interface SummaryData {

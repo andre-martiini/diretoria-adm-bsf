@@ -13,9 +13,15 @@ interface ContractTableProps {
   onEdit?: (item: ContractItem) => void;
   onViewDetails?: (item: ContractItem) => void;
   isPublic?: boolean;
+  selectedIds?: string[];
+  onToggleSelection?: (id: string) => void;
+  onToggleAll?: () => void;
 }
 
-const ContractTable: React.FC<ContractTableProps> = ({ data, loading, onSort, sortConfig, onEdit, onViewDetails, isPublic = false }) => {
+const ContractTable: React.FC<ContractTableProps> = ({
+  data, loading, onSort, sortConfig, onEdit, onViewDetails, isPublic = false,
+  selectedIds = [], onToggleSelection, onToggleAll
+}) => {
   const TableHeader = ({ label, sortKey, align = 'left' }: { label: string; sortKey?: keyof ContractItem; align?: 'left' | 'center' | 'right' }) => (
     <th
       className={`p-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100 ${sortKey ? 'cursor-pointer hover:bg-slate-50' : ''} transition-colors whitespace-nowrap`}
@@ -32,38 +38,52 @@ const ContractTable: React.FC<ContractTableProps> = ({ data, loading, onSort, so
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-left border-collapse">
-        <thead className="sticky top-0 z-10">
+      <table className="w-full border-collapse">
+        <thead>
           <tr className="bg-slate-50/50">
+            {!isPublic && (
+              <th className="p-4 border-b border-slate-100 text-center w-10">
+                <input
+                  type="checkbox"
+                  className="rounded border-slate-300 text-ifes-green focus:ring-ifes-green"
+                  onChange={() => onToggleAll && onToggleAll()}
+                  checked={data.length > 0 && selectedIds.length === data.length}
+                />
+              </th>
+            )}
             <TableHeader label="Descrição" sortKey="titulo" />
-            <TableHeader label="Status" align="center" sortKey="computedStatus" />
+            <TableHeader label="Status" align="center" />
             <TableHeader label="Previsto" sortKey="valor" align="right" />
-            <TableHeader label="Processo SIPAC" align="right" sortKey="protocoloSIPAC" />
+            <TableHeader label="Processo SIPAC" align="right" />
             {!isPublic && <TableHeader label="Ações" align="center" />}
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
           {loading ? (
             <tr>
-              <td colSpan={isPublic ? 4 : 5} className="p-24 text-center">
-                <div className="flex flex-col items-center gap-4">
-                  <div className="relative">
-                    <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
-                    <RefreshCw className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-indigo-600" size={16} />
-                  </div>
-                  <p className="text-sm font-bold text-slate-500 animate-pulse">Carregando Dados...</p>
+              <td colSpan={isPublic ? 4 : 6} className="p-20 text-center">
+                <div className="flex flex-col items-center gap-3">
+                  <RefreshCw className="animate-spin text-ifes-green" size={24} />
+                  <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Carregando Planejamento...</span>
                 </div>
               </td>
             </tr>
           ) : data.length > 0 ? (
             data.map((item) => {
-              const computedStatus = getProcessStatus(item);
+              const computedStatus = item.computedStatus || getProcessStatus(item);
               const statusColor = getStatusColor(computedStatus);
+
+              let isSelected = false;
+              if (item.isGroup && item.childItems) {
+                isSelected = item.childItems.every(c => selectedIds.includes(String(c.id)));
+              } else {
+                isSelected = selectedIds.includes(String(item.id));
+              }
 
               return (
                 <tr
                   key={item.id}
-                  className="hover:bg-slate-50/80 transition-all group cursor-pointer"
+                  className={`transition-all group cursor-pointer ${isSelected ? 'bg-ifes-green/5' : 'hover:bg-slate-50/80'}`}
                   onClick={() => {
                     if (item.protocoloSIPAC && onViewDetails) {
                       onViewDetails(item);
@@ -72,13 +92,35 @@ const ContractTable: React.FC<ContractTableProps> = ({ data, loading, onSort, so
                     }
                   }}
                 >
+                  {!isPublic && (
+                    <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        className="rounded border-slate-300 text-ifes-green focus:ring-ifes-green"
+                        checked={isSelected}
+                        onChange={() => onToggleSelection && onToggleSelection(String(item.id))}
+                      />
+                    </td>
+                  )}
                   <td className="p-4">
                     <div className="flex flex-col max-w-[400px]">
                       <span className="text-xs font-bold text-slate-800 line-clamp-2 leading-tight mb-1">
                         {item.titulo}
                         {item.isManual && <span className="ml-2 text-[8px] bg-amber-100 text-amber-700 px-1 rounded uppercase">Manual</span>}
+                        {item.isGroup && (
+                          <span className="ml-2 text-[9px] bg-blue-600 text-white px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter">
+                            {item.itemCount} itens
+                          </span>
+                        )}
                       </span>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{item.categoria} • {formatDate(item.inicio)}</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                        {item.categoria} • {formatDate(item.inicio)}
+                        {item.identificadorFuturaContratacao && (
+                          <span className="ml-2 px-1 bg-slate-100 text-slate-500 rounded font-mono text-[9px] lowercase">
+                            ifc: {item.identificadorFuturaContratacao}
+                          </span>
+                        )}
+                      </span>
                     </div>
                   </td>
                   <td className="p-4 text-center">
@@ -102,7 +144,7 @@ const ContractTable: React.FC<ContractTableProps> = ({ data, loading, onSort, so
                     <td className="p-4 text-center">
                       <div className="flex items-center justify-center gap-1">
                         <button
-                          onClick={() => onEdit && onEdit(item)}
+                          onClick={(e) => { e.stopPropagation(); onEdit && onEdit(item); }}
                           title="Vincular/Atualizar Processo SIPAC"
                           className="p-1.5 hover:bg-ifes-green/10 text-slate-400 hover:text-ifes-green rounded-lg transition-colors cursor-pointer"
                         >
@@ -128,7 +170,7 @@ const ContractTable: React.FC<ContractTableProps> = ({ data, loading, onSort, so
             })
           ) : (
             <tr>
-              <td colSpan={isPublic ? 4 : 5} className="p-20 text-center text-slate-400 font-medium italic">
+              <td colSpan={isPublic ? 4 : 6} className="p-20 text-center text-slate-400 font-medium italic">
                 Nenhum registro encontrado para os filtros selecionados.
               </td>
             </tr>

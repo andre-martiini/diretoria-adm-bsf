@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { API_SERVER_URL } from '../constants';
 import { SIPACProcess } from '../types';
 import { Search, Loader2, FileCheck, AlertCircle, History, FileText, Info, Users, AlertTriangle } from 'lucide-react';
 
@@ -19,7 +20,8 @@ export const SIPACImporter: React.FC = () => {
 
         try {
             // Correctly calling the backend which uses query parameters
-            const response = await fetch(`http://localhost:3002/api/sipac/processo?protocolo=${protocol}`);
+            // Correctly calling the backend which uses query parameters
+            const response = await fetch(`${API_SERVER_URL}/api/sipac/processo?protocolo=${protocol}`);
 
             if (!response.ok) {
                 throw new Error('Processo não encontrado ou erro no servidor SIPAC.');
