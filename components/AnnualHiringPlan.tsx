@@ -80,7 +80,9 @@ const AnnualHiringPlan: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState<string>(DEFAULT_YEAR);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('Todas');
-  const [selectedRisk, setSelectedRisk] = useState<string>('Todos');
+  const [statusFilter, setStatusFilter] = useState<string>('Todos');
+  const [processFilter, setProcessFilter] = useState<string>('Todos');
+
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage] = useState<number>(10);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'valor', direction: 'desc' });
@@ -168,10 +170,13 @@ const AnnualHiringPlan: React.FC = () => {
     return sorted.map(item => {
       const daysToStart = Math.ceil((new Date(item.inicio).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
       let risk: 'Baixo' | 'Médio' | 'Alto' = 'Baixo';
+
       if (daysToStart < 30) risk = 'Alto';
       else if (daysToStart < 60) risk = 'Médio';
 
-      return { ...item, riskStatus: risk };
+      const computedStatus = getProcessStatus(item);
+
+      return { ...item, riskStatus: risk, computedStatus };
     });
   }, [data]);
 
@@ -393,9 +398,19 @@ const AnnualHiringPlan: React.FC = () => {
     if (selectedCategory !== 'Todas') {
       result = result.filter(item => item.categoria === selectedCategory);
     }
-    if (selectedRisk !== 'Todos') {
-      result = result.filter(item => item.riskStatus === selectedRisk);
+
+    if (statusFilter !== 'Todos') {
+      result = result.filter(item => item.computedStatus === statusFilter);
     }
+
+    if (processFilter !== 'Todos') {
+      if (processFilter === 'Com Processo') {
+        result = result.filter(item => item.protocoloSIPAC && item.protocoloSIPAC.length > 5);
+      } else if (processFilter === 'Sem Processo') {
+        result = result.filter(item => !item.protocoloSIPAC || item.protocoloSIPAC.length <= 5);
+      }
+    }
+
     if (searchTerm) {
       const low = searchTerm.toLowerCase();
       result = result.filter(item =>
@@ -405,15 +420,30 @@ const AnnualHiringPlan: React.FC = () => {
     }
 
     const sorted = result.sort((a, b) => {
-      const aVal = a[sortConfig.key] || '';
-      const bVal = b[sortConfig.key] || '';
+      // Handle derived fields for sorting
+      let aVal, bVal;
+
+      if (sortConfig.key === 'protocoloSIPAC') {
+        aVal = a.protocoloSIPAC || '';
+        bVal = b.protocoloSIPAC || '';
+      } else {
+        aVal = a[sortConfig.key] || '';
+        bVal = b[sortConfig.key] || '';
+      }
+
+      // Handle nulls/empty for protocol
+      if (sortConfig.key === 'protocoloSIPAC') {
+        if (!aVal && bVal) return 1; // Nulls last
+        if (aVal && !bVal) return -1;
+      }
+
       if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
       if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
       return 0;
     });
 
     return sorted;
-  }, [processedData, searchTerm, selectedCategory, selectedRisk, sortConfig]);
+  }, [processedData, searchTerm, selectedCategory, statusFilter, processFilter, sortConfig]);
 
   const pagedData = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -727,16 +757,34 @@ const AnnualHiringPlan: React.FC = () => {
                   onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                 />
               </div>
+
               <select
-                value={selectedRisk}
-                onChange={(e) => { setSelectedRisk(e.target.value); setCurrentPage(1); }}
+                value={processFilter}
+                onChange={(e) => { setProcessFilter(e.target.value); setCurrentPage(1); }}
                 className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-[11px] font-bold text-slate-600 outline-none"
               >
-                <option value="Todos">Risco: Todos</option>
-                <option value="Alto">Alto Risco</option>
-                <option value="Médio">Médio</option>
-                <option value="Baixo">Baixo</option>
+                <option value="Todos">Filtro: Todos</option>
+                <option value="Com Processo">Processo Aberto</option>
+                <option value="Sem Processo">Processo Não Aberto</option>
               </select>
+
+              <select
+                value={statusFilter}
+                onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+                className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-[11px] font-bold text-slate-600 outline-none max-w-[150px]"
+              >
+                <option value="Todos">Status: Todos</option>
+                <option value="Processo Não Aberto">Não Aberto</option>
+                <option value="Planejamento da Contratação">Planejamento</option>
+                <option value="Composição de Preços">Preços</option>
+                <option value="Análise de Legalidade">Jurídico</option>
+                <option value="Fase Externa">Fase Externa</option>
+                <option value="Licitação Suspensa/Sob Análise">Suspenso</option>
+                <option value="Adjudicado/Homologado">Adjudicado</option>
+                <option value="Contratado">Contratado</option>
+                <option value="Encerrado/Arquivado">Encerrado</option>
+              </select>
+
               <select
                 value={selectedCategory}
                 onChange={(e) => { setSelectedCategory(e.target.value); setCurrentPage(1); }}

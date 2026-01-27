@@ -36,15 +36,16 @@ const ContractTable: React.FC<ContractTableProps> = ({ data, loading, onSort, so
         <thead className="sticky top-0 z-10">
           <tr className="bg-slate-50/50">
             <TableHeader label="Descrição" sortKey="titulo" />
+            <TableHeader label="Status" align="center" sortKey="computedStatus" />
             <TableHeader label="Previsto" sortKey="valor" align="right" />
-            <TableHeader label="Processo SIPAC" align="right" />
+            <TableHeader label="Processo SIPAC" align="right" sortKey="protocoloSIPAC" />
             {!isPublic && <TableHeader label="Ações" align="center" />}
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
           {loading ? (
             <tr>
-              <td colSpan={isPublic ? 3 : 4} className="p-24 text-center">
+              <td colSpan={isPublic ? 4 : 5} className="p-24 text-center">
                 <div className="flex flex-col items-center gap-4">
                   <div className="relative">
                     <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
@@ -80,18 +81,18 @@ const ContractTable: React.FC<ContractTableProps> = ({ data, loading, onSort, so
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{item.categoria} • {formatDate(item.inicio)}</span>
                     </div>
                   </td>
+                  <td className="p-4 text-center">
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase ${statusColor} bg-opacity-10 border border-opacity-20`}>
+                      {computedStatus}
+                    </span>
+                  </td>
                   <td className="p-4 text-right font-mono text-[11px] font-extrabold text-slate-700">
                     {formatCurrency(item.valor)}
                   </td>
                   <td className="p-4 text-right">
                     <div className="flex flex-col items-end">
                       {item.protocoloSIPAC ? (
-                        <>
-                          <span className="font-mono text-[10px] font-black text-blue-600 tabular-nums">{item.protocoloSIPAC}</span>
-                          <span className={`text-[8px] font-bold px-1 rounded uppercase mt-0.5 ${statusColor}`}>
-                            {computedStatus}
-                          </span>
-                        </>
+                        <span className="font-mono text-[10px] font-black text-blue-600 tabular-nums">{item.protocoloSIPAC}</span>
                       ) : (
                         <span className="text-[9px] font-bold text-slate-300 uppercase italic">Processo Não Aberto</span>
                       )}
@@ -127,7 +128,7 @@ const ContractTable: React.FC<ContractTableProps> = ({ data, loading, onSort, so
             })
           ) : (
             <tr>
-              <td colSpan={isPublic ? 3 : 4} className="p-20 text-center text-slate-400 font-medium italic">
+              <td colSpan={isPublic ? 4 : 5} className="p-20 text-center text-slate-400 font-medium italic">
                 Nenhum registro encontrado para os filtros selecionados.
               </td>
             </tr>

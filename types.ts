@@ -24,6 +24,7 @@ export interface ContractItem {
   dadosSIPAC?: SIPACProcess & {
     ultimaAtualizacao?: string;
   };
+  computedStatus?: string;
 }
 
 export interface SummaryData {

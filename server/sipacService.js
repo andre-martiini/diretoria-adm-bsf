@@ -6,133 +6,7 @@ puppeteer.use(StealthPlugin());
 
 export async function scrapeSIPACProcess(protocol) {
     // Mock data for test keys to ensure instant success during demo
-    const mocks = {
-        '23543001552202560': {
-            numeroProcesso: '23543.001552/2025-60',
-            dataAutuacion: '15/01/2025',
-            horarioAutuacion: '14:30',
-            usuarioAutuacion: 'ANDRE MARTINI',
-            natureza: 'OSTENSIVO',
-            status: 'EM TRAMITAÇÃO',
-            dataCadastro: '15/01/2025',
-            unidadeOrigem: 'CAMPUS BARRA DE SÃO FRANCISCO',
-            totalDocumentos: '12',
-            observacao: 'Contratação de serviços de limpeza e conservação para o exercício de 2025.',
-            assuntoCodigo: '023.01',
-            assuntoDescricao: 'ADMINISTRAÇÃO GERAL',
-            assuntoDetalhado: 'Licitação para serviços contínuos',
-            interessados: [{ tipo: 'UNIDADE', nome: 'DIRETORIA DE ADMINISTRAÇÃO - BSF' }],
-            documentos: [
-                { ordem: '1', tipo: 'REQUISIÇÃO', data: '15/01/2025', unidadeOrigem: 'DAP-BSF', natureza: 'INTERNO', statusVisualizacao: 'OK' },
-                { ordem: '2', tipo: 'ETP', data: '16/01/2025', unidadeOrigem: 'DAP-BSF', natureza: 'INTERNO', statusVisualizacao: 'OK' }
-            ],
-            movimentacoes: [
-                { data: '15/01/2025', horario: '14:30', unidadeOrigem: 'PROTOCOL', unidadeDestino: 'DAP-BSF', usuarioRemetente: 'SISTEMA', dataRecebimento: '15/01/2025', horarioRecebimento: '15:00', usuarioRecebedor: 'ANDRE' }
-            ],
-            incidentes: []
-        },
-        '23543000050202511': {
-            numeroProcesso: '23543.000050/2025-11',
-            dataAutuacion: '21/01/2025',
-            horarioAutuacion: '11:16',
-            usuarioAutuacion: 'ANDRE ARAUJO MARTINI',
-            natureza: 'OSTENSIVO',
-            status: 'ATIVO',
-            dataCadastro: '21/01/2025',
-            unidadeOrigem: 'BSF - COORDENADORIA DE LICITACOES E COMPRAS',
-            totalDocumentos: '56',
-            observacao: '',
-            assuntoCodigo: '045.24',
-            assuntoDescricao: 'CONSERVAÇÃO PREDIAL',
-            assuntoDetalhado: 'CONTRATAÇÃO DE SERVIÇOS DE OFICIAL DE MANUTENÇÃO PREDIAL, TRABALHADOR BRAÇAL E AUXILIAR ADMINISTRATIVO PARA ATENDER ÀS NECESSIDADES DO IFES CAMPUS BARRA DE SÃO FRANCISCO.',
-            interessados: [{ tipo: 'Servidor', nome: 'ANDRE ARAUJO MARTINI' }],
-            documentos: Array.from({ length: 56 }, (_, i) => {
-                const ordem = i + 1;
-                const docMap = {
-                    1: 'DESPACHO', 2: 'DFD - DOCUMENTO DE FORMALIZAÇÃO DE DEMANDA', 3: 'DESPACHO',
-                    4: 'PORTARIA', 5: 'DESPACHO', 6: 'DESPACHO', 7: 'ETP DIGITAL - IN Nº 40/2020',
-                    8: 'PESQUISA DE PREÇOS', 12: 'DESPACHO', 13: 'DESPACHO', 14: 'DESPACHO',
-                    15: 'DESPACHO', 16: 'DESPACHO', 17: 'DESPACHO', 18: 'TERMO DE REFERÊNCIA',
-                    19: 'PLANILHA DE COMPOSIÇÃO DE CUSTOS', 20: 'PLANILHA DE COMPOSIÇÃO DE CUSTOS',
-                    21: 'TERMO DE REFERÊNCIA', 22: 'NOTA INFORMATIVA', 23: 'TERMO DE REFERÊNCIA',
-                    27: 'MINUTA DE CONTRATO', 28: 'MINUTA DE EDITAL PREGÃO', 29: 'CHECK-LIST',
-                    30: 'DESPACHO', 31: 'DESPACHO', 32: 'DESPACHO', 33: 'PARECER JURÍDICO',
-                    34: 'DESPACHO', 35: 'DESPACHO', 36: 'DESPACHO', 37: 'DESPACHO', 38: 'DESPACHO',
-                    42: 'PLANILHA DE COMPOSIÇÃO DE CUSTOS', 43: 'TERMO DE REFERÊNCIA', 44: 'DESPACHO',
-                    45: 'PORTARIA', 46: 'DESPACHO', 47: 'DESPACHO', 48: 'PESQUISA DE PREÇOS',
-                    49: 'PLANILHA DE COMPOSIÇÃO DE CUSTOS', 50: 'PLANILHA DE COMPOSIÇÃO DE CUSTOS',
-                    51: 'TERMO DE REFERÊNCIA', 52: 'EDITAL', 53: 'RELAÇÃO DE ITENS'
-                };
-                return {
-                    ordem: ordem.toString(),
-                    tipo: docMap[ordem] || (ordem > 40 ? 'ANEXO' : 'DOCUMENTO'),
-                    data: ordem <= 10 ? '02/06/2025' : (ordem <= 20 ? '22/08/2025' : '16/01/2026'),
-                    unidadeOrigem: ordem === 1 ? 'BSF-CLC' : (ordem < 4 ? 'BSF-DIAPL' : 'BSF-CLC'),
-                    natureza: 'OSTENSIVO',
-                    statusVisualizacao: 'Identificado',
-                    url: 'https://sipac.ifes.edu.br/public/jsp/processos/documento_visualizacao.jsf?idDoc=' + (2639311 + i)
-                };
-            }),
-            movimentacoes: [
-                { data: '19/12/2025', horario: '10:36', unidadeOrigem: 'BSF - DIRETORIA DE ADMINISTRAÇÃO E PLANEJAMENTO', unidadeDestino: 'BSF - COORDENADORIA DE LICITACOES E COMPRAS', usuarioRemetente: 'BRYAN DE AZEVEDO RODRIGUES', dataRecebimento: '30/12/2025', horarioRecebimento: '11:58', usuarioRecebedor: 'ANDRE ARAUJO MARTINI', urgente: 'Não' },
-                { data: '19/12/2025', horario: '10:05', unidadeOrigem: 'BSF - GABINETE DA DIRETORIA GERAL', unidadeDestino: 'BSF - DIRETORIA DE ADMINISTRAÇÃO E PLANEJAMENTO', usuarioRemetente: 'MARIANA SOUZA DA SILVA LIMA', dataRecebimento: '19/12/2025', horarioRecebimento: '10:29', usuarioRecebedor: 'BRYAN DE AZEVEDO RODRIGUES', urgente: 'Não' },
-                { data: '16/12/2025', horario: '14:59', unidadeOrigem: 'BSF - DIRETORIA DE ADMINISTRAÇÃO E PLANEJAMENTO', unidadeDestino: 'BSF - GABINETE DA DIRETORIA GERAL', usuarioRemetente: 'BRYAN DE AZEVEDO RODRIGUES', dataRecebimento: '19/12/2025', horarioRecebimento: '09:35', usuarioRecebedor: 'MARIANA SOUZA DA SILVA LIMA', urgente: 'Não' },
-                { data: '16/12/2025', horario: '13:46', unidadeOrigem: 'BSF - GABINETE DA DIRETORIA GERAL', unidadeDestino: 'BSF - DIRETORIA DE ADMINISTRAÇÃO E PLANEJAMENTO', usuarioRemetente: 'MARIANA SOUZA DA SILVA LIMA', dataRecebimento: '16/12/2025', horarioRecebimento: '14:54', usuarioRecebedor: 'BRYAN DE AZEVEDO RODRIGUES', urgente: 'Não' },
-                { data: '15/12/2025', horario: '16:02', unidadeOrigem: 'BSF - DIRETORIA DE ADMINISTRAÇÃO E PLANEJAMENTO', unidadeDestino: 'BSF - GABINETE DA DIRETORIA GERAL', usuarioRemetente: 'BRYAN DE AZEVEDO RODRIGUES', dataRecebimento: 'PENDENTE', horarioRecebimento: '', usuarioRecebedor: '', urgente: 'Não' },
-                { data: '29/10/2025', horario: '08:11', unidadeOrigem: 'BSF - COORDENADORIA DE LICITACOES E COMPRAS', unidadeDestino: 'BSF - DIRETORIA DE ADMINISTRAÇÃO E PLANEJAMENTO', usuarioRemetente: 'EZEQUIEL ALVES DE MORAIS', dataRecebimento: '15/12/2025', horarioRecebimento: '15:47', usuarioRecebedor: 'BRYAN DE AZEVEDO RODRIGUES', urgente: 'Não' },
-                { data: '22/09/2025', horario: '16:23', unidadeOrigem: 'BSF - COORDENADORIA GERAL DE GESTAO DE CAMPO', unidadeDestino: 'BSF - COORDENADORIA DE LICITACOES E COMPRAS', usuarioRemetente: 'GUILHERME MEDIOTE', dataRecebimento: '29/10/2025', horarioRecebimento: '08:06', usuarioRecebedor: 'EZEQUIEL ALVES DE MORAIS', urgente: 'Não' },
-                { data: '17/09/2025', horario: '14:05', unidadeOrigem: 'BSF - DIRETORIA DE ADMINISTRAÇÃO E PLANEJAMENTO', unidadeDestino: 'BSF - COORDENADORIA GERAL DE GESTAO DE CAMPO', usuarioRemetente: 'BRYAN DE AZEVEDO RODRIGUES', dataRecebimento: '22/09/2025', horarioRecebimento: '14:40', usuarioRecebedor: 'GUILHERME MEDIOTE', urgente: 'Não' },
-                { data: '15/09/2025', horario: '17:00', unidadeOrigem: 'BSF - GABINETE DA DIRETORIA GERAL', unidadeDestino: 'BSF - DIRETORIA DE ADMINISTRAÇÃO E PLANEJAMENTO', usuarioRemetente: 'MARIANA SOUZA DA SILVA LIMA', dataRecebimento: '17/09/2025', horarioRecebimento: '14:02', usuarioRecebedor: 'BRYAN DE AZEVEDO RODRIGUES', urgente: 'Não' },
-                { data: '15/09/2025', horario: '14:20', unidadeOrigem: 'REI - GABINETE DA REITORIA', unidadeDestino: 'BSF - GABINETE DA DIRETORIA GERAL', usuarioRemetente: 'MARCOS LUCIANO DE ANGELI SOUSA', dataRecebimento: '15/09/2025', horarioRecebimento: '16:58', usuarioRecebedor: 'MARIANA SOUZA DA SILVA LIMA', urgente: 'Não' },
-                { data: '15/09/2025', horario: '13:58', unidadeOrigem: 'REI - PROCURADORIA FEDERAL', unidadeDestino: 'REI - GABINETE DA REITORIA', usuarioRemetente: 'JOSE APARECIDO BUFFON', dataRecebimento: '15/09/2025', horarioRecebimento: '14:13', usuarioRecebedor: 'MARCOS LUCIANO DE ANGELI SOUSA', urgente: 'Não' },
-                { data: '10/09/2025', horario: '12:00', unidadeOrigem: 'REI - GABINETE DA REITORIA', unidadeDestino: 'REI - PROCURADORIA FEDERAL', usuarioRemetente: 'MARCOS LUCIANO DE ANGELI SOUSA', dataRecebimento: '10/09/2025', horarioRecebimento: '16:08', usuarioRecebedor: 'MARIA DO CARMO CONOPCA', urgente: 'Não' },
-                { data: '08/09/2025', horario: '11:31', unidadeOrigem: 'BSF - GABINETE DA DIRETORIA GERAL', unidadeDestino: 'REI - GABINETE DA REITORIA', usuarioRemetente: 'MARIANA SOUZA DA SILVA LIMA', dataRecebimento: '10/09/2025', horarioRecebimento: '11:57', usuarioRecebedor: 'MARCOS LUCIANO DE ANGELI SOUSA', urgente: 'Não' },
-                { data: '05/09/2025', horario: '16:08', unidadeOrigem: 'BSF - COORDENADORIA DE LICITACOES E COMPRAS', unidadeDestino: 'BSF - GABINETE DA DIRETORIA GERAL', usuarioRemetente: 'EZEQUIEL ALVES DE MORAIS', dataRecebimento: '08/09/2025', horarioRecebimento: '11:20', usuarioRecebedor: 'MARIANA SOUZA DA SILVA LIMA', urgente: 'Não' },
-                { data: '23/06/2025', horario: '12:20', unidadeOrigem: 'BSF - DIRETORIA DE ADMINISTRAÇÃO E PLANEJAMENTO', unidadeDestino: 'BSF - COORDENADORIA DE LICITACOES E COMPRAS', usuarioRemetente: 'BRYAN DE AZEVEDO RODRIGUES', dataRecebimento: '09/07/2025', horarioRecebimento: '16:23', usuarioRecebedor: 'ANDRE ARAUJO MARTINI', urgente: 'Não' },
-                { data: '23/06/2025', horario: '10:39', unidadeOrigem: 'BSF - GABINETE DA DIRETORIA GERAL', unidadeDestino: 'BSF - DIRETORIA DE ADMINISTRAÇÃO E PLANEJAMENTO', usuarioRemetente: 'MARIANA SOUZA DA SILVA LIMA', dataRecebimento: '23/06/2025', horarioRecebimento: '12:17', usuarioRecebedor: 'BRYAN DE AZEVEDO RODRIGUES', urgente: 'Não' },
-                { data: '18/06/2025', horario: '14:12', unidadeOrigem: 'BSF - DIRETORIA DE ADMINISTRAÇÃO E PLANEJAMENTO', unidadeDestino: 'BSF - GABINETE DA DIRETORIA GERAL', usuarioRemetente: 'BRYAN DE AZEVEDO RODRIGUES', dataRecebimento: '23/06/2025', horarioRecebimento: '09:02', usuarioRecebedor: 'MARIANA SOUZA DA SILVA LIMA', urgente: 'Não' },
-                { data: '17/06/2025', horario: '17:07', unidadeOrigem: 'BSF - GABINETE DA DIRETORIA GERAL', unidadeDestino: 'BSF - DIRETORIA DE ADMINISTRAÇÃO E PLANEJAMENTO', usuarioRemetente: 'MARIANA SOUZA DA SILVA LIMA', dataRecebimento: '18/06/2025', horarioRecebimento: '13:02', usuarioRecebedor: 'BRYAN DE AZEVEDO RODRIGUES', urgente: 'Não' },
-                { data: '17/06/2025', horario: '14:46', unidadeOrigem: 'BSF - DIRETORIA DE ADMINISTRAÇÃO E PLANEJAMENTO', unidadeDestino: 'BSF - GABINETE DA DIRETORIA GERAL', usuarioRemetente: 'BRYAN DE AZEVEDO RODRIGUES', dataRecebimento: '17/06/2025', horarioRecebimento: '17:01', usuarioRecebedor: 'MARIANA SOUZA DA SILVA LIMA', urgente: 'Não' },
-                { data: '16/06/2025', horario: '15:12', unidadeOrigem: 'BSF - COORDENADORIA GERAL DE GESTAO DE CAMPO', unidadeDestino: 'BSF - DIRETORIA DE ADMINISTRAÇÃO E PLANEJAMENTO', usuarioRemetente: 'GUILHERME MEDIOTE', dataRecebimento: '17/06/2025', horarioRecebimento: '14:40', usuarioRecebedor: 'BRYAN DE AZEVEDO RODRIGUES', urgente: 'Não' },
-                { data: '05/06/2025', horario: '16:52', unidadeOrigem: 'BSF - DIRETORIA DE ADMINISTRAÇÃO E PLANEJAMENTO', unidadeDestino: 'BSF - COORDENADORIA GERAL DE GESTAO DE CAMPO', usuarioRemetente: 'BRYAN DE AZEVEDO RODRIGUES', dataRecebimento: '10/06/2025', horarioRecebimento: '14:48', usuarioRecebedor: 'GUILHERME MEDIOTE', urgente: 'Não' },
-                { data: '04/06/2025', horario: '14:50', unidadeOrigem: 'BSF - GABINETE DA DIRETORIA GERAL', unidadeDestino: 'BSF - DIRETORIA DE ADMINISTRAÇÃO E PLANEJAMENTO', usuarioRemetente: 'MARIANA SOUZA DA SILVA LIMA', dataRecebimento: '05/06/2025', horarioRecebimento: '16:48', usuarioRecebedor: 'BRYAN DE AZEVEDO RODRIGUES', urgente: 'Não' },
-                { data: '02/06/2025', horario: '09:55', unidadeOrigem: 'BSF - COORDENADORIA DE LICITACOES E COMPRAS', unidadeDestino: 'BSF - DIRETORIA DE ADMINISTRAÇÃO E PLANEJAMENTO', usuarioRemetente: 'ANDRE ARAUJO MARTINI', dataRecebimento: '02/06/2025', horarioRecebimento: '16:43', usuarioRecebedor: 'BRYAN DE AZEVEDO RODRIGUES', urgente: 'Não' }
-            ],
-            incidentes: [
-                { numeroDocumento: 'Nº 743/2025', tipoDocumento: 'DESPACHO', usuarioSolicitacao: 'BRYAN DE AZEVEDO RODRIGUES (3384610)', dataSolicitacao: '16/12/2025', usuarioCancelamento: 'HILDO ANSELMO GALTER DALMONECH (2863614)', dataCancelamento: '16/12/2025', justificativa: 'Erro no despacho.' }
-            ]
-        },
-        '23152002555202514': {
-            numeroProcesso: '23152.002555/2025-14',
-            dataAutuacion: '20/01/2025',
-            horarioAutuacion: '09:15',
-            usuarioAutuacion: 'MARIA SILVA',
-            natureza: 'OSTENSIVO',
-            status: 'AGUARDANDO LICITAÇÃO',
-            dataCadastro: '20/01/2025',
-            unidadeOrigem: 'REITORIA - PROAD',
-            totalDocumentos: '8',
-            observacao: 'Aquisição de materiais de consumo para laboratórios.',
-            assuntoCodigo: '024.12',
-            assuntoDescricao: 'MATERIAL E PATRIMÔNIO',
-            assuntoDetalhado: 'Pregão Eletrônico SRP',
-            interessados: [{ tipo: 'UNIDADE', nome: 'COORDENAÇÃO DE APOIO AO ENSINO' }],
-            documentos: [
-                { ordem: '1', tipo: 'MEMORANDO', data: '20/01/2025', unidadeOrigem: 'CAE', natureza: 'INTERNO', statusVisualizacao: 'OK' }
-            ],
-            movimentacoes: [
-                { data: '20/01/2025', horario: '09:20', unidadeOrigem: 'REITORIA', unidadeDestino: 'BSF-DAP', usuarioRemetente: 'MARIA', dataRecebimento: '20/01/2025', horarioRecebimento: '11:00', usuarioRecebedor: 'JOAO' }
-            ],
-            incidentes: []
-        }
-    };
 
-    const normalized = protocol.replace(/[^0-9]/g, '');
-    if (mocks[normalized]) {
-        console.log(`[SIPAC] returning mock for ${protocol}`);
-        await new Promise(resolve => setTimeout(resolve, 800));
-        return mocks[normalized];
-    }
 
     // Real scraping attempt
     console.log(`[SIPAC] Starting real scraper for ${protocol}...`);
@@ -146,10 +20,10 @@ export async function scrapeSIPACProcess(protocol) {
         await page.setDefaultNavigationTimeout(60000);
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
-        // Optimize: Block heavy resources
+        // Optimize: Block images but keep CSS/Scripts as JSF can be sensitive
         await page.setRequestInterception(true);
         page.on('request', (req) => {
-            if (['image', 'stylesheet', 'font', 'media'].includes(req.resourceType())) {
+            if (['image', 'font', 'media'].includes(req.resourceType())) {
                 req.abort();
             } else {
                 req.continue();
@@ -158,32 +32,25 @@ export async function scrapeSIPACProcess(protocol) {
 
         // 1. Go to portal (Establishing session)
         console.log(`[SIPAC] Opening portal...`);
-        await page.goto('https://sipac.ifes.edu.br/public/jsp/portal.jsf', { waitUntil: 'load', timeout: 90000 });
+        await page.goto('https://sipac.ifes.edu.br/public/jsp/portal.jsf', { waitUntil: 'networkidle2', timeout: 90000 });
 
-        // 2. Click "Processos"
-        console.log(`[SIPAC] Looking for 'Processos' menu...`);
+        // 2. Click "Processos" (AJAX Navigation)
+        console.log(`[SIPAC] Clicking 'Processos' menu...`);
         try {
-            const elHandle = await page.evaluateHandle(() => {
-                return Array.from(document.querySelectorAll('div.item.sub-item, span, a')).find(el =>
-                    el.innerText.trim() === 'Processos' ||
-                    el.innerText.trim().includes('Consultar Processo')
-                );
+            await page.waitForSelector('div#l-processos, span#ext-gen10, .item.sub-item', { timeout: 30000 });
+            await page.evaluate(() => {
+                const el = document.querySelector('div#l-processos') ||
+                    Array.from(document.querySelectorAll('span, div, a')).find(e => e.innerText.trim() === 'Processos');
+                if (el) el.click();
             });
 
-            if (elHandle && elHandle.asElement()) {
-                console.log(`[SIPAC] Menu 'Processos' found, clicking...`);
-                await Promise.all([
-                    elHandle.asElement().click(),
-                    page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 45000 }).catch(e => console.log('[SIPAC] Navigation timeout after click, but continuing...'))
-                ]);
-            } else {
-                console.warn(`[SIPAC] Menu 'Processos' NOT found, trying direct search page jump...`);
-                await page.goto('https://sipac.ifes.edu.br/public/jsp/processos/processo_consulta.jsf', { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => { });
-            }
+            // Wait for the AJAX form to appear
+            console.log(`[SIPAC] Waiting for search form to load...`);
+            await page.waitForSelector('#n_proc_p', { timeout: 30000 });
         } catch (err) {
-            console.error('[SIPAC] Error during menu navigation:', err.message);
-            // Fallback attempt
-            await page.goto('https://sipac.ifes.edu.br/public/jsp/processos/processo_consulta.jsf', { waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => { });
+            console.warn(`[SIPAC] Menu click or form load failed: ${err.message}. Trying direct recovery...`);
+            // Only try direct jump if AJAX fails, though portal usually requires session
+            await page.goto('https://sipac.ifes.edu.br/public/jsp/processos/processo_consulta.jsf', { waitUntil: 'networkidle2', timeout: 30000 }).catch(() => { });
         }
 
         // 3. Ensure "Nº Processo" is selected and fill fields
