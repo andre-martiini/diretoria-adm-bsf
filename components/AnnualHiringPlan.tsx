@@ -69,6 +69,8 @@ import { fetchPcaData, hasPcaInMemoryCache, fetchLocalPcaSnapshot, updatePcaCach
 import ContractTable from './ContractTable';
 import Toast, { ToastType } from './Toast';
 import logoIfes from '../logo-ifes.png';
+import ProcessDashboard from './ProcessDashboard';
+import { getProcessStatus, getStatusColor } from '../utils/processLogic';
 
 const AnnualHiringPlan: React.FC = () => {
   const navigate = useNavigate();
@@ -135,10 +137,15 @@ const AnnualHiringPlan: React.FC = () => {
       // O fetchPcaData agora é super rápido pois prioriza o JSON local.
       const result = await fetchPcaData(year, forceSync, false, (p) => setSyncProgress(p));
 
-      setData(result.data);
+      if (result.data.length === 0) {
+        setData(FALLBACK_DATA);
+        setUsingFallback(true);
+      } else {
+        setData(result.data);
+        setUsingFallback(false);
+      }
       setLastSync(result.lastSync);
       setPcaMeta(result.pcaMeta);
-      setUsingFallback(result.data.length === 0);
     } catch (err) {
       console.error("Erro ao carregar dados:", err);
       setData(FALLBACK_DATA);
@@ -689,15 +696,7 @@ const AnnualHiringPlan: React.FC = () => {
 
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center min-h-[400px] text-slate-300 gap-4 animate-in fade-in slide-in-from-right-4 duration-300">
-                <div className="bg-slate-100 p-6 rounded-full">
-                  <RefreshCw size={48} className="animate-spin-slow" />
-                </div>
-                <div className="text-center">
-                  <p className="text-lg font-black uppercase tracking-widest">Em Construção</p>
-                  <p className="text-xs font-bold text-slate-400">Módulo de monitoramento de status em desenvolvimento</p>
-                </div>
-              </div>
+              <ProcessDashboard data={processedData} />
             )}
           </div>
         </div>
@@ -1021,11 +1020,8 @@ const AnnualHiringPlan: React.FC = () => {
               <div>
                 <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
                   Processo {viewingItem.dadosSIPAC.numeroProcesso}
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase ${viewingItem.dadosSIPAC.status.includes('ATIVO') ? 'bg-green-100 text-green-700' :
-                    viewingItem.dadosSIPAC.status.includes('TRAMITAÇÃO') ? 'bg-blue-100 text-blue-700' :
-                      'bg-slate-100 text-slate-500'
-                    }`}>
-                    {viewingItem.dadosSIPAC.status}
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase ${getStatusColor(getProcessStatus(viewingItem))}`}>
+                    {getProcessStatus(viewingItem)}
                   </span>
                 </h2>
                 <div className="flex items-center gap-3 mt-1">
@@ -1168,11 +1164,8 @@ const AnnualHiringPlan: React.FC = () => {
                   </div>
                   <div>
                     <span className="block text-[8px] font-black text-slate-400 uppercase mb-1">Status Atual</span>
-                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${viewingItem.dadosSIPAC.status.includes('ATIVO') ? 'bg-green-100 text-green-700' :
-                      viewingItem.dadosSIPAC.status.includes('TRAMITAÇÃO') ? 'bg-blue-100 text-blue-700' :
-                        'bg-slate-100 text-slate-500'
-                      }`}>
-                      {viewingItem.dadosSIPAC.status}
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${getStatusColor(getProcessStatus(viewingItem))}`}>
+                      {getProcessStatus(viewingItem)}
                     </span>
                   </div>
                   <div>
