@@ -3,6 +3,7 @@ import React from 'react';
 import { ArrowUpDown, RefreshCw, Eye, PencilLine } from 'lucide-react';
 import { ContractItem, SortConfig } from '../types';
 import { formatCurrency, formatDate } from '../utils/formatters';
+import { getProcessStatus, getStatusColor } from '../utils/processLogic';
 
 interface ContractTableProps {
   data: ContractItem[];
@@ -55,6 +56,9 @@ const ContractTable: React.FC<ContractTableProps> = ({ data, loading, onSort, so
             </tr>
           ) : data.length > 0 ? (
             data.map((item) => {
+              const computedStatus = getProcessStatus(item);
+              const statusColor = getStatusColor(computedStatus);
+
               return (
                 <tr
                   key={item.id}
@@ -84,15 +88,12 @@ const ContractTable: React.FC<ContractTableProps> = ({ data, loading, onSort, so
                       {item.protocoloSIPAC ? (
                         <>
                           <span className="font-mono text-[10px] font-black text-blue-600 tabular-nums">{item.protocoloSIPAC}</span>
-                          <span className={`text-[8px] font-bold px-1 rounded uppercase mt-0.5 ${item.dadosSIPAC?.status?.includes('ATIVO') ? 'bg-green-100 text-green-700' :
-                            item.dadosSIPAC?.status?.includes('TRAMITAÇÃO') ? 'bg-blue-100 text-blue-700' :
-                              'bg-slate-100 text-slate-500'
-                            }`}>
-                            {item.dadosSIPAC?.status || 'VINCULADO'}
+                          <span className={`text-[8px] font-bold px-1 rounded uppercase mt-0.5 ${statusColor}`}>
+                            {computedStatus}
                           </span>
                         </>
                       ) : (
-                        <span className="text-[9px] font-bold text-slate-300 uppercase italic">Não vinculado</span>
+                        <span className="text-[9px] font-bold text-slate-300 uppercase italic">Processo Não Aberto</span>
                       )}
                     </div>
                   </td>
