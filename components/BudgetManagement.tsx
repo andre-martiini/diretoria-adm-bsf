@@ -33,6 +33,7 @@ import {
     getDocs,
     doc,
     setDoc,
+    updateDoc,
     addDoc,
     deleteDoc,
     Timestamp,
@@ -71,9 +72,13 @@ const BudgetManagement: React.FC = () => {
     });
     const itemsPerPage = 12;
 
+    // Monthly View Controls
+    const [gridFilter, setGridFilter] = useState<'todos' | 'empenhado' | 'executadoRP' | 'executado'>('todos');
+
     // Form states
     const [newElementName, setNewElementName] = useState('');
     const [newElementType, setNewElementType] = useState<BudgetType>(BudgetType.Custeio);
+    const [editingElement, setEditingElement] = useState<BudgetElement | null>(null);
 
     // Record editing state
     const [selectedRecordElement, setSelectedRecordElement] = useState<BudgetElement | null>(null);
@@ -107,20 +112,36 @@ const BudgetManagement: React.FC = () => {
         };
     }, [selectedYear]);
 
-    const handleAddElement = async () => {
+    const handleOpenEditElementModal = (el: BudgetElement) => {
+        setEditingElement(el);
+        setNewElementName(el.nome);
+        setNewElementType(el.tipo);
+        setIsElementModalOpen(true);
+    };
+
+    const handleSaveElement = async () => {
         if (!newElementName.trim()) return;
         setSaving(true);
         try {
-            await addDoc(collection(db, "budget_elements"), {
-                nome: newElementName,
-                tipo: newElementType,
-                ano: Number(selectedYear),
-                createdAt: Timestamp.now()
-            });
+            if (editingElement) {
+                await updateDoc(doc(db, "budget_elements", editingElement.id), {
+                    nome: newElementName,
+                    tipo: newElementType,
+                    updatedAt: Timestamp.now()
+                });
+            } else {
+                await addDoc(collection(db, "budget_elements"), {
+                    nome: newElementName,
+                    tipo: newElementType,
+                    ano: Number(selectedYear),
+                    createdAt: Timestamp.now()
+                });
+            }
             setNewElementName('');
+            setEditingElement(null);
             setIsElementModalOpen(false);
         } catch (err) {
-            console.error("Erro ao adicionar elemento:", err);
+            console.error("Erro ao salvar elemento:", err);
         } finally {
             setSaving(false);
         }
@@ -378,7 +399,7 @@ const BudgetManagement: React.FC = () => {
             )}
 
             <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
-                <div className="max-w-7xl mx-auto px-4 h-24 flex items-center justify-between gap-4">
+                <div className={`${viewMode === 'monthly' || viewMode === 'list' ? 'max-w-[98%]' : 'max-w-7xl'} mx-auto px-4 h-24 flex items-center justify-between gap-4 transition-all duration-500`}>
                     <div className="flex items-center gap-3 shrink-0">
                         <img src={logoIfes} alt="Logo IFES" className="h-12 w-auto object-contain" />
                         <div className="flex flex-col border-l border-slate-100 pl-3">
@@ -410,9 +431,9 @@ const BudgetManagement: React.FC = () => {
                 </div>
             </header>
 
-            <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+            <main className={`${viewMode === 'monthly' || viewMode === 'list' ? 'max-w-full px-6' : 'max-w-7xl px-4'} mx-auto py-8 space-y-8 transition-all duration-500`}>
                 {/* KPI Cards */}
-                <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Empenhado Total</p>
                         <h3 className="text-2xl font-black text-slate-900">{formatCurrency(totals.empenhado)}</h3>
@@ -476,7 +497,37 @@ const BudgetManagement: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="flex flex-col sm:flex-row gap-4 flex-1 max-w-5xl justify-end">
+                        <div className="flex flex-col sm:flex-row gap-4 flex-1 max-w-none justify-end">
+                            {/* Grid Filter (Monthly only) */}
+                            {viewMode === 'monthly' && (
+                                <div className="flex bg-slate-200/50 p-1 rounded-xl shrink-0">
+                                    <button
+                                        onClick={() => setGridFilter('todos')}
+                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${gridFilter === 'todos' ? 'bg-white shadow-sm text-ifes-green' : 'text-slate-400'}`}
+                                    >
+                                        Todos
+                                    </button>
+                                    <button
+                                        onClick={() => setGridFilter('empenhado')}
+                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${gridFilter === 'empenhado' ? 'bg-white shadow-sm text-ifes-green' : 'text-slate-400'}`}
+                                    >
+                                        Empenhado
+                                    </button>
+                                    <button
+                                        onClick={() => setGridFilter('executadoRP')}
+                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${gridFilter === 'executadoRP' ? 'bg-white shadow-sm text-ifes-green' : 'text-slate-400'}`}
+                                    >
+                                        Exec. RP
+                                    </button>
+                                    <button
+                                        onClick={() => setGridFilter('executado')}
+                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${gridFilter === 'executado' ? 'bg-white shadow-sm text-ifes-green' : 'text-slate-400'}`}
+                                    >
+                                        Exec. Ano
+                                    </button>
+                                </div>
+                            )}
+
                             {/* Type Filter */}
                             <div className="flex bg-slate-200/50 p-1 rounded-xl shrink-0">
                                 <button
@@ -566,10 +617,19 @@ const BudgetManagement: React.FC = () => {
                                             </th>
                                             <th
                                                 className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right cursor-pointer hover:text-ifes-green transition-colors"
+                                                onClick={() => handleSort('executadoRP')}
+                                            >
+                                                <div className="flex items-center justify-end gap-2">
+                                                    Executado RP
+                                                    {sortConfig.key === 'executadoRP' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
+                                                </div>
+                                            </th>
+                                            <th
+                                                className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right cursor-pointer hover:text-ifes-green transition-colors"
                                                 onClick={() => handleSort('executado')}
                                             >
                                                 <div className="flex items-center justify-end gap-2">
-                                                    Executado
+                                                    Executado Ano
                                                     {sortConfig.key === 'executado' && (sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
                                                 </div>
                                             </th>
@@ -593,25 +653,26 @@ const BudgetManagement: React.FC = () => {
                                                             {el.tipo}
                                                         </span>
                                                     </td>
-                                                    <td className="px-8 py-5 text-right font-black text-sm text-slate-900">
+                                                    <td className="px-8 py-5 text-right font-black text-sm text-slate-900 leading-tight">
+                                                        <span className="block text-[10px] text-slate-400 font-bold uppercase mb-0.5 lg:hidden">Empenhado</span>
                                                         {formatCurrency(elTotals.empenhado)}
                                                     </td>
-                                                    <td className="px-8 py-5 text-right font-black text-sm text-emerald-600">
-                                                        {formatCurrency(elTotals.executado + elTotals.executadoRP)}
+                                                    <td className="px-8 py-5 text-right font-black text-sm text-amber-600 leading-tight">
+                                                        <span className="block text-[10px] text-slate-400 font-bold uppercase mb-0.5 lg:hidden">Exec. RP</span>
+                                                        {formatCurrency(elTotals.executadoRP)}
+                                                    </td>
+                                                    <td className="px-8 py-5 text-right font-black text-sm text-emerald-600 leading-tight">
+                                                        <span className="block text-[10px] text-slate-400 font-bold uppercase mb-0.5 lg:hidden">Exec. Ano</span>
+                                                        {formatCurrency(elTotals.executado)}
                                                     </td>
                                                     <td className="px-8 py-5" onClick={(e) => e.stopPropagation()}>
                                                         <div className="flex items-center justify-center gap-1">
                                                             <button
-                                                                onClick={() => handleOpenRecordModal(el)}
+                                                                onClick={() => handleOpenEditElementModal(el)}
                                                                 className="p-2 text-slate-400 hover:text-ifes-green hover:bg-ifes-green/10 rounded-lg transition-all"
+                                                                title="Editar Descrição/Tipo"
                                                             >
                                                                 <Edit2 size={16} />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDeleteElement(el.id)}
-                                                                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                                                            >
-                                                                <Trash2 size={16} />
                                                             </button>
                                                         </div>
                                                     </td>
@@ -664,44 +725,108 @@ const BudgetManagement: React.FC = () => {
                             </>
                         ) : (
                             /* Monthly Grid View */
-                            <table className="w-full text-left border-collapse min-w-[1200px]">
+                            <table className="w-full text-left border-collapse min-w-[1400px]">
                                 <thead>
-                                    <tr className="border-b border-slate-100 bg-slate-50/30">
-                                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase sticky left-0 bg-slate-50 z-10 w-64 shadow-[2px_0_5px_rgba(0,0,0,0.05)] border-r border-slate-100">Elemento</th>
+                                    <tr className="border-b border-slate-100 bg-slate-50/50">
+                                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase sticky left-0 bg-slate-50 z-10 w-72 shadow-[2px_0_5px_rgba(0,0,0,0.05)] border-r border-slate-100">Elemento de Despesa</th>
                                         {MONTHS.map(m => (
-                                            <th key={m} className="px-2 py-4 text-[9px] font-black text-slate-400 uppercase text-center">{m.substring(0, 3)}</th>
+                                            <th key={m} className="px-2 py-5 text-[9px] font-black text-slate-400 uppercase text-center border-l border-slate-50">{m}</th>
                                         ))}
-                                        <th className="px-6 py-4 text-[10px] font-black text-slate-900 uppercase text-right border-l border-slate-200">Total</th>
+                                        <th className="px-6 py-5 text-[10px] font-black text-slate-900 uppercase text-right border-l border-slate-200 bg-slate-50 sticky right-0 z-10 shadow-[-2px_0_5px_rgba(0,0,0,0.05)]">Totais Elemento</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-50">
+                                <tbody className="divide-y divide-slate-100">
                                     {processedElements.map(el => {
                                         const elRecords = records.filter(r => r.elementId === el.id);
-                                        const total = elRecords.reduce((acc, r) => acc + (r.executado || 0) + (r.executadoRP || 0), 0);
+                                        const totalRealizadoAno = elRecords.reduce((acc, r) => acc + (r.executado || 0), 0);
+                                        const totalRealizadoRP = elRecords.reduce((acc, r) => acc + (r.executadoRP || 0), 0);
+                                        const totalEmpenhado = elRecords.reduce((acc, r) => acc + (r.empenhado || 0), 0);
+
                                         return (
-                                            <tr key={el.id} className="hover:bg-slate-50/50 transition-colors group">
-                                                <td className="px-6 py-4 sticky left-0 bg-white group-hover:bg-slate-50 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)] border-r border-slate-50">
-                                                    <span className="text-[11px] font-black text-slate-700 uppercase truncate block w-52">{el.nome}</span>
-                                                    <span className={`text-[8px] font-black uppercase ${el.tipo === BudgetType.Custeio ? 'text-amber-500' : 'text-blue-500'}`}>{el.tipo}</span>
+                                            <tr key={el.id} className="hover:bg-ifes-green/[0.02] transition-colors group">
+                                                <td className="px-6 py-4 sticky left-0 bg-white group-hover:bg-slate-50 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.05)] border-r border-slate-100">
+                                                    <span className="text-[11px] font-black text-slate-700 uppercase leading-tight block w-60 mb-0.5">{el.nome}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase ${el.tipo === BudgetType.Custeio ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'}`}>
+                                                            {el.tipo}
+                                                        </span>
+                                                        <span className="text-[8px] font-bold text-slate-300 uppercase tracking-tighter">Emp. Total: {formatCurrency(totalEmpenhado)}</span>
+                                                    </div>
                                                 </td>
                                                 {MONTHS.map((_, idx) => {
                                                     const mNum = idx + 1;
                                                     const rec = elRecords.find(r => r.mes === mNum);
-                                                    const val = (rec?.executado || 0) + (rec?.executadoRP || 0);
+
+                                                    const vEmp = rec?.empenhado || 0;
+                                                    const vRP = rec?.executadoRP || 0;
+                                                    const vAno = rec?.executado || 0;
+
+                                                    const showEmp = gridFilter === 'todos' || gridFilter === 'empenhado';
+                                                    const showRP = gridFilter === 'todos' || gridFilter === 'executadoRP';
+                                                    const showAno = gridFilter === 'todos' || gridFilter === 'executado';
+
+                                                    const hasValues = (vEmp > 0 && showEmp) || (vRP > 0 && showRP) || (vAno > 0 && showAno);
+
                                                     return (
                                                         <td
                                                             key={idx}
                                                             onClick={() => handleOpenRecordModal(el, mNum)}
-                                                            className="px-2 py-4 text-center cursor-pointer hover:bg-ifes-green/10 transition-colors border-l border-slate-50"
+                                                            className="px-2 py-3 text-center cursor-pointer hover:bg-ifes-green/10 transition-colors border-l border-slate-50 group/cell"
                                                         >
-                                                            <span className={`text-[10px] font-bold ${val > 0 ? 'text-slate-900' : 'text-slate-100'}`}>
-                                                                {val > 0 ? (val / 1000).toFixed(1) + 'k' : '-'}
-                                                            </span>
+                                                            {!hasValues ? (
+                                                                <span className="text-[10px] text-slate-100 font-bold group-hover/cell:text-ifes-green/30">-</span>
+                                                            ) : (
+                                                                <div className="flex flex-col gap-1.5 items-center justify-center min-h-[55px] py-1">
+                                                                    {showEmp && vEmp > 0 && (
+                                                                        <div className="flex flex-col items-center">
+                                                                            <span className="text-[7px] font-bold text-blue-400 uppercase leading-none mb-0.5">Emp.</span>
+                                                                            <span className="text-[10px] font-black text-blue-600 leading-none">
+                                                                                {vEmp.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                                            </span>
+                                                                        </div>
+                                                                    )}
+                                                                    {showRP && vRP > 0 && (
+                                                                        <div className="flex flex-col items-center">
+                                                                            <span className="text-[7px] font-bold text-amber-500 uppercase leading-none mb-0.5">RP</span>
+                                                                            <span className="text-[10px] font-black text-amber-700 leading-none">
+                                                                                {vRP.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                                            </span>
+                                                                        </div>
+                                                                    )}
+                                                                    {showAno && vAno > 0 && (
+                                                                        <div className="flex flex-col items-center">
+                                                                            <span className="text-[7px] font-bold text-emerald-500 uppercase leading-none mb-0.5">Ano</span>
+                                                                            <span className="text-[10px] font-black text-emerald-600 leading-none">
+                                                                                {vAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                                            </span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
                                                         </td>
                                                     );
                                                 })}
-                                                <td className="px-6 py-4 text-right border-l border-slate-200 bg-slate-50/30">
-                                                    <span className="text-xs font-black text-emerald-600">{formatCurrency(total)}</span>
+                                                <td className="px-6 py-4 text-right border-l border-slate-200 bg-slate-50 sticky right-0 z-10 shadow-[-2px_0_5px_rgba(0,0,0,0.05)]">
+                                                    <div className="flex flex-col gap-2">
+                                                        {(gridFilter === 'todos' || gridFilter === 'empenhado') && (
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[8px] font-bold text-blue-400 uppercase leading-none">Total Emp.</span>
+                                                                <span className="text-[10px] font-black text-blue-600 leading-tight">{formatCurrency(totalEmpenhado)}</span>
+                                                            </div>
+                                                        )}
+                                                        {(gridFilter === 'todos' || gridFilter === 'executadoRP') && (
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[8px] font-bold text-amber-600 uppercase leading-none">Total RP</span>
+                                                                <span className="text-[10px] font-black text-amber-700 leading-tight">{formatCurrency(totalRealizadoRP)}</span>
+                                                            </div>
+                                                        )}
+                                                        {(gridFilter === 'todos' || gridFilter === 'executado') && (
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[8px] font-bold text-emerald-600 uppercase leading-none">Total Ano</span>
+                                                                <span className="text-[10px] font-black text-emerald-600 leading-tight">{formatCurrency(totalRealizadoAno)}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         );
@@ -719,10 +844,10 @@ const BudgetManagement: React.FC = () => {
                     <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 overflow-hidden">
                         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                             <div>
-                                <h3 className="text-xl font-black text-slate-800 tracking-tight">Novo Elemento</h3>
+                                <h3 className="text-xl font-black text-slate-800 tracking-tight">{editingElement ? 'Editar Elemento' : 'Novo Elemento'}</h3>
                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Classificação Orçamentária</p>
                             </div>
-                            <button onClick={() => setIsElementModalOpen(false)} className="p-2 hover:bg-white rounded-xl transition-colors text-slate-400 hover:text-red-500">
+                            <button onClick={() => { setIsElementModalOpen(false); setEditingElement(null); setNewElementName(''); }} className="p-2 hover:bg-white rounded-xl transition-colors text-slate-400 hover:text-red-500">
                                 <X size={20} />
                             </button>
                         </div>
@@ -757,16 +882,32 @@ const BudgetManagement: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex gap-3">
-                            <button onClick={() => setIsElementModalOpen(false)} className="flex-1 px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-2xl text-sm font-black">Cancelar</button>
-                            <button
-                                onClick={handleAddElement}
-                                disabled={saving || !newElementName.trim()}
-                                className="flex-1 px-6 py-3 bg-ifes-green text-white rounded-2xl text-sm font-black hover:bg-emerald-600 transition-all shadow-lg flex items-center justify-center gap-2"
-                            >
-                                {saving ? <RefreshCw className="animate-spin" size={18} /> : <Save size={18} />}
-                                Salvar
-                            </button>
+                        <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex flex-col gap-3">
+                            <div className="flex gap-3">
+                                <button onClick={() => { setIsElementModalOpen(false); setEditingElement(null); setNewElementName(''); }} className="flex-1 px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-2xl text-sm font-black">Cancelar</button>
+                                <button
+                                    onClick={handleSaveElement}
+                                    disabled={saving || !newElementName.trim()}
+                                    className="flex-1 px-6 py-3 bg-ifes-green text-white rounded-2xl text-sm font-black hover:bg-emerald-600 transition-all shadow-lg flex items-center justify-center gap-2"
+                                >
+                                    {saving ? <RefreshCw className="animate-spin" size={18} /> : <Save size={18} />}
+                                    {editingElement ? 'Atualizar' : 'Salvar'}
+                                </button>
+                            </div>
+
+                            {editingElement && (
+                                <button
+                                    onClick={() => {
+                                        handleDeleteElement(editingElement.id);
+                                        setIsElementModalOpen(false);
+                                        setEditingElement(null);
+                                    }}
+                                    className="w-full px-6 py-3 text-red-500 hover:bg-red-50 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all mt-2 border border-transparent hover:border-red-100 flex items-center justify-center gap-2"
+                                >
+                                    <Trash2 size={14} />
+                                    Excluir Elemento
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
