@@ -15,9 +15,9 @@ const Login: React.FC = () => {
       <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-slate-100 text-center">
         <img src={logoIfes} alt="Ifes Logo" className="h-20 mx-auto mb-6 object-contain" />
 
-        <h1 className="text-2xl font-black text-slate-800 mb-2">Portal PCA</h1>
-        <p className="text-slate-400 font-medium mb-8 text-sm">
-          Planejamento de Contratações Anual
+        <h1 className="text-2xl font-black text-slate-800 mb-2">Portal DAP</h1>
+        <p className="text-slate-400 font-medium mb-8 text-sm leading-relaxed">
+          Diretoria de Administração e Planejamento
           <br />Campus Barra de São Francisco
         </p>
 
@@ -30,7 +30,7 @@ const Login: React.FC = () => {
         </button>
 
         <div className="mt-8 pt-6 border-t border-slate-100">
-           <p className="text-xs text-slate-300 font-bold uppercase tracking-widest">Acesso Restrito</p>
+          <p className="text-xs text-slate-300 font-bold uppercase tracking-widest">Acesso Restrito</p>
         </div>
       </div>
     </div>

@@ -15,8 +15,8 @@ const Dashboard: React.FC = () => {
                     <div className="flex items-center gap-4">
                         <img src={logoIfes} alt="Logo IFES" className="h-16 w-auto object-contain" />
                         <div className="flex flex-col border-l border-slate-100 pl-4">
-                            <span className="text-lg font-black text-ifes-green uppercase leading-none tracking-tight">Portal Administrativo</span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Campus Barra de São Francisco</span>
+                            <span className="text-lg font-black text-ifes-green uppercase leading-none tracking-tight">Portal DAP</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Diretoria de Administração e Planejamento, Campus Barra de São Francisco</span>
                         </div>
                     </div>
 
@@ -90,24 +90,6 @@ const Dashboard: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Card 4: Consulta SIPAC */}
-                    <div
-                        onClick={() => navigate('/sipac')}
-                        className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-500 transition-all cursor-pointer group flex flex-col justify-between h-48"
-                    >
-                        <div>
-                            <div className="bg-indigo-50 w-12 h-12 rounded-xl flex items-center justify-center text-indigo-500 mb-4 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
-                                <Search size={24} />
-                            </div>
-                            <h3 className="text-lg font-black text-slate-800 group-hover:text-indigo-500 transition-colors">Consulta Rápida SIPAC</h3>
-                            <p className="text-xs text-slate-400 font-medium mt-1">Busca avulsa de processos sem vínculo ao PCA.</p>
-                        </div>
-
-                        <div className="flex items-center text-indigo-500 text-sm font-bold mt-4">
-                            <span>Acessar</span>
-                            <ArrowRight size={16} className="ml-2 group-hover:translate-x-1 transition-transform" />
-                        </div>
-                    </div>
 
                 </div>
             </main>

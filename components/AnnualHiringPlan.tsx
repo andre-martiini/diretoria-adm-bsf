@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+﻿import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Building2,
   RefreshCw,
@@ -454,115 +454,71 @@ const AnnualHiringPlan: React.FC = () => {
     { name: 'TIC', value: summary.tic.val, fill: '#3b82f6' }
   ], [summary]);
 
-  // --- LÓGICA DE AGREGAÇÃO (NÍVEL DE EXECUÇÃO E PLANEJAMENTO) ---
-  const aggregatedData = useMemo(() => {
-    // 1. Filtragem Inicial (Filtros de UI)
+  // --- LÓGICA DE DADOS POR VISÃO ---
+  const activeData = useMemo(() => {
+    // Base always processed (sorted by value desc)
     let base = [...processedData];
-    if (selectedCategory !== 'Todas') base = base.filter(i => i.categoria === selectedCategory);
-    if (statusFilter !== 'Todos') base = base.filter(i => i.computedStatus === statusFilter);
-    if (processFilter !== 'Todos') {
-      if (processFilter === 'Com Processo') base = base.filter(i => i.protocoloSIPAC && i.protocoloSIPAC.length > 5);
-      else if (processFilter === 'Sem Processo') base = base.filter(i => !i.protocoloSIPAC || i.protocoloSIPAC.length <= 5);
-    }
+
+    // Apply Global Search & Filters
     if (searchTerm) {
       const low = searchTerm.toLowerCase();
       base = base.filter(i => i.titulo.toLowerCase().includes(low) || i.area.toLowerCase().includes(low));
     }
+    if (selectedCategory !== 'Todas') base = base.filter(i => i.categoria === selectedCategory);
+    if (statusFilter !== 'Todos') base = base.filter(i => i.computedStatus === statusFilter);
 
-    // 2. Agrupamento por Protocolo SIPAC (Prioridade 1 - Execução)
-    const sipacGroups: Record<string, ContractItem[]> = {};
-    const notInSipac: ContractItem[] = [];
+    // View Specific Logic
+    if (dashboardView === 'planning') {
+      // PCA: Raw Data from PNCP (No Grouping, No Process Filter specific logic unless applied by user)
+      // Just return the base list
+      return base.sort((a, b) => b.valor - a.valor);
+    } else {
+      // Gestão de Processos: Agrupamento por Protocolo SIPAC
+      const processItems = base.filter(i => i.protocoloSIPAC && i.protocoloSIPAC.length > 5);
 
-    base.forEach(item => {
-      if (item.protocoloSIPAC && item.protocoloSIPAC.length > 5) {
-        if (!sipacGroups[item.protocoloSIPAC]) sipacGroups[item.protocoloSIPAC] = [];
-        sipacGroups[item.protocoloSIPAC].push(item);
-      } else {
-        notInSipac.push(item);
-      }
-    });
+      const groups: Record<string, ContractItem[]> = {};
+      processItems.forEach(item => {
+        const proto = item.protocoloSIPAC as string;
+        if (!groups[proto]) groups[proto] = [];
+        groups[proto].push(item);
+      });
 
-    // 3. Agrupamento por IFC (Prioridade 2 - Planejamento)
-    const ifcGroups: Record<string, ContractItem[]> = {};
-    const individuals: ContractItem[] = [];
-
-    notInSipac.forEach(item => {
-      if (item.identificadorFuturaContratacao) {
-        if (!ifcGroups[item.identificadorFuturaContratacao]) ifcGroups[item.identificadorFuturaContratacao] = [];
-        ifcGroups[item.identificadorFuturaContratacao].push(item);
-      } else {
-        individuals.push(item);
-      }
-    });
-
-    // 4. Construção das Linhas de Exibição (Display Rows)
-    const resultRows: ContractItem[] = [];
-
-    // Processar Grupos SIPAC
-    Object.entries(sipacGroups).forEach(([proto, items]) => {
-      if (items.length === 1) {
-        resultRows.push(items[0]);
-      } else {
+      const result = Object.values(groups).map(items => {
         const first = items[0];
-        resultRows.push({
+        // SOMA VALOR TOTAL DO PROCESSO
+        const totalValue = items.reduce((acc, i) => acc + i.valor, 0);
+
+        // TÍTULO: Assunto Detalhado do SIPAC (solicitação do usuário)
+        const processTitle = first.dadosSIPAC?.assuntoDetalhado || first.dadosSIPAC?.assuntoDescricao || first.titulo;
+
+        return {
           ...first,
-          id: `group-sipac-${proto}`,
-          titulo: first.titulo,
-          valor: items.reduce((acc, i) => acc + i.valor, 0),
+          id: `process-group-${first.protocoloSIPAC}`,
+          titulo: processTitle, // Override do título para o assunto do processo
+          valor: totalValue,
           isGroup: true,
           itemCount: items.length,
-          childItems: items
-        });
-      }
-    });
+          childItems: items,
+          // Mantém dadosSIPAC do primeiro item (todos devem ser iguais pois é o mesmo protocolo)
+          dadosSIPAC: first.dadosSIPAC
+        } as ContractItem;
+      });
 
-    // Processar Grupos IFC
-    Object.entries(ifcGroups).forEach(([ifc, items]) => {
-      if (items.length === 1) {
-        resultRows.push(items[0]);
-      } else {
-        const first = items[0];
-        resultRows.push({
-          ...first,
-          id: `group-ifc-${ifc}`,
-          titulo: first.titulo,
-          valor: items.reduce((acc, i) => acc + i.valor, 0),
-          isGroup: true,
-          itemCount: items.length,
-          childItems: items
-        });
-      }
-    });
-
-    // Adicionar Indivíduos
-    resultRows.push(...individuals);
-
-    // 5. Ordenação Final
-    return resultRows.sort((a, b) => {
-      let aVal = a[sortConfig.key] || '';
-      let bVal = b[sortConfig.key] || '';
-
-      if (sortConfig.key === 'valor') {
-        return sortConfig.direction === 'desc' ? Number(bVal) - Number(aVal) : Number(aVal) - Number(bVal);
-      }
-
-      if (String(aVal).toLowerCase() < String(bVal).toLowerCase()) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (String(aVal).toLowerCase() > String(bVal).toLowerCase()) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }, [processedData, searchTerm, selectedCategory, statusFilter, processFilter, sortConfig]);
+      return result.sort((a, b) => b.valor - a.valor);
+    }
+  }, [processedData, dashboardView, searchTerm, selectedCategory, statusFilter]);
 
   const pagedData = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
-    return aggregatedData.slice(start, start + itemsPerPage);
-  }, [aggregatedData, currentPage]);
+    return activeData.slice(start, start + itemsPerPage);
+  }, [activeData, currentPage, itemsPerPage]);
 
-  const totalPages = Math.ceil(aggregatedData.length / itemsPerPage);
+  const totalPages = Math.ceil(activeData.length / itemsPerPage);
 
   const closeToast = () => setToast(null);
 
   return (
-    <div className="min-h-screen border-t-4 border-ifes-green bg-slate-50/30 relative">
+    <div className="min-h-screen border-t-4 border-ifes-green bg-slate-50/30 relative font-sans">
       {toast && (
         <Toast
           message={toast.message}
@@ -628,252 +584,202 @@ const AnnualHiringPlan: React.FC = () => {
         </div>
       )}
 
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm font-sans">
-        <div className="max-w-7xl mx-auto px-4 h-24 flex items-center justify-between gap-4">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div className="w-full px-6 h-20 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 sm:gap-6 min-w-0">
             <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-              <img src={logoIfes} alt="Logo IFES" className="h-12 sm:h-16 w-auto object-contain" />
+              <img src={logoIfes} alt="Logo IFES" className="h-10 sm:h-14 w-auto object-contain" />
               <div className="flex flex-col border-l border-slate-100 pl-3 sm:pl-4">
-                <span className="text-sm sm:text-lg font-black text-ifes-green uppercase leading-none tracking-tight">Gestão de Contratações</span>
-                <span className="text-[8px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Campus BSF</span>
+                <span className="text-sm sm:text-base font-black text-ifes-green uppercase leading-none tracking-tight">Gestão de Contratações</span>
+                <span className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Campus BSF</span>
               </div>
             </div>
 
-            <div className="border-l border-slate-100 pl-3 sm:pl-6 ml-0 sm:ml-6">
-              <div className="flex flex-col">
-                <span className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Ano Ref.</span>
-                <div className="flex items-center gap-3">
-                  <select
-                    value={selectedYear}
-                    onChange={(e) => {
-                      setSelectedYear(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="bg-ifes-green/5 text-ifes-green border border-ifes-green/20 rounded-md px-2 sm:px-3 py-1 text-[10px] sm:text-sm font-black outline-none focus:ring-2 focus:ring-ifes-green/40 transition-all cursor-pointer"
-                  >
-                    {Object.keys(PCA_YEARS_MAP).sort((a, b) => b.localeCompare(a)).map(year => (
-                      <option key={year} value={year}>{year}</option>
-                    ))}
-                  </select>
-
-                  {pcaMeta && (
-                    <div className="hidden lg:flex flex-col border-l border-slate-200 pl-3">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase leading-none">PCA ID: {pcaMeta.id}</span>
-                      <span className="text-[9px] font-medium text-slate-400 mt-1">Ref.: {formatDate(pcaMeta.dataPublicacao)}</span>
-                    </div>
-                  )}
-                </div>
+            <div className="border-l border-slate-100 pl-6 ml-6 hidden md:block">
+              <div className="flex bg-slate-100 p-1 rounded-xl">
+                <button
+                  onClick={() => setDashboardView('planning')}
+                  className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${dashboardView === 'planning' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                  Plano de Contratação (PCA)
+                </button>
+                <button
+                  onClick={() => setDashboardView('status')}
+                  className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${dashboardView === 'status' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                  Gestão de Processos
+                </button>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-            {(loading || isSyncing) && <RefreshCw size={18} className="animate-spin text-ifes-green hidden sm:block" />}
-
-            <div className="hidden lg:flex flex-col items-end mr-2">
-              <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Última Sincronização</span>
-              <span className="text-[10px] font-bold text-slate-600">{lastSync || 'Carregando...'}</span>
+          <div className="flex items-center gap-4 shrink-0">
+            <div className="flex flex-col">
+              <span className="text-[8px] sm:text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Ano Ref.</span>
+              <div className="flex items-center gap-3">
+                <select
+                  value={selectedYear}
+                  onChange={(e) => {
+                    setSelectedYear(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="bg-ifes-green/5 text-ifes-green border border-ifes-green/20 rounded-md px-2 py-1 text-xs font-black outline-none focus:ring-2 focus:ring-ifes-green/40 transition-all cursor-pointer"
+                >
+                  {Object.keys(PCA_YEARS_MAP).sort((a, b) => b.localeCompare(a)).map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </div>
             </div>
+
+            <div className="w-px h-8 bg-slate-100 mx-2" />
 
             <button
               onClick={() => fetchData(selectedYear, true)}
               disabled={isSyncing}
-              className="flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl transition-all font-bold text-xs sm:text-sm border border-blue-200 cursor-pointer disabled:opacity-50"
+              className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl transition-all border border-blue-200 cursor-pointer disabled:opacity-50"
               title="Atualizar dados diretamente da PNCP"
             >
               <RefreshCw size={18} className={isSyncing ? 'animate-spin' : ''} />
-              <span className="hidden md:inline">Atualizar PNCP</span>
             </button>
-
 
             <button
               onClick={() => navigate('/dashboard')}
-              className="flex items-center gap-2 px-3 py-2 bg-slate-50 hover:bg-ifes-green/10 text-slate-600 hover:text-ifes-green rounded-xl transition-all font-bold text-xs sm:text-sm border border-slate-100 hover:border-ifes-green/20 cursor-pointer"
+              className="flex items-center gap-2 px-3 py-2 bg-slate-50 hover:bg-ifes-green/10 text-slate-600 hover:text-ifes-green rounded-xl transition-all font-bold text-xs border border-slate-100 hover:border-ifes-green/20 cursor-pointer"
             >
               <LayoutDashboard size={18} />
-              <span className="hidden md:inline">Menu Principal</span>
+              <span className="hidden md:inline">Menu Princ.</span>
             </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+      <main className="w-full max-w-[1920px] px-6 mx-auto py-8 space-y-8">
 
-        {/* Carousel Dashboard */}
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden relative font-sans">
+        {/* VISUALIZAÇÃO DO PLANEJAMENTO (PCA) */}
+        {dashboardView === 'planning' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+            {/* CHART GRID FOR PCA */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              {/* KPI 1: Valor Total */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-center relative overflow-hidden group hover:border-ifes-green/30 transition-all">
+                <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
+                  <DollarSign size={80} className="text-ifes-green" />
+                </div>
+                <div className="relative z-10">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Valor Total Planejado</p>
+                  <h3 className="text-3xl font-black text-slate-900 mb-6">{formatCurrency(summary.totalValue)}</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[9px] font-black text-slate-400 uppercase">
+                      <span>Itens Vinculados a Processos</span>
+                      <span>{((summary.totalExecutado / (summary.totalItems || 1)) * 100).toFixed(0)}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-ifes-green transition-all duration-500"
+                        style={{ width: `${(summary.totalExecutado / (summary.totalItems || 1)) * 100}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-          {/* Header do Carousel */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white">
-            <button
-              onClick={() => setDashboardView(prev => prev === 'planning' ? 'status' : 'planning')}
-              className="p-2 hover:bg-slate-50 rounded-full text-slate-400 hover:text-ifes-green transition-colors"
-            >
-              <ChevronLeft size={24} />
-            </button>
+              {/* CHART 1: Alocação por Categoria */}
+              <div className="lg:col-span-1 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+                <h3 className="text-xs font-black text-slate-800 mb-4 flex items-center gap-2 uppercase tracking-wide">
+                  <Target size={14} className="text-ifes-green" />
+                  Por Categoria
+                </h3>
+                <div className="h-[200px] w-full relative">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={chartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={70}
+                        paddingAngle={5}
+                        dataKey="value"
+                        stroke="none"
+                      >
+                        {chartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} cornerRadius={4} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(v: number) => formatCurrency(v)}
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
 
-            <div className="text-center">
+              {/* CHART 2: Cronograma Mensal */}
+              <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+                <h3 className="text-xs font-black text-slate-800 mb-4 flex items-center gap-2 uppercase tracking-wide">
+                  <RefreshCw size={14} className="text-blue-500" />
+                  Cronograma de Contratação (Inicio Vigência)
+                </h3>
+                <div className="h-[200px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={summary.monthlyPlan}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis
+                        dataKey="month"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }}
+                      />
+                      <Tooltip
+                        formatter={(v: number) => formatCurrency(v)}
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                      />
+                      <Bar
+                        dataKey="value"
+                        fill="#2f9e41"
+                        radius={[4, 4, 0, 0]}
+                        barSize={24}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* VISUALIZAÇÃO DA GESTÃO DE PROCESSOS */}
+        {dashboardView === 'status' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <ProcessDashboard data={activeData} />
+          </div>
+        )}
+
+        {/* TABELA DE DADOS (Compartilhada mas com dados diferentes) */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col font-sans">
+          <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row items-center justify-between gap-6 bg-slate-50/30">
+            <div>
               <h2 className="text-xl font-black text-slate-800 tracking-tight">
-                {dashboardView === 'planning' ? 'Plano de Contratação Anual' : 'Gestão de Processos (Status)'}
+                {dashboardView === 'planning' ? 'Detalhamento do Plano (PNCP)' : 'Processos em Andamento'}
               </h2>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                {dashboardView === 'planning' ? 'Visão Geral do Planejamento e Alocação' : 'Monitoramento de Fluxos e Prazos'}
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 italic">
+                {dashboardView === 'planning' ? `Lista completa de itens importados do PNCP - Ano ${selectedYear}` : 'Listagem de processos com protocolo SIPAC vinculado'}
               </p>
             </div>
 
-            <button
-              onClick={() => setDashboardView(prev => prev === 'planning' ? 'status' : 'planning')}
-              className="p-2 hover:bg-slate-50 rounded-full text-slate-400 hover:text-ifes-green transition-colors"
-            >
-              <ChevronRight size={24} />
-            </button>
-          </div>
-
-          <div className="p-6 bg-slate-50/30 min-h-[400px]">
-            {dashboardView === 'planning' ? (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in slide-in-from-right-4 duration-300">
-
-                {/* Coluna 1: KPI Planejado Total */}
-                <div className="lg:col-span-3 flex flex-col gap-6">
-                  <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-center h-full relative overflow-hidden group hover:border-ifes-green/30 transition-all">
-                    <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
-                      <DollarSign size={80} className="text-ifes-green" />
-                    </div>
-
-                    <div className="relative z-10">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Inv. Planejado Total</p>
-                      <h3 className="text-3xl font-black text-slate-900 mb-6">{formatCurrency(summary.totalValue)}</h3>
-
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-[9px] font-black text-slate-400 uppercase">
-                          <span>Itens Vinculados</span>
-                          <span>{((summary.totalExecutado / (summary.totalItems || 1)) * 100).toFixed(0)}%</span>
-                        </div>
-                        <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-ifes-green transition-all duration-500"
-                            style={{ width: `${(summary.totalExecutado / (summary.totalItems || 1)) * 100}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Coluna 2: Gráfico de Pizza (Alocação) */}
-                <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
-                  <h3 className="text-sm font-black text-slate-800 mb-4 flex items-center gap-2">
-                    <Target size={16} className="text-ifes-green" />
-                    Alocação de Recursos
-                  </h3>
-                  <div className="h-[300px] w-full relative">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={chartData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={80}
-                          paddingAngle={5}
-                          dataKey="value"
-                          stroke="none"
-                        >
-                          {chartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} cornerRadius={4} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          formatter={(v: number) => formatCurrency(v)}
-                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    {/* Legend Overlay */}
-                    <div className="absolute bottom-0 right-0 flex flex-col gap-2 bg-white/90 p-2 rounded-xl border border-slate-100 backdrop-blur-sm text-[10px]">
-                      {chartData.map(item => (
-                        <div key={item.name} className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.fill }} />
-                          <span className="font-bold text-slate-600">{item.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Coluna 3: Cronograma Mensal (Substituindo Curva ABC) */}
-                <div className="lg:col-span-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
-                  <h3 className="text-sm font-black text-slate-800 mb-4 flex items-center gap-2">
-                    <RefreshCw size={16} className="text-blue-500" />
-                    Cronograma Mensal
-                  </h3>
-                  <div className="h-[300px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={summary.monthlyPlan}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis
-                          dataKey="month"
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }}
-                        />
-                        <Tooltip
-                          formatter={(v: number) => formatCurrency(v)}
-                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                        />
-                        <Bar
-                          dataKey="value"
-                          fill="#2f9e41"
-                          radius={[4, 4, 0, 0]}
-                          barSize={16}
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-              </div>
-            ) : (
-              <ProcessDashboard data={processedData} />
-            )}
-          </div>
-        </div>
-
-        {/* Zona 4: Tabela */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col font-sans">
-          <div className="p-8 border-b border-slate-100 flex flex-col md:flex-row items-center justify-between gap-8 bg-slate-50/30">
-            <div>
-              <h2 className="text-2xl font-black text-slate-800 tracking-tight">Contratações Planejadas</h2>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 italic">Lista oficial do PCA {selectedYear}</p>
-            </div>
-
             <div className="flex flex-wrap items-center gap-3">
-              <button
-                onClick={() => setIsManualModalOpen(true)}
-                className="flex items-center gap-2 bg-ifes-green text-white px-4 py-2 rounded-xl text-xs font-black hover:bg-emerald-600 transition-colors shadow-sm"
-              >
-                <Plus size={16} />
-                <span>Nova Demanda</span>
-              </button>
               <div className="relative w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
                 <input
                   type="text"
-                  placeholder="Buscar descrição..."
-                  className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-[11px] font-bold outline-none"
+                  placeholder="Buscar por descrição ou área..."
+                  className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:ring-2 focus:ring-ifes-green/20 transition-all"
                   value={searchTerm}
                   onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                 />
               </div>
-
-              <select
-                value={processFilter}
-                onChange={(e) => { setProcessFilter(e.target.value); setCurrentPage(1); }}
-                className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-[11px] font-bold text-slate-600 outline-none"
-              >
-                <option value="Todos">Filtro: Todos</option>
-                <option value="Com Processo">Processo Aberto</option>
-                <option value="Sem Processo">Processo Não Aberto</option>
-              </select>
 
               <select
                 value={statusFilter}
@@ -892,16 +798,35 @@ const AnnualHiringPlan: React.FC = () => {
                 <option value="Encerrado/Arquivado">Encerrado</option>
               </select>
 
-              <select
-                value={selectedCategory}
-                onChange={(e) => { setSelectedCategory(e.target.value); setCurrentPage(1); }}
-                className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-[11px] font-bold text-slate-600 outline-none"
+              {dashboardView === 'planning' && (
+                <div className="flex bg-slate-900/5 p-1 rounded-xl items-center mx-2">
+                  {[
+                    { label: 'Todas', value: 'Todas' },
+                    { label: 'Bens', value: Category.Bens },
+                    { label: 'Serviços', value: Category.Servicos },
+                    { label: 'TIC', value: Category.TIC }
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => { setSelectedCategory(opt.value); setCurrentPage(1); }}
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${selectedCategory === opt.value
+                          ? 'bg-white text-slate-800 shadow-sm ring-1 ring-black/5'
+                          : 'text-slate-400 hover:text-slate-600'
+                        }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <button
+                onClick={() => setIsManualModalOpen(true)}
+                className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-black hover:bg-slate-700 transition-colors shadow-sm"
               >
-                <option value="Todas">Todas Categorias</option>
-                <option value={Category.Bens}>Bens</option>
-                <option value={Category.Servicos}>Serviços</option>
-                <option value={Category.TIC}>TIC</option>
-              </select>
+                <Plus size={16} />
+                <span>Nova Demanda</span>
+              </button>
             </div>
           </div>
 
@@ -915,35 +840,14 @@ const AnnualHiringPlan: React.FC = () => {
             sortConfig={sortConfig}
             selectedIds={selectedIds}
             onToggleSelection={(id) => {
-              // Encontrar o item ou grupo correspondente
-              const item = aggregatedData.find(i => String(i.id) === id);
-              if (!item) return;
-
-              if (item.isGroup && item.childItems) {
-                const childIds = item.childItems.map(c => String(c.id));
-                const allSelected = childIds.every(cid => selectedIds.includes(cid));
-
-                if (allSelected) {
-                  setSelectedIds(prev => prev.filter(pid => !childIds.includes(pid)));
-                } else {
-                  setSelectedIds(prev => Array.from(new Set([...prev, ...childIds])));
-                }
-              } else {
-                setSelectedIds(prev =>
-                  prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-                );
-              }
+              setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
             }}
             onToggleAll={() => {
-              const allIdsInPage = pagedData.flatMap(item =>
-                item.isGroup && item.childItems ? item.childItems.map(c => String(c.id)) : [String(item.id)]
-              );
-              const allSelected = allIdsInPage.every(id => selectedIds.includes(id));
-
-              if (allSelected) {
-                setSelectedIds(prev => prev.filter(id => !allIdsInPage.includes(id)));
+              const allIds = pagedData.map(i => String(i.id));
+              if (allIds.every(id => selectedIds.includes(id))) {
+                setSelectedIds(prev => prev.filter(id => !allIds.includes(id)));
               } else {
-                setSelectedIds(prev => Array.from(new Set([...prev, ...allIdsInPage])));
+                setSelectedIds(prev => [...prev, ...allIds]);
               }
             }}
             onEdit={(item) => {
@@ -960,8 +864,8 @@ const AnnualHiringPlan: React.FC = () => {
             <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
               <span className="text-[10px] font-bold text-slate-400 capitalize">Página {currentPage} de {totalPages}</span>
               <div className="flex gap-2">
-                <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="p-2 border rounded-lg bg-white disabled:opacity-30"><ChevronLeft size={16} /></button>
-                <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="p-2 border rounded-lg bg-white disabled:opacity-30"><ChevronRight size={16} /></button>
+                <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="p-2 border rounded-lg bg-white disabled:opacity-30 hover:bg-slate-50"><ChevronLeft size={16} /></button>
+                <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="p-2 border rounded-lg bg-white disabled:opacity-30 hover:bg-slate-50"><ChevronRight size={16} /></button>
               </div>
             </div>
           )}

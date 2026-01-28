@@ -1,340 +1,247 @@
 import React, { useMemo } from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
-  Sankey, TooltipProps, Cell, Legend
+    Activity,
+    BarChart3,
+    Layers,
+    Clock,
+    TrendingUp
+} from 'lucide-react';
+import {
+    ResponsiveContainer,
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Cell,
+    PieChart,
+    Pie,
+    Legend
 } from 'recharts';
-import { Clock, RefreshCw, AlertTriangle, Activity, ArrowRight, GitMerge } from 'lucide-react';
 import { ContractItem } from '../types';
-import { calculateProcessMetrics, generateSankeyData, ProcessMetrics } from '../utils/processLogic';
+import { formatCurrency } from '../utils/formatters';
 
 interface ProcessDashboardProps {
-  data: ContractItem[];
+    data: ContractItem[];
 }
 
 const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data }) => {
-  // 1. Filter items that have SIPAC data
-  const validItems = useMemo(() => data.filter(item => item.dadosSIPAC && item.dadosSIPAC.numeroProcesso), [data]);
-
-  // 2. Calculate Aggregated Metrics
-  const metrics = useMemo(() => {
-    const calculated = validItems.map(item => ({
-      item,
-      metrics: calculateProcessMetrics(item.dadosSIPAC)
-    })).filter(r => r.metrics !== null) as { item: ContractItem, metrics: ProcessMetrics }[];
-
-    if (calculated.length === 0) return null;
-
-    // Avg Lead Time
-    const totalLeadTime = calculated.reduce((acc, curr) => acc + curr.metrics.leadTime, 0);
-    const avgLeadTime = Math.round(totalLeadTime / calculated.length);
-
-    // Rework (Total Loops)
-    const totalRework = calculated.reduce((acc, curr) => acc + curr.metrics.reworkCount, 0);
-    const reworkRate = (totalRework / calculated.length).toFixed(1);
-
-    // Bottlenecks Aggregation
-    const unitBottlenecks: Record<string, { totalDays: number, count: number }> = {};
-    calculated.forEach(c => {
-      c.metrics.bottlenecks.forEach(b => {
-        if (!unitBottlenecks[b.unit]) unitBottlenecks[b.unit] = { totalDays: 0, count: 0 };
-        unitBottlenecks[b.unit].totalDays += b.days;
-        unitBottlenecks[b.unit].count += 1;
-      });
-    });
-
-    const avgBottlenecks = Object.entries(unitBottlenecks)
-      .map(([unit, data]) => ({
-        unit,
-        avgDays: Math.round(data.totalDays / data.count),
-        count: data.count
-      }))
-      .sort((a, b) => b.avgDays - a.avgDays)
-      .slice(0, 10); // Top 10 slowest
-
-    // Lead Time Distribution
-    // Buckets: <30, 30-60, 60-90, 90-120, >120
-    const buckets = {
-      '< 30 dias': 0,
-      '30-60 dias': 0,
-      '60-90 dias': 0,
-      '90-120 dias': 0,
-      '> 120 dias': 0
-    };
-
-    calculated.forEach(c => {
-      const lt = c.metrics.leadTime;
-      if (lt < 30) buckets['< 30 dias']++;
-      else if (lt < 60) buckets['30-60 dias']++;
-      else if (lt < 90) buckets['60-90 dias']++;
-      else if (lt < 120) buckets['90-120 dias']++;
-      else buckets['> 120 dias']++;
-    });
-
-    const leadTimeData = Object.entries(buckets).map(([name, value]) => ({ name, value }));
-
-    // Rework Data (Top Processes with Loops)
-    const topReworks = calculated
-      .sort((a, b) => b.metrics.reworkCount - a.metrics.reworkCount)
-      .slice(0, 5)
-      .map(c => ({
-        name: c.item.titulo.substring(0, 30) + '...',
-        loops: c.metrics.reworkCount,
-        process: c.item.dadosSIPAC?.numeroProcesso
-      }));
-
-    return {
-      totalProcesses: calculated.length,
-      avgLeadTime,
-      reworkRate,
-      avgBottlenecks,
-      leadTimeData,
-      topReworks,
-      slowestUnit: avgBottlenecks.length > 0 ? avgBottlenecks[0].unit : 'N/A'
-    };
-  }, [validItems]);
-
-  const sankeyData = useMemo(() => {
-    if (validItems.length === 0) return { nodes: [], links: [] };
-    return generateSankeyData(validItems);
-  }, [validItems]);
-
-  if (!metrics || metrics.totalProcesses === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center p-12 bg-white rounded-3xl border border-slate-200 shadow-sm">
-        <div className="bg-slate-100 p-6 rounded-full mb-4">
-          <Activity size={48} className="text-slate-300" />
-        </div>
-        <h3 className="text-lg font-black text-slate-700">Dados Insuficientes</h3>
-        <p className="text-sm text-slate-400 mt-2 text-center max-w-md">
-          Não há dados de movimentação suficientes nos processos vinculados para gerar os indicadores de performance.
-          Vincule processos do SIPAC que possuam histórico de tramitação.
-        </p>
-      </div>
+    // Filtra apenas itens que possuem um processo SIPAC (ou seja, estão em execução)
+    const processItems = useMemo(() =>
+        data.filter(item => item.protocoloSIPAC && item.protocoloSIPAC.length > 5),
+        [data]
     );
-  }
 
-  // Custom Tooltip for Sankey
-  const SankeyTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      // Check if it's a node or link
-      const isLink = data.source && data.target;
-      return (
-        <div className="bg-white p-3 border border-slate-200 shadow-lg rounded-xl text-xs z-50">
-          {isLink ? (
-            <>
-              <p className="font-bold text-slate-700">{data.source.name} <span className="text-slate-400 mx-1">→</span> {data.target.name}</p>
-              <p className="font-black text-blue-600 mt-1">{data.value} Trâmites</p>
-            </>
-          ) : (
-            <p className="font-bold text-slate-700">{data.name}</p>
-          )}
-        </div>
-      );
-    }
-    return null;
-  };
+    const stats = useMemo(() => {
+        const totalValue = processItems.reduce((acc, item) => acc + item.valor, 0);
+        // Consideramos em andamento o que não está contratado nem encerrado
+        const inProgress = processItems.filter(item =>
+            !['Contratado', 'Encerrado/Arquivado', 'Adjudicado/Homologado'].includes(item.computedStatus || '')
+        ).length;
 
-  return (
-    <div className="space-y-6 animate-in fade-in duration-500 font-sans">
+        // Processos Estagnados (sem movimentação há mais de 30 dias)
+        // Baseado na data da última atualização do SIPAC (proxy para último trâmite)
+        const stalled = processItems.filter(item => {
+            if (!item.dadosSIPAC?.ultimaAtualizacao) return false;
+            try {
+                // Formato esperado: dd/mm/yyyy HH:mm
+                const parts = item.dadosSIPAC.ultimaAtualizacao.split(' ')[0].split('/');
+                if (parts.length !== 3) return false;
+                const lastDate = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+                const diffTime = Math.abs(new Date().getTime() - lastDate.getTime());
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                return diffDays > 30; // 30 dias de tolerância
+            } catch (e) {
+                return false;
+            }
+        }).length;
 
-      {/* KPIS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between group hover:border-blue-300 transition-all">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lead Time Médio</p>
-              <h3 className="text-3xl font-black text-slate-800 mt-2">{metrics.avgLeadTime} <span className="text-sm text-slate-400 font-bold">dias</span></h3>
+        return {
+            totalCount: processItems.length,
+            totalValue,
+            inProgress,
+            stalled
+        };
+    }, [processItems]);
+
+    const statusData = useMemo(() => {
+        const counts: Record<string, number> = {};
+        processItems.forEach(item => {
+            const status = item.computedStatus || 'Indefinido';
+            counts[status] = (counts[status] || 0) + 1;
+        });
+
+        return Object.entries(counts)
+            .map(([name, value]) => ({ name, value }))
+            .sort((a, b) => b.value - a.value);
+    }, [processItems]);
+
+    const movementData = useMemo(() => {
+        return processItems
+            .map(item => ({
+                name: item.titulo.substring(0, 20) + '...',
+                fullTitle: item.titulo,
+                value: item.dadosSIPAC?.movimentacoes?.length || 0,
+                incidentes: item.dadosSIPAC?.incidentes?.length || 0
+            }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 5);
+    }, [processItems]);
+
+    const STATUS_COLORS: Record<string, string> = {
+        'Planejamento da Contratação': '#3b82f6',
+        'Composição de Preços': '#6366f1',
+        'Análise de Legalidade': '#f59e0b',
+        'Fase Externa': '#10b981',
+        'Licitação Suspensa/Sob Análise': '#ef4444',
+        'Adjudicado/Homologado': '#8b5cf6',
+        'Contratado': '#047857',
+        'Encerrado/Arquivado': '#64748b'
+    };
+
+    return (
+        <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-300">
+            {/* Linha 1: KPIs Rápidos */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm group hover:border-blue-400 transition-all">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="bg-blue-50 p-2 rounded-xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                            <Activity size={20} />
+                        </div>
+                    </div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Processos Ativos</p>
+                    <h3 className="text-2xl font-black text-slate-900">{stats.totalCount}</h3>
+                    <p className="text-[9px] font-bold text-slate-400 mt-2 italic">{stats.inProgress} em trâmite atual</p>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm group hover:border-emerald-400 transition-all">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="bg-emerald-50 p-2 rounded-xl text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                            <TrendingUp size={20} />
+                        </div>
+                    </div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Valor sob Gestão</p>
+                    <h3 className="text-2xl font-black text-slate-900">{formatCurrency(stats.totalValue)}</h3>
+                    <p className="text-[9px] font-bold text-slate-400 mt-2 italic">Volume financeiro em processos</p>
+                </div>
+
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm group hover:border-amber-400 transition-all">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="bg-amber-50 p-2 rounded-xl text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-all">
+                            <Clock size={20} />
+                        </div>
+                    </div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Estagnação (Setor)</p>
+                    <h3 className="text-2xl font-black text-slate-900">{stats.stalled}</h3>
+                    <p className="text-[9px] font-bold text-slate-400 mt-2 italic">Sem trâmite há 30+ dias</p>
+                </div>
             </div>
-            <div className="bg-blue-50 p-3 rounded-2xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-              <Clock size={24} />
+
+            {/* Linha 2: Gráficos */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Distribuição por Status */}
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+                    <h3 className="text-sm font-black text-slate-800 mb-6 flex items-center gap-2">
+                        <BarChart3 size={16} className="text-blue-500" />
+                        Volume por Fase do Processo
+                    </h3>
+                    <div className="h-[280px] w-full relative">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={statusData}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={60}
+                                    outerRadius={80}
+                                    paddingAngle={2}
+                                    dataKey="value"
+                                    stroke="none"
+                                >
+                                    {statusData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name] || '#cbd5e1'} />
+                                    ))}
+                                </Pie>
+                                <Tooltip
+                                    formatter={(value: number, name: string) => [
+                                        `${value} processos`,
+                                        name
+                                    ]}
+                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                />
+                                <Legend
+                                    layout="horizontal"
+                                    verticalAlign="bottom"
+                                    align="center"
+                                    iconType="circle"
+                                    iconSize={8}
+                                    wrapperStyle={{ fontSize: '10px', fontWeight: 700, color: '#64748b', paddingTop: '10px' }}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none pb-6">
+                            <span className="text-3xl font-black text-slate-800 leading-none">{stats.totalCount}</span>
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-tight">Total</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Análise de Retrabalho e Complexidade */}
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col relative overflow-hidden">
+                    <h3 className="text-sm font-black text-slate-800 mb-6 flex items-center gap-2">
+                        <Layers size={16} className="text-emerald-500" />
+                        Nível de Complexidade (Trâmites)
+                    </h3>
+                    <div className="h-[200px] w-full relative">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={movementData} layout="vertical" margin={{ left: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
+                                <XAxis type="number" hide />
+                                <YAxis
+                                    dataKey="name"
+                                    type="category"
+                                    width={100}
+                                    tick={{ fontSize: 9, fontWeight: 700, fill: '#64748b' }}
+                                    axisLine={false}
+                                    tickLine={false}
+                                />
+                                <Tooltip
+                                    cursor={{ fill: '#f8fafc' }}
+                                    formatter={(value: number, name: string, props: any) => [
+                                        `${value} movimentações`,
+                                        `Incidentes: ${props.payload.incidentes}`
+                                    ]}
+                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                />
+                                <Bar dataKey="value" fill="#10b981" radius={[0, 4, 4, 0]} barSize={16} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                        <div className="absolute top-2 right-2 flex flex-col items-end pointer-events-none">
+                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Processos Mais Movimentados</span>
+                        </div>
+                    </div>
+
+                    <div className="mt-auto space-y-2">
+                        {movementData.map((item, idx) => (
+                            <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
+                                <div className="flex items-center gap-2">
+                                    <div className={`w-2 h-2 rounded-full ${item.incidentes > 0 ? 'bg-red-500' : 'bg-emerald-500'}`} />
+                                    <span className="text-[10px] font-bold text-slate-600 truncate max-w-[150px]" title={item.fullTitle}>{item.name}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {item.incidentes > 0 && (
+                                        <span className="text-[9px] font-black text-red-500 bg-red-50 px-1.5 rounded-full">{item.incidentes} !</span>
+                                    )}
+                                    <span className="text-[10px] font-black text-slate-400">{item.value} trâm.</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
-          </div>
-          <p className="text-[10px] font-bold text-slate-400 mt-4 bg-slate-50 inline-block px-2 py-1 rounded-lg self-start">
-            Base: {metrics.totalProcesses} processos
-          </p>
         </div>
-
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between group hover:border-amber-300 transition-all min-h-[180px]">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gargalo Principal</p>
-              <h3 className="text-[11px] font-black text-slate-800 mt-2 leading-tight uppercase break-words">
-                {metrics.slowestUnit}
-              </h3>
-            </div>
-            <div className="bg-amber-50 p-3 rounded-2xl text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-colors shrink-0">
-              <AlertTriangle size={24} />
-            </div>
-          </div>
-          <div className="mt-4 pt-4 border-t border-slate-50">
-            <p className="text-[10px] font-bold text-slate-400">Tempo Médio na Unidade</p>
-            <p className="text-xl font-black text-amber-600">{Math.max(0, metrics.avgBottlenecks[0]?.avgDays || 0)} dias</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between group hover:border-purple-300 transition-all">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Taxa de Retrabalho</p>
-              <h3 className="text-3xl font-black text-slate-800 mt-2">{metrics.reworkRate} <span className="text-sm text-slate-400 font-bold">loops/proc</span></h3>
-            </div>
-            <div className="bg-purple-50 p-3 rounded-2xl text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
-              <RefreshCw size={24} />
-            </div>
-          </div>
-          <p className="text-[10px] font-bold text-slate-400 mt-4 leading-tight">
-            Média de retornos de processo para a mesma unidade.
-          </p>
-        </div>
-
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col justify-between group hover:border-emerald-300 transition-all">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fluxo do Processo</p>
-              <h3 className="text-3xl font-black text-slate-800 mt-2">{sankeyData.links.length} <span className="text-sm text-slate-400 font-bold">conexões</span></h3>
-            </div>
-            <div className="bg-emerald-50 p-3 rounded-2xl text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-              <GitMerge size={24} />
-            </div>
-          </div>
-          <p className="text-[10px] font-bold text-slate-400 mt-4 leading-tight">
-            Mapeamento de trâmites entre setores distintos.
-          </p>
-        </div>
-      </div>
-
-      {/* Charts Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {/* Lead Time Histogram */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col h-[400px]">
-          <h3 className="text-sm font-black text-slate-800 mb-6 flex items-center gap-2">
-            <Clock size={18} className="text-blue-500" />
-            Lead Time Total (Tempo de Vida)
-          </h3>
-          <div className="flex-1 w-full min-h-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={metrics.leadTimeData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} />
-                <RechartsTooltip
-                  cursor={{ fill: '#f8fafc' }}
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                />
-                <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={40} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Bottlenecks Chart */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col h-[400px]">
-          <h3 className="text-sm font-black text-slate-800 mb-6 flex items-center gap-2">
-            <AlertTriangle size={18} className="text-amber-500" />
-            Top Gargalos (Tempo Médio por Unidade)
-          </h3>
-          <div className="flex-1 w-full min-h-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart layout="vertical" data={metrics.avgBottlenecks} margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} unit="d" />
-                <YAxis dataKey="unit" type="category" width={100} axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 700, fill: '#64748b' }} />
-                <RechartsTooltip
-                  cursor={{ fill: '#f8fafc' }}
-                  formatter={(value: number) => [`${value} dias`, 'Tempo Médio']}
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                />
-                <Bar dataKey="avgDays" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={20} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      {/* Sankey Chart - Flow Map */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col h-[500px]">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-sm font-black text-slate-800 flex items-center gap-2">
-            <GitMerge size={18} className="text-emerald-500" />
-            Mapa de Fluxo (Diagrama de Sankey)
-          </h3>
-          <span className="text-[10px] font-bold text-slate-400 uppercase bg-slate-50 px-3 py-1 rounded-full">
-            {sankeyData.nodes.length} Unidades • {sankeyData.links.length} Conexões
-          </span>
-        </div>
-
-        <div className="flex-1 w-full min-h-0 bg-slate-50/50 rounded-2xl border border-slate-100 p-4 overflow-hidden relative">
-          {sankeyData.nodes.length > 1 && sankeyData.links.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <Sankey
-                data={sankeyData}
-                nodePadding={20}
-                nodeWidth={10}
-                iterations={1}
-                link={{ stroke: '#10b981', strokeOpacity: 0.2 }}
-                node={{
-                  fill: '#3b82f6',
-                  stroke: '#2563eb',
-                  strokeWidth: 1
-                }}
-              >
-                <RechartsTooltip />
-              </Sankey>
-            </ResponsiveContainer>
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-xs font-bold uppercase">
-              Dados de fluxo insuficientes para visualização
-            </div>
-          )}
-        </div>
-        <p className="text-[10px] font-medium text-slate-400 mt-4 text-center">
-          Espessura das linhas representa o volume de processos tramitando entre as unidades.
-        </p>
-      </div>
-
-      {/* Rework Analysis List */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-        <h3 className="text-sm font-black text-slate-800 mb-6 flex items-center gap-2">
-          <RefreshCw size={18} className="text-purple-500" />
-          Análise de Retrabalho (Top 5 Processos com mais Loops)
-        </h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest rounded-l-xl">Processo</th>
-                <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Descrição</th>
-                <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right rounded-r-xl">Ciclos de Retorno</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {metrics.topReworks.map((item, idx) => (
-                <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 text-xs font-black text-slate-700 font-mono">{item.process}</td>
-                  <td className="px-6 py-4 text-xs font-bold text-slate-600">{item.name}</td>
-                  <td className="px-6 py-4 text-right">
-                    <span className="bg-purple-100 text-purple-700 font-black px-3 py-1 rounded-full text-xs">
-                      {item.loops} loops
-                    </span>
-                  </td>
-                </tr>
-              ))}
-              {metrics.topReworks.length === 0 && (
-                <tr>
-                  <td colSpan={3} className="px-6 py-8 text-center text-xs font-bold text-slate-400 italic">
-                    Nenhum retrabalho significativo detectado.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-    </div>
-  );
+    );
 };
 
 export default ProcessDashboard;
