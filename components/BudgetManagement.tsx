@@ -43,6 +43,8 @@ import {
 } from 'firebase/firestore';
 import { BudgetElement, BudgetRecord, BudgetType } from '../types';
 import { DEFAULT_YEAR, PCA_YEARS_MAP } from '../constants';
+import { fetchSystemConfig } from '../services/configService';
+import { SystemConfig } from '../types';
 import { formatCurrency } from '../utils/formatters';
 import logoIfes from '../logo-ifes.png';
 
@@ -84,6 +86,19 @@ const BudgetManagement: React.FC = () => {
     const [selectedRecordElement, setSelectedRecordElement] = useState<BudgetElement | null>(null);
     const [editMonth, setEditMonth] = useState<number>(1);
     const [monthlyRecords, setMonthlyRecords] = useState<Record<number, Partial<BudgetRecord>>>({});
+
+    // Variáveis Dinâmicas de Configuração
+    const [config, setConfig] = useState<SystemConfig | null>(null);
+
+    // Inicialização da Configuração
+    useEffect(() => {
+        const initConfig = async () => {
+            const sysConfig = await fetchSystemConfig();
+            setConfig(sysConfig);
+            setSelectedYear(sysConfig.defaultYear);
+        };
+        initConfig();
+    }, []);
 
     useEffect(() => {
         setLoading(true);
@@ -404,7 +419,9 @@ const BudgetManagement: React.FC = () => {
                         <img src={logoIfes} alt="Logo IFES" className="h-12 w-auto object-contain" />
                         <div className="flex flex-col border-l border-slate-100 pl-3">
                             <span className="text-lg font-black text-ifes-green uppercase leading-none tracking-tight">Gestão Orçamentária</span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Admin Campus BSF</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                                Admin {config?.unidadeGestora.nome || 'Campus BSF'}
+                            </span>
                         </div>
                     </div>
 
@@ -416,7 +433,9 @@ const BudgetManagement: React.FC = () => {
                                 onChange={(e) => setSelectedYear(e.target.value)}
                                 className="bg-ifes-green/5 text-ifes-green border border-ifes-green/20 rounded-md px-3 py-1 text-sm font-black outline-none focus:ring-2 focus:ring-ifes-green/40 transition-all cursor-pointer"
                             >
-                                <option value="2026">2026</option>
+                                {Object.keys(config?.pcaYearsMap || PCA_YEARS_MAP).sort((a, b) => b.localeCompare(a)).map(year => (
+                                    <option key={year} value={year}>{year}</option>
+                                ))}
                             </select>
                         </div>
 

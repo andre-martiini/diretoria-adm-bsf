@@ -1,0 +1,75 @@
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import {
+  Building2,
+  RefreshCw,
+  Search,
+  Package,
+  DollarSign,
+  ExternalLink,
+  ChevronLeft,
+  ChevronRight,
+  Target,
+  LayoutDashboard,
+  Plus,
+  X,
+  Save,
+  Trash2,
+  AlertCircle,
+  Link,
+  Check,
+  TrendingUp,
+  History,
+  PencilLine,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  Info,
+  Users,
+  AlertTriangle,
+  Eye
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { db } from '../firebase';
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  getDoc,
+  setDoc,
+  addDoc,
+  deleteDoc,
+  Timestamp,
+  writeBatch
+} from 'firebase/firestore';
+import {
+  ContractItem,
+  SummaryData,
+  Category,
+  SortConfig
+} from '../types';
+import {
+  CNPJ_IFES_BSF,
+  PCA_YEARS_MAP,
+  DEFAULT_YEAR,
+  FALLBACK_DATA,
+  API_SERVER_URL
+} from '../constants';
+import {
+  formatCurrency,
+  formatDate
+} from '../utils/formatters';
+import {
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid
+} from 'recharts';
+
+import { fetchPcaData, hasPcaInMemoryCache, fetchLocalPcaSnapshot, updatePcaCache } from '../services/pcaService';
+
+// Components
+import ContractTable from './ContractTable';
+import Toast, { ToastType } from './Toast';
+import logoIfes from '../logo-ifes.png';
+import ProcessDashboard from './ProcessDashboard';
+import { getProcessStatus, getStatusColor } from '../utils/processLogic';

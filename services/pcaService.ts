@@ -19,6 +19,7 @@ import {
     PCA_YEARS_MAP,
     API_SERVER_URL
 } from '../constants';
+import { fetchSystemConfig } from './configService';
 
 // In-memory cache for the current session
 const inMemoryCache: Record<string, {
@@ -165,9 +166,14 @@ export const fetchPcaData = async (
     if (shouldSyncNow) {
         try {
             console.log(`[PCA Service] 📡 Realizando Sincronização LIVE com PNCP...`);
-            const seq = PCA_YEARS_MAP[year] || '12';
+
+            const config = await fetchSystemConfig();
+            const cnpj = config.unidadeGestora.cnpj || CNPJ_IFES_BSF;
+            const seqMap = config.pcaYearsMap || PCA_YEARS_MAP;
+            const seq = seqMap[year] || '12';
+
             const pageSize = 100;
-            const firstUrl = `${API_SERVER_URL}/api/pncp/pca/${CNPJ_IFES_BSF}/${year}?tamanhoPagina=${pageSize}&sequencial=${seq}&pagina=1`;
+            const firstUrl = `${API_SERVER_URL}/api/pncp/pca/${cnpj}/${year}?tamanhoPagina=${pageSize}&sequencial=${seq}&pagina=1`;
             const firstRes = await fetch(firstUrl);
 
             if (firstRes.ok) {
@@ -176,7 +182,7 @@ export const fetchPcaData = async (
                 const totalPages = firstData.totalPaginas || 1;
 
                 for (let p = 2; p <= totalPages; p++) {
-                    const res = await fetch(`${API_SERVER_URL}/api/pncp/pca/${CNPJ_IFES_BSF}/${year}?tamanhoPagina=${pageSize}&sequencial=${seq}&pagina=${p}`);
+                    const res = await fetch(`${API_SERVER_URL}/api/pncp/pca/${cnpj}/${year}?tamanhoPagina=${pageSize}&sequencial=${seq}&pagina=${p}`);
                     if (res.ok) {
                         const pageData = await res.json();
                         rawOfficialItems = [...rawOfficialItems, ...(pageData.data || [])];
@@ -224,6 +230,8 @@ export const fetchPcaData = async (
             area: item.nomeUnidade || "IFES - BSF",
             protocoloSIPAC: extra.protocoloSIPAC || '',
             dadosSIPAC: extra.dadosSIPAC || null,
+            vinculo_processo_id: extra.vinculo_processo_id || extra.protocoloSIPAC || '',
+            status_item: extra.status_item || (extra.protocoloSIPAC ? 'Em Processo' : 'Não iniciado'),
             identificadorFuturaContratacao: extra.identificadorFuturaContratacao || item.grupoContratacaoCodigo || '',
             isManual: false,
             ano: String(year)
@@ -239,8 +247,13 @@ export const fetchPcaData = async (
     let pcaMeta = null;
     if (rawOfficialItems.length > 0) {
         const first = rawOfficialItems[0];
+        const config = await fetchSystemConfig();
+        const cnpjFallback = config.unidadeGestora.cnpj || CNPJ_IFES_BSF;
+        const seqMap = config.pcaYearsMap || PCA_YEARS_MAP;
+        const seqFallback = seqMap[year] || '12';
+
         pcaMeta = {
-            id: `${first.cnpj || CNPJ_IFES_BSF}-0-${String(first.sequencialPca || '12').padStart(6, '0')}/${first.anoPca || year}`,
+            id: `${first.cnpj || cnpjFallback}-0-${String(first.sequencialPca || seqFallback).padStart(6, '0')}/${first.anoPca || year}`,
             dataPublicacao: first.dataPublicacaoPncp || first.dataInclusao
         };
     }

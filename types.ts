@@ -1,34 +1,95 @@
 
+export interface SIPACDocument {
+  ordem: string;
+  tipo: string;
+  data: string;
+  unidadeOrigem: string;
+  natureza: string;
+  statusVisualizacao: string;
+  url: string;
+}
+
+export interface SIPACMovement {
+  data: string;
+  horario?: string;
+  unidadeOrigem: string;
+  unidadeDestino: string;
+  usuario: string;
+  urgente?: string;
+  usuarioRemetente?: string;
+  usuarioRecebedor?: string;
+  dataRecebimento?: string;
+  horarioRecebimento?: string;
+}
+
+export interface SIPACIncident {
+  tipo: string;
+  data: string;
+  usuario: string;
+  descricao: string;
+  tipoDocumento?: string;
+  numeroDocumento?: string;
+  dataCancelamento?: string;
+  usuarioSolicitacao?: string;
+  dataSolicitacao?: string;
+  usuarioCancelamento?: string;
+  justificativa?: string;
+}
+
 export enum Category {
   Bens = 'Bens',
   Servicos = 'Serviços',
-  TIC = 'TIC',
-  Obras = 'Obras'
+  TIC = 'TIC'
+}
+
+export enum BudgetType {
+  Custeio = 'Custeio',
+  Investimento = 'Investimento'
+}
+
+export interface BudgetElement {
+  id: string;
+  nome: string;
+  tipo: BudgetType;
+  ano: number;
+  createdAt?: any;
+}
+
+export interface BudgetRecord {
+  id: string;
+  elementId: string;
+  mes: number;
+  empenhado: number;
+  executadoRP: number;
+  executado: number;
+  ano: number;
+  updatedAt?: any;
 }
 
 export interface ContractItem {
   id: string | number;
   titulo: string;
-  categoria: Category;
+  subtitulo?: string;
   valor: number;
+  valorExecutado?: number;
+  categoria: Category;
   inicio: string;
   fim: string;
   area: string;
-  valorExecutado?: number;
-  abcClass?: 'A' | 'B' | 'C';
-  riskStatus?: 'Baixo' | 'Médio' | 'Alto';
+  vencimento?: string;
+  status?: string;
+  articulador?: string;
   isManual?: boolean;
-  ano?: string;
-  // Integração SIPAC
   protocoloSIPAC?: string;
-  dadosSIPAC?: SIPACProcess & {
-    ultimaAtualizacao?: string;
-  };
-  computedStatus?: string;
-  identificadorFuturaContratacao?: string;
+  dadosSIPAC: SIPACProcess | null;
+  vinculo_processo_id?: string;
+  status_item?: string;
+  updatedAt?: any;
+  ano?: string;
   isGroup?: boolean;
-  itemCount?: number;
   childItems?: ContractItem[];
+  identificadorFuturaContratacao?: string;
+  computedStatus?: string;
 }
 
 export interface SummaryData {
@@ -47,58 +108,10 @@ export interface SortConfig {
   direction: 'asc' | 'desc';
 }
 
-export enum BudgetType {
-  Custeio = 'Custeio',
-  Investimento = 'Investimento'
-}
-
-export interface BudgetElement {
-  id: string;
-  nome: string;
-  tipo: BudgetType;
-  ano: number;
-}
-
-export interface BudgetRecord {
-  id: string;
-  elementId: string;
-  mes: number;
-  ano: number;
-  empenhado: number;
-  executadoRP: number;
-  executado: number;
-}
-
-export interface SIPACDocument {
-  ordem: string;
-  tipo: string;
-  data: string;
-  unidadeOrigem: string;
-  natureza: string;
-  statusVisualizacao: string; // Link or text
-  url?: string;
-}
-
-export interface SIPACMovement {
-  data: string;
-  horario: string;
-  unidadeOrigem: string;
-  unidadeDestino: string;
-  usuarioRemetente: string;
-  dataRecebimento: string;
-  horarioRecebimento: string;
-  usuarioRecebedor: string;
-  urgente?: string;
-}
-
-export interface SIPACIncident {
-  numeroDocumento: string;
-  tipoDocumento: string;
-  usuarioSolicitacao: string;
-  dataSolicitacao: string;
-  usuarioCancelamento: string;
-  dataCancelamento: string;
-  justificativa: string;
+export interface AIStructuredAnalysis {
+  parecer_risco: 'Alto' | 'Médio' | 'Baixo';
+  proxima_etapa_sugerida: string;
+  pendencias_detectadas: string[];
 }
 
 export interface SIPACProcess {
@@ -111,6 +124,9 @@ export interface SIPACProcess {
   status: string;
   dataCadastro: string;
   unidadeOrigem: string;
+  unidadeAtual?: string;
+  ultimaMovimentacao?: string;
+  ultimaAtualizacao?: string;
   totalDocumentos: string;
   observacao: string;
 
@@ -129,4 +145,43 @@ export interface SIPACProcess {
   documentos: SIPACDocument[];
   movimentacoes: SIPACMovement[];
   incidentes: SIPACIncident[];
+  resumoIA?: string;
+  resumoIA_Flash?: string;
+  despachosCount?: number;
+  fase_interna_status?: string;
+  health_score?: number;
+  dias_sem_movimentacao?: number;
+  snapshot_hash?: string;
+  last_ai_hash?: string;
+  scraping_last_error?: string;
+  analise_ia_estruturada?: AIStructuredAnalysis;
+}
+
+export interface ProcessoAquisicao {
+  id: string;
+  protocoloSIPAC: string;
+  id_processo_unificado?: string;
+  fase_interna_status: string;
+  health_score: number;
+  dias_sem_movimentacao: number;
+  embedding_contextual?: number[];
+  resumo_contextual?: string;
+  dadosSIPAC: SIPACProcess;
+  itens_vinculados: string[];
+  ultima_sincronizacao: any;
+  snapshot_hash?: string;
+  last_ai_hash?: string;
+  scraping_last_error?: string;
+}
+
+export interface UnidadeGestora {
+  cnpj: string;
+  uasg: string;
+  nome: string;
+}
+
+export interface SystemConfig {
+  unidadeGestora: UnidadeGestora;
+  pcaYearsMap: Record<string, string>;
+  defaultYear: string;
 }

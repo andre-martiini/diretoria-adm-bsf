@@ -5,7 +5,8 @@ import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { scrapeSIPACProcess } from './sipacService.js';
+import { scrapeSIPACProcess, scrapeSIPACDocumentContent } from './sipacService.js';
+import { summarizeDespachos } from './aiService.js';
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -78,6 +79,71 @@ app.get('/api/sipac/processo', async (req, res) => {
     res.json(data);
   } catch (error) {
     console.error(`[SIPAC ERROR]`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint para extrair conteúdo de documento
+app.get('/api/sipac/documento/conteudo', async (req, res) => {
+  const url = req.query.url;
+
+  if (!url) {
+    return res.status(400).json({ error: 'URL é obrigatória' });
+  }
+
+  console.log(`[SIPAC] Lendo conteúdo do documento: ${url}`);
+  try {
+    const text = await scrapeSIPACDocumentContent(url);
+    res.json({ text });
+  } catch (error) {
+    console.error(`[SIPAC DOC ERROR]`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint para gerar resumo com IA
+app.post('/api/sipac/processo/resumo-ai', async (req, res) => {
+  const { processoInfo, documentos } = req.body;
+
+  if (!processoInfo || !documentos || !Array.isArray(documentos)) {
+    return res.status(400).json({ error: 'Informações do processo e lista de documentos são obrigatórias' });
+  }
+
+  const despachos = documentos.filter(d => d.tipo.toUpperCase().includes('DESPACHO') && d.url);
+
+  if (despachos.length === 0) {
+    return res.json({
+      resumoFlash: "Consulte os detalhes para trâmites manuais.",
+      relatorioDetalhado: "Não foram encontrados despachos digitais para este processo."
+    });
+  }
+
+  console.log(`[AI] Gerando resumo para o processo ${processoInfo.numeroProcesso} (${despachos.length} despachos)`);
+
+  try {
+    const despachosComTexto = [];
+
+    // Scrape texts serially to avoid instability
+    for (const d of despachos) {
+      try {
+        const texto = await scrapeSIPACDocumentContent(d.url);
+        despachosComTexto.push({ ...d, texto });
+      } catch (err) {
+        console.warn(`[AI] Erro ao extrair texto do despacho ${d.ordem}:`, err.message);
+      }
+    }
+
+    if (despachosComTexto.length === 0) {
+      return res.json({
+        resumoFlash: "Erro na extração de dados.",
+        relatorioDetalhado: "Não foi possível extrair o conteúdo dos despachos encontrados."
+      });
+    }
+
+    const result = await summarizeDespachos(processoInfo, despachosComTexto);
+    res.json(result);
+  } catch (error) {
+    console.error(`[AI ENDPOINT ERROR]`, error);
     res.status(500).json({ error: error.message });
   }
 });

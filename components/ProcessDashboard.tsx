@@ -40,21 +40,10 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data }) => {
             !['Contratado', 'Encerrado/Arquivado', 'Adjudicado/Homologado'].includes(item.computedStatus || '')
         ).length;
 
-        // Processos Estagnados (sem movimentação há mais de 30 dias)
-        // Baseado na data da última atualização do SIPAC (proxy para último trâmite)
+        // Processos Estagnados (Baseado no Health Score dinâmico)
         const stalled = processItems.filter(item => {
-            if (!item.dadosSIPAC?.ultimaAtualizacao) return false;
-            try {
-                // Formato esperado: dd/mm/yyyy HH:mm
-                const parts = item.dadosSIPAC.ultimaAtualizacao.split(' ')[0].split('/');
-                if (parts.length !== 3) return false;
-                const lastDate = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
-                const diffTime = Math.abs(new Date().getTime() - lastDate.getTime());
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                return diffDays > 30; // 30 dias de tolerância
-            } catch (e) {
-                return false;
-            }
+            const score = (item.dadosSIPAC as any)?.health_score || 100;
+            return score < 70; // Score abaixo de 70 indica estagnação ou muitos dias parado
         }).length;
 
         return {
@@ -83,7 +72,8 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data }) => {
                 name: item.titulo.substring(0, 20) + '...',
                 fullTitle: item.titulo,
                 value: item.dadosSIPAC?.movimentacoes?.length || 0,
-                incidentes: item.dadosSIPAC?.incidentes?.length || 0
+                incidentes: item.dadosSIPAC?.incidentes?.length || 0,
+                health: (item.dadosSIPAC as any)?.health_score || 100
             }))
             .sort((a, b) => b.value - a.value)
             .slice(0, 5);
@@ -132,9 +122,9 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data }) => {
                             <Clock size={20} />
                         </div>
                     </div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Estagnação (Setor)</p>
-                    <h3 className="text-2xl font-black text-slate-900">{stats.stalled}</h3>
-                    <p className="text-[9px] font-bold text-slate-400 mt-2 italic">Sem trâmite há 30+ dias</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Engajamento (Saúde)</p>
+                    <h3 className="text-2xl font-black text-slate-900">{stats.stalled} alertas</h3>
+                    <p className="text-[9px] font-bold text-slate-400 mt-2 italic">Processos com score de saúde crítico</p>
                 </div>
             </div>
 
@@ -226,7 +216,7 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data }) => {
                         {movementData.map((item, idx) => (
                             <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
                                 <div className="flex items-center gap-2">
-                                    <div className={`w-2 h-2 rounded-full ${item.incidentes > 0 ? 'bg-red-500' : 'bg-emerald-500'}`} />
+                                    <div className={`w-2 h-2 rounded-full ${item.health < 60 ? 'bg-red-500' : item.health < 80 ? 'bg-amber-500' : 'bg-emerald-500'}`} />
                                     <span className="text-[10px] font-bold text-slate-600 truncate max-w-[150px]" title={item.fullTitle}>{item.name}</span>
                                 </div>
                                 <div className="flex items-center gap-2">

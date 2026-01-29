@@ -32,11 +32,13 @@ import {
     BudgetType
 } from '../types';
 import {
-    CNPJ_IFES_BSF,
-    PCA_YEARS_MAP,
-    DEFAULT_YEAR,
     FALLBACK_DATA,
+    DEFAULT_YEAR,
+    PCA_YEARS_MAP,
+    CNPJ_IFES_BSF
 } from '../constants';
+import { fetchSystemConfig } from '../services/configService';
+import { SystemConfig } from '../types';
 import {
     formatCurrency,
     formatDate
@@ -72,6 +74,19 @@ const PublicDashboard: React.FC = () => {
     const [syncProgress, setSyncProgress] = useState<number>(0);
     const [monthlyViewBudget, setMonthlyViewBudget] = useState<boolean>(false);
     const itemsPerPage = 10;
+
+    // Variáveis Dinâmicas de Configuração
+    const [config, setConfig] = useState<SystemConfig | null>(null);
+
+    // Inicialização da Configuração
+    useEffect(() => {
+        const initConfig = async () => {
+            const sysConfig = await fetchSystemConfig();
+            setConfig(sysConfig);
+            setSelectedYear(sysConfig.defaultYear);
+        };
+        initConfig();
+    }, []);
 
     const loadPcaData = useCallback(async (year: string) => {
         const hasCache = hasPcaInMemoryCache(year);
@@ -269,7 +284,9 @@ const PublicDashboard: React.FC = () => {
                             <img src={logoIfes} alt="Logo IFES" className="h-12 sm:h-16 w-auto object-contain" />
                             <div className="flex flex-col border-l border-slate-100 pl-3 sm:pl-4">
                                 <span className="text-sm sm:text-lg font-black text-ifes-green uppercase leading-none tracking-tight">Portal de Transparência</span>
-                                <span className="text-[8px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Campus Barra de São Francisco</span>
+                                <span className="text-[8px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                                    {config?.unidadeGestora.nome || 'Campus Barra de São Francisco'}
+                                </span>
                             </div>
                         </div>
 
@@ -281,7 +298,7 @@ const PublicDashboard: React.FC = () => {
                                     onChange={(e) => setSelectedYear(e.target.value)}
                                     className="bg-ifes-green/5 text-ifes-green border border-ifes-green/20 rounded-md px-3 py-1 text-sm font-black outline-none focus:ring-2 focus:ring-ifes-green/40 transition-all cursor-pointer"
                                 >
-                                    {Object.keys(PCA_YEARS_MAP).sort((a, b) => b.localeCompare(a)).map(year => (
+                                    {Object.keys(config?.pcaYearsMap || PCA_YEARS_MAP).sort((a, b) => b.localeCompare(a)).map(year => (
                                         <option key={year} value={year}>{year}</option>
                                     ))}
                                 </select>
@@ -407,7 +424,7 @@ const PublicDashboard: React.FC = () => {
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <PieChart>
                                                     <Pie data={pcaChartData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value" stroke="none">
-                                                        {pcaChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} cornerRadius={4} />)}
+                                                        {pcaChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
                                                     </Pie>
                                                     <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
                                                 </PieChart>
@@ -644,7 +661,12 @@ const PublicDashboard: React.FC = () => {
 
                 {/* Footer Links */}
                 <section className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-8 border-t border-slate-100">
-                    <a href={`https://pncp.gov.br/app/pca/${CNPJ_IFES_BSF}/${selectedYear}/${PCA_YEARS_MAP[selectedYear]}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-6 bg-white border border-slate-200 rounded-3xl hover:border-ifes-green transition-all group shadow-sm hover:shadow-md">
+                    <a
+                        href={`https://pncp.gov.br/app/pca/${config?.unidadeGestora.cnpj || CNPJ_IFES_BSF}/${selectedYear}/${(config?.pcaYearsMap || PCA_YEARS_MAP)[selectedYear] || '12'}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between p-6 bg-white border border-slate-200 rounded-3xl hover:border-ifes-green transition-all group shadow-sm hover:shadow-md"
+                    >
                         <div className="flex items-center gap-4">
                             <div className="bg-ifes-green/10 p-3 rounded-2xl text-ifes-green transition-colors group-hover:bg-ifes-green group-hover:text-white">
                                 <ExternalLink size={20} />

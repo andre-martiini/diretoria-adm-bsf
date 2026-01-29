@@ -1,8 +1,25 @@
-
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import crypto from 'crypto';
 
 puppeteer.use(StealthPlugin());
+
+/**
+ * Gera um hash MD5 determinístico para o conteúdo do processo.
+ * Usado para detectar mudanças e evitar chamadas redundantes de IA.
+ */
+function generateSnapshotHash(data) {
+    // Selecionamos campos que realmente indicam mudança no trâmite ou conteúdo
+    const relevantContent = {
+        status: data.status,
+        unidadeAtual: data.unidadeAtual,
+        movimentacoesCount: data.movimentacoes?.length,
+        documentosCount: data.documentos?.length,
+        ultimaMovimentacao: data.movimentacoes?.[data.movimentacoes.length - 1]?.data || '',
+        assuntoDetalhado: data.assuntoDetalhado
+    };
+    return crypto.createHash('md5').update(JSON.stringify(relevantContent)).digest('hex');
+}
 
 export async function scrapeSIPACProcess(protocol) {
     // Mock data for test keys to ensure instant success during demo
@@ -342,10 +359,65 @@ export async function scrapeSIPACProcess(protocol) {
         });
 
         result.totalDocumentos = result.documentos.length.toString();
+        result.snapshot_hash = generateSnapshotHash(result);
+        result.scraping_last_error = null; // Sucesso
+
         return result;
 
     } catch (error) {
         console.error('[SIPAC SCRAPER ERROR]', error);
+
+        let errorMessage = "Erro Desconhecido";
+        if (error.message.includes('timeout')) errorMessage = "Timeout (Portal Lento)";
+        if (error.message.includes('Protocolo não encontrado')) errorMessage = "Processo Não Encontrado";
+        if (error.message.includes('formato de protocolo')) errorMessage = "Protocolo Inválido";
+        if (error.message.includes('Navigation failed')) errorMessage = "Falha de Rede/Conexão";
+
+        return {
+            numeroProcesso: protocol,
+            scraping_last_error: errorMessage,
+            status: "ERRO_SCRAPING",
+            documentos: [],
+            movimentacoes: [],
+            incidentes: []
+        };
+    } finally {
+        await browser.close();
+    }
+}
+
+export async function scrapeSIPACDocumentContent(url) {
+    console.log(`[SIPAC] Fetching document content from: ${url}`);
+    const browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+    });
+
+    try {
+        const page = await browser.newPage();
+        await page.setDefaultNavigationTimeout(45000);
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
+        await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
+
+        // Wait for content container if possible, or just extract body text
+        // Despachos are usually in a specific table or div
+        const content = await page.evaluate(() => {
+            // SIPAC specific content areas
+            const contentArea = document.querySelector('div.conteudo, table.listagem, #visualizacaoDocumento');
+            if (contentArea) return contentArea.innerText.trim();
+
+            // Fallback for PDF or other types (though PDF won't return text this way)
+            // But for Despachos (which are HTML), this works.
+            const bodyText = document.body.innerText.trim();
+
+            // Clean up common header/footer if needed
+            return bodyText.split('Imprimir')[0].trim();
+        });
+
+        return content;
+    } catch (error) {
+        console.error(`[SIPAC DOC ERROR] ${url}:`, error);
         throw error;
     } finally {
         await browser.close();
