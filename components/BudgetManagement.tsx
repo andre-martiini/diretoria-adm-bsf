@@ -23,8 +23,10 @@ import {
     Edit2,
     Download,
     Table as TableIcon,
-    Calendar as CalendarIcon
+    Calendar as CalendarIcon,
+    Calculator
 } from 'lucide-react';
+import ScenarioSimulator from './ScenarioSimulator';
 import { db } from '../firebase';
 import {
     collection,
@@ -86,6 +88,7 @@ const BudgetManagement: React.FC = () => {
     const [selectedRecordElement, setSelectedRecordElement] = useState<BudgetElement | null>(null);
     const [editMonth, setEditMonth] = useState<number>(1);
     const [monthlyRecords, setMonthlyRecords] = useState<Record<number, Partial<BudgetRecord>>>({});
+    const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
 
     // Variáveis Dinâmicas de Configuração
     const [config, setConfig] = useState<SystemConfig | null>(null);
@@ -401,6 +404,24 @@ const BudgetManagement: React.FC = () => {
         }));
     };
 
+    const initialSimulatorBudget = useMemo(() => {
+        // Tenta encontrar elementos relacionados à Assistência Estudantil para pré-popular o orçamento
+        const relevantElements = elements.filter(el =>
+             el.nome.toLowerCase().includes('assistência estudantil') ||
+             el.nome.toLowerCase().includes('auxílio') ||
+             el.nome.toLowerCase().includes('bolsa')
+        );
+
+        if (relevantElements.length === 0) return 0;
+
+        const relevantIds = relevantElements.map(e => e.id);
+        const relevantRecords = records.filter(r => relevantIds.includes(r.elementId));
+
+        // Assume que o valor "Empenhado Total" é o orçamento disponível para estes itens
+        const totalEmpenhado = relevantRecords.reduce((acc, r) => acc + (r.empenhado || 0), 0);
+        return totalEmpenhado;
+    }, [elements, records]);
+
     return (
         <div className="min-h-screen border-t-4 border-ifes-green bg-slate-50/30 relative font-sans text-slate-800">
             {/* Loading Indicator */}
@@ -583,6 +604,13 @@ const BudgetManagement: React.FC = () => {
 
                             <div className="flex gap-2">
                                 <button
+                                onClick={() => setIsSimulatorOpen(true)}
+                                className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl text-xs font-black hover:bg-indigo-100 transition-colors border border-indigo-200 shadow-sm"
+                            >
+                                <Calculator size={16} />
+                                <span className="hidden lg:inline">Simular Cenários</span>
+                            </button>
+                            <button
                                     onClick={importStandardList}
                                     disabled={saving}
                                     className="flex items-center gap-2 bg-white text-blue-600 px-4 py-2 rounded-xl text-xs font-black hover:bg-blue-50 transition-colors border border-slate-200"
@@ -931,6 +959,12 @@ const BudgetManagement: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            <ScenarioSimulator
+                isOpen={isSimulatorOpen}
+                onClose={() => setIsSimulatorOpen(false)}
+                initialBudget={initialSimulatorBudget}
+            />
 
             {/* Record Modal (Single Month / Quick Entry) */}
             {isRecordModalOpen && selectedRecordElement && (
