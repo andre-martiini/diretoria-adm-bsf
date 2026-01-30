@@ -90,6 +90,7 @@ export interface ContractItem {
   childItems?: ContractItem[];
   identificadorFuturaContratacao?: string;
   computedStatus?: string;
+  computedSituation?: string;
 }
 
 export interface SummaryData {
@@ -100,6 +101,7 @@ export interface SummaryData {
   services: { qtd: number; val: number };
   obras: { qtd: number; val: number };
   totalExecutado: number;
+  totalDelayed: number;
   monthlyPlan: { month: string; value: number }[];
 }
 

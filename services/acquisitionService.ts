@@ -79,20 +79,45 @@ export const linkItemsToProcess = async (protocolo: string, itemIds: (string | n
     batch.set(procRef, processData, { merge: true });
 
     // 2. Atualizar os Itens (Filhos)
-    itemIds.forEach(id => {
-        const itemRef = doc(db, "pca_data", String(id));
+    for (const id of itemIds) {
+        // Obter o ano do item se possível, ou usar o ano atual (fallback)
+        // Para garantir que o ID do documento seja {ano}-{id} consistente com o fetchPcaData
+        // Se o ID já contiver o ano (ex: manual), usamos ele.
+        let docId = String(id);
+
+        // No fetchPcaData, os itens oficiais são salvos como "{ano}-{officialId}"
+        // Vamos tentar identificar se o ID precisa do prefixo do ano
+        if (!docId.includes('-')) {
+            // Se não tem hífen, provavelmente é um ID puro do PNCP. 
+            // Como não temos o "ano" aqui direto no argumento, uma estratégia é 
+            // buscar o item ou assumir o padrão. 
+            // Mas para ser seguro e bater com AnnualHiringPlan (que usa selectedYear),
+            // o ideal seria passar o ano. No entanto, o AnnualHiringPlan passa IDs que
+            // ele extrai do 'data', onde 'id' é apenas o officialId.
+
+            // Vamos olhar se o protocolo tem o ano (geralmente tem /202X-)
+            const yearMatch = protocolo.match(/\/(\d{4})-/);
+            const yearPrefix = yearMatch ? yearMatch[1] : new Date().getFullYear().toString();
+            docId = `${yearPrefix}-${docId}`;
+        }
+
+        const safeDocId = docId.replace(/\//g, '-');
+        const itemRef = doc(db, "pca_data", safeDocId);
+
         batch.set(itemRef, {
-            officialId: String(id), // Necessário para o mapeamento no fetchPcaData
+            officialId: String(id), // Importante: mantém o ID original do PNCP aqui
             vinculo_processo_id: protocolo,
             status_item: 'Em Processo',
             protocoloSIPAC: protocolo,
             "dadosSIPAC.unidadeAtual": sipacData.unidadeAtual,
-            "dadosSIPAC.fase_interna_status": processData.fase_interna_status
+            "dadosSIPAC.fase_interna_status": processData.fase_interna_status,
+            updatedAt: Timestamp.now()
         }, { merge: true });
-    });
+    }
 
     await batch.commit();
 }
+
 
 /**
  * Busca processos que podem possuir o mesmo embedding ou contexto.

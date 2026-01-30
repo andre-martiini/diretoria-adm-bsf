@@ -54,9 +54,18 @@ const ContractTable: React.FC<ContractTableProps> = ({
               </th>
             )}
             <TableHeader label="Descrição do Item" sortKey="titulo" />
-            <TableHeader label="Status do Processo" align="center" />
+            <TableHeader label="Tipo" sortKey="categoria" align="center" />
+
+            {viewMode === 'planning' ? (
+              <>
+                <TableHeader label="Situação" sortKey="computedSituation" align="center" />
+                <TableHeader label="Cód. Item (IFC)" sortKey="identificadorFuturaContratacao" align="right" />
+              </>
+            ) : (
+              <TableHeader label="Status do Processo" sortKey="computedStatus" align="center" />
+            )}
+
             <TableHeader label="Valor Previsto" sortKey="valor" align="right" />
-            <TableHeader label="Protocolo SIPAC" align="right" />
             {!isPublic && <TableHeader label="Configurar" align="center" />}
           </tr>
         </thead>
@@ -86,7 +95,9 @@ const ContractTable: React.FC<ContractTableProps> = ({
                 <tr
                   key={item.id}
                   className={`transition-all group cursor-pointer ${isSelected ? 'bg-ifes-green/5' : 'hover:bg-slate-50/80'}`}
+                  /* Click on row now handled by specific cell clicks or default logic */
                   onClick={() => {
+                    // Default row click behavior if needed, or keep it empty if cells handle it
                     if (item.protocoloSIPAC && onViewDetails) {
                       onViewDetails(item);
                     } else if (!item.protocoloSIPAC && onEdit) {
@@ -104,57 +115,86 @@ const ContractTable: React.FC<ContractTableProps> = ({
                       />
                     </td>
                   )}
-                  <td className="p-6">
+                  <td className="p-6" onClick={(e) => {
+                    e.stopPropagation();
+                    // Priority: Show Metadata/Details
+                    // If user clicked description, they want details/metadata.
+                    // Even if no protocol, we should show "planning metadata".
+                    // For now, mapping to existing props:
+                    if (onViewDetails && item.protocoloSIPAC) onViewDetails(item);
+                    else if (onEdit) onEdit(item); // Fallback to edit modal which shows metadata
+                  }}>
                     <div className="flex flex-col max-w-[500px]">
-                      <div className="flex items-center flex-wrap gap-2 mb-2">
-                        <span className="text-sm font-bold text-slate-800 leading-tight">
+                      <div className="flex flex-col gap-2 mb-2">
+                        <span className="text-sm font-bold text-slate-800 leading-tight hover:text-ifes-blue transition-colors">
                           {item.titulo}
                         </span>
-                        {item.isManual && <span className="text-[8px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-sm uppercase font-black tracking-widest leading-none">Extra-PCA</span>}
-                        <div className="flex items-center gap-2">
+
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {/* Protocol / Status Tag */}
+                          {item.protocoloSIPAC ? (
+                            <span className="text-[10px] font-black bg-blue-50 text-blue-600 px-2 py-0.5 rounded border border-blue-100 uppercase tracking-tight">
+                              Protocolo: {item.protocoloSIPAC}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded border border-slate-200 uppercase tracking-tight">
+                              Aguardando Abertura
+                            </span>
+                          )}
+
+                          {item.isManual && <span className="text-[8px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-sm uppercase font-black tracking-widest leading-none">Extra-PCA</span>}
+
                           {item.isGroup && (
                             <span className="text-[9px] bg-blue-600 text-white px-2 py-0.5 rounded-md font-black uppercase tracking-tighter leading-none">
                               {item.childItems?.length || 0} itens do PCA
                             </span>
                           )}
 
-                          {item.protocoloSIPAC && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onViewSummary && onViewSummary(item);
-                              }}
-                              className={`flex items-center gap-1.5 px-3 py-1 rounded-md border transition-all active:scale-95 ${item.dadosSIPAC?.resumoIA_Flash
-                                ? 'bg-blue-50 border-blue-100 text-blue-600 hover:bg-blue-100'
-                                : 'bg-slate-50 border-slate-200 text-slate-400 hover:bg-slate-100 hover:text-slate-600'
-                                }`}
-                            >
-                              <Sparkles size={12} className={item.dadosSIPAC?.resumoIA_Flash ? 'text-blue-500' : 'text-slate-400'} />
-                              <span className="text-[10px] font-black uppercase tracking-tight">
-                                {item.dadosSIPAC?.resumoIA_Flash ? 'Entenda o Processo' : 'Análise Indisp.'}
-                              </span>
-                            </button>
-                          )}
+                          {/* Recurso de Resumo IA Executivo desativado temporariamente */}
+
                         </div>
                       </div>
                     </div>
                   </td>
+
+                  {/* Tipo Column */}
                   <td className="p-6 text-center">
-                    <span className={`text-[10px] font-black px-3 py-1 rounded-md uppercase ${statusColor} bg-opacity-10 border border-opacity-20 tracking-widest`}>
-                      {computedStatus}
+                    <span className={`text-[10px] font-black px-2 py-1 rounded border uppercase tracking-wider ${item.categoria === 'Bens' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                      item.categoria === 'TIC' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                        'bg-amber-50 text-amber-600 border-amber-100'
+                      }`}>
+                      {item.categoria}
                     </span>
                   </td>
+
+                  {viewMode === 'planning' ? (
+                    <>
+                      <td className="p-6 text-center">
+                        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider ${item.protocoloSIPAC ? 'bg-blue-50 text-blue-600' :
+                          new Date() > new Date(item.inicio) ? 'bg-red-50 text-red-600' :
+                            'bg-slate-100 text-slate-500'
+                          }`}>
+                          {item.protocoloSIPAC ? 'Em Execução' :
+                            new Date() > new Date(item.inicio) ? 'Atrasado' :
+                              'Previsto'}
+                        </span>
+                      </td>
+                      <td className="p-6 text-right">
+                        <span className="text-[10px] font-bold text-slate-500 font-mono tracking-widest bg-slate-50 border border-slate-100 px-2 py-1 rounded-md">
+                          {item.identificadorFuturaContratacao || 'N/D'}
+                        </span>
+                      </td>
+                    </>
+                  ) : (
+                    <td className="p-6 text-center">
+                      <span className={`text-[10px] font-black px-3 py-1 rounded-md uppercase ${statusColor} bg-opacity-10 border border-opacity-20 tracking-widest`}>
+                        {computedStatus}
+                      </span>
+                    </td>
+                  )}
+
                   <td className="p-6 text-right text-sm font-bold text-slate-800 tabular-nums">
                     {formatCurrency(item.valor)}
-                  </td>
-                  <td className="p-6 text-right">
-                    <div className="flex flex-col items-end">
-                      {item.protocoloSIPAC ? (
-                        <span className="text-sm font-bold text-blue-600 tabular-nums tracking-tighter">{item.protocoloSIPAC}</span>
-                      ) : (
-                        <span className="text-[10px] font-bold text-slate-300 uppercase italic tracking-tighter">Aguard. Abertura</span>
-                      )}
-                    </div>
                   </td>
                   {!isPublic && (
                     <td className="p-6 text-center">

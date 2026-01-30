@@ -1,6 +1,13 @@
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+import mime from 'mime-types';
+import axios from 'axios';
+
+
+
 
 puppeteer.use(StealthPlugin());
 
@@ -416,8 +423,182 @@ export async function scrapeSIPACDocumentContent(url) {
         });
 
         return content;
+    } finally {
+        await browser.close();
+    }
+}
+
+/**
+ * Downloads a document from SIPAC and returns its content as a buffer, with metadata.
+ */
+export async function downloadSIPACDocument(url) {
+    console.log(`[SIPAC] Downloading document from: ${url}`);
+
+    // Tática 1: Se o link parece ser de download direto (verArquivoDocumento), 
+    // usamos axios para evitar o erro de 'ERR_ABORTED' do Puppeteer, MAS com headers reais para evitar 403/WAF.
+    if (url.includes('verArquivoDocumento') || url.includes('downloadArquivo=true')) {
+        try {
+            console.log(`[SIPAC] Link de download direto detectado, tentando Axios com headers...`);
+            const response = await axios.get(url, {
+                responseType: 'arraybuffer',
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                    'Referer': 'https://sipac.ifes.edu.br/public/jsp/portal.jsf',
+                    'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7'
+                }
+            });
+
+            const contentType = response.headers['content-type'];
+            const buffer = Buffer.from(response.data);
+
+            // Verificação de Integridade: Detectar página de erro "Anomaly Detected" / WAF
+            if (contentType && contentType.includes('text/html')) {
+                const htmlContent = buffer.toString('utf-8');
+                if (htmlContent.includes('Anomaly Detected') || htmlContent.includes('think that you are a bot')) {
+                    throw new Error('WAF/Bot Detection triggered (Axios)');
+                }
+            }
+
+            let fileName = 'documento_sipac';
+            const contentDisp = response.headers['content-disposition'];
+            if (contentDisp && contentDisp.includes('filename=')) {
+                fileName = contentDisp.split('filename=')[1].replace(/["']/g, '');
+            }
+
+            if (!path.extname(fileName) && contentType) {
+                const ext = mime.extension(contentType);
+                if (ext) fileName += `.${ext}`;
+            }
+
+            const hash = crypto.createHash('md5').update(buffer).digest('hex');
+            return { buffer, contentType, fileName, fileHash: hash, sizeBytes: buffer.length };
+        } catch (e) {
+            console.warn(`[SIPAC] Axios download failed/blocked (${e.message}), falling back to Puppeteer Stealth...`);
+        }
+    }
+
+    // Tática 2: Fallback para Puppeteer (Download via CDP para evitar ERR_ABORTED)
+    const browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+    });
+
+    try {
+        const page = await browser.newPage();
+        await page.setDefaultNavigationTimeout(60000);
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
+        // Configura pasta temporária para downloads
+        const downloadPath = path.resolve('./temp_downloads', crypto.randomBytes(16).toString('hex'));
+        if (!fs.existsSync(downloadPath)) {
+            fs.mkdirSync(downloadPath, { recursive: true });
+        }
+
+        // Configura comportamento de download via CDP
+        const client = await page.target().createCDPSession();
+        await client.send('Page.setDownloadBehavior', {
+            behavior: 'allow',
+            downloadPath: downloadPath,
+        });
+
+        // Variáveis para captura
+        let buffer = null;
+        let contentType = '';
+        let fileName = '';
+
+        try {
+            // Tenta navegar. Se for download, pode dar ERR_ABORTED ou timeout, mas o arquivo deve baixar.
+            // Se for HTML (visualização), a página carrega.
+            const response = await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+
+            // Se chegou aqui, não "abortou", então pode ser HTML ou o download terminou sem abortar a nav.
+            if (response) {
+                contentType = response.headers()['content-type'];
+                if (contentType && contentType.includes('text/html')) {
+                    // É uma página HTML (Ex: Despacho ou Erro)
+                    console.log(`[SIPAC] Document is HTML (not a direct download).`);
+                    // Se for página de erro do WAF, já convertemos ou lançamos erro?
+                    // Vamos converter para PDF para manter padrão
+                    fileName = 'documento_visualizacao_sipac.pdf';
+                    buffer = await page.pdf({ format: 'A4', printBackground: true });
+                    contentType = 'application/pdf';
+                }
+            }
+        } catch (gotoError) {
+            console.log(`[SIPAC] Navigation aborted/failed (${gotoError.message}), checking for downloaded file...`);
+        }
+
+        // Se buffer ainda é nulo, verifica a pasta de downloads com polling estendido
+        if (!buffer) {
+            // Aguarda até 60 segundos (120 * 500ms) para o arquivo aparecer e terminar de baixar
+            let downloadedFile = null;
+            let downloadStarted = false;
+
+            for (let i = 0; i < 120; i++) {
+                const files = fs.readdirSync(downloadPath);
+
+                // Verifica se há arquivo temporário de download (.crdownload ou .tmp)
+                const isDownloading = files.some(f => f.endsWith('.crdownload') || f.endsWith('.tmp'));
+
+                if (isDownloading) {
+                    if (!downloadStarted) {
+                        console.log('[SIPAC] Download large file started...');
+                        downloadStarted = true;
+                    }
+                    // Se estiver baixando, estendemos a espera resetando o contador periodicamente ou apenas não desistindo
+                    // Aqui vamos apenas continuar o loop. Se o loop acabar e ainda estiver baixando, falhamos (timeout de 60s)
+                    // Mas se o arquivo for muito grande, talvez precisemos de mais tempo. 
+                    // Vamos adicionar +1 ao contador "i" para "pausar" o timeout enquanto baixa? Não, pode ser infinito.
+                    // Vamos dar mais 60s se detectar downloadStarted?
+                    // Simples: se detectar .crdownload, apenas continue.
+                }
+
+                // Procura arquivo finalizado
+                const finalFile = files.find(f => !f.endsWith('.crdownload') && !f.endsWith('.tmp'));
+
+                if (finalFile) {
+                    // Garante que o tamanho parou de mudar? (Chrome remove .crdownload atomicamente)
+                    // Pequeno delay safe
+                    await new Promise(r => setTimeout(r, 500));
+                    downloadedFile = finalFile;
+                    break;
+                }
+
+                await new Promise(r => setTimeout(r, 500));
+            }
+
+            if (downloadedFile) {
+                console.log(`[SIPAC] Downloaded file found: ${downloadedFile}`);
+                const fullPath = path.join(downloadPath, downloadedFile);
+                buffer = fs.readFileSync(fullPath);
+                fileName = downloadedFile;
+                // Tenta adivinhar content-type pela extensão se não tiver
+                if (!contentType) contentType = mime.lookup(fileName) || 'application/octet-stream';
+            }
+        }
+
+        // Limpeza
+        try {
+            fs.rmSync(downloadPath, { recursive: true, force: true });
+        } catch (e) {
+            console.warn(`[SIPAC] Failed to clean temp dir: ${e.message}`);
+        }
+
+        if (!buffer || buffer.length === 0) throw new Error('Falha ao capturar conteúdo do documento (Buffer vazio ou download falhou)');
+
+        const hash = crypto.createHash('md5').update(buffer).digest('hex');
+
+        return {
+            buffer,
+            contentType,
+            fileName,
+            fileHash: hash,
+            sizeBytes: buffer.length
+        };
+
     } catch (error) {
-        console.error(`[SIPAC DOC ERROR] ${url}:`, error);
+        console.error(`[SIPAC DOWNLOAD ERROR] ${url}:`, error.message);
         throw error;
     } finally {
         await browser.close();

@@ -29,7 +29,11 @@ import {
   Eye,
   Download,
   Sparkles,
-  List
+  List,
+  Send,
+  MessageSquare,
+  Bot,
+  BookOpen
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
@@ -141,8 +145,27 @@ const AnnualHiringPlan: React.FC = () => {
   const [syncProgress, setSyncProgress] = useState<number>(0);
   const [dashboardView, setDashboardView] = useState<'planning' | 'status'>('planning');
   const [isItemsListModalOpen, setIsItemsListModalOpen] = useState(false);
+  const [syncErrors, setSyncErrors] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ message: string, type: ToastType } | null>(null);
+
   const processedAISummaryRefs = useRef<Set<string>>(new Set());
+
+  // Data Lake States
+  const [lakeDocuments, setLakeDocuments] = useState<any[]>([]);
+  const [isLakeModalOpen, setIsLakeModalOpen] = useState(false);
+  const [selectedLakeDoc, setSelectedLakeDoc] = useState<any>(null);
+  const [lakeDocUrl, setLakeDocUrl] = useState<string | null>(null);
+  const [isFetchingUrl, setIsFetchingUrl] = useState(false);
+  const [loadingLake, setLoadingLake] = useState(false);
+
+  // Chat Auditor Regional States (RAG)
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant', content: string, timestamp: Date, sources?: { id: string, fileId: string, preview: string }[] }[]>([]);
+  const [chatQuery, setChatQuery] = useState('');
+  const [isThinking, setIsThinking] = useState(false);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+
+
 
 
   // Novos campos para item manual
@@ -196,7 +219,63 @@ const AnnualHiringPlan: React.FC = () => {
     }
   }, []);
 
+  // Fetch documents from Lake when process details open
+  useEffect(() => {
+    if (isDetailsModalOpen && viewingItem?.protocoloSIPAC) {
+      const fetchLakeContent = async () => {
+        setLoadingLake(true);
+        try {
+          // ID sanitizado usado no backend
+          const processId = viewingItem.protocoloSIPAC.replace(/[^\d]/g, '');
+          const q = query(collection(db, 'contratacoes', processId, 'arquivos'));
+          const snap = await getDocs(q);
+          const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          setLakeDocuments(docs);
+
+          // Mapeia erros de sincronização para exibir no front
+          const errors: Record<string, string> = {};
+          docs.forEach((ld: any) => {
+            if (ld.status === 'ERROR' && ld.sipacMetadata) {
+              const key = `${ld.sipacMetadata.ordem}-${ld.sipacMetadata.tipo}`;
+              errors[key] = ld.errorMessage || 'Erro desconhecido durante a sincronização';
+            }
+          });
+          setSyncErrors(errors);
+        } catch (err) {
+
+          console.error("Erro ao buscar documentos do Data Lake:", err);
+        } finally {
+          setLoadingLake(false);
+        }
+      };
+      fetchLakeContent();
+    } else {
+      setLakeDocuments([]);
+    }
+  }, [isDetailsModalOpen, viewingItem]);
+
+  const handleOpenLakeDoc = async (doc: any) => {
+    setSelectedLakeDoc(doc);
+    setLakeDocUrl(null);
+    setIsLakeModalOpen(true);
+    setIsFetchingUrl(true);
+
+    try {
+      const resp = await fetch(`${API_SERVER_URL}/api/lake/document/url?path=${encodeURIComponent(doc.storagePath)}`);
+      if (!resp.ok) throw new Error('Falha ao obter URL segura');
+      const { url } = await resp.json();
+      setLakeDocUrl(url);
+    } catch (err) {
+      console.error(err);
+      setToast({ message: "Não conseguimos gerar o link seguro para este arquivo.", type: "error" });
+    } finally {
+      setIsFetchingUrl(false);
+    }
+  };
+
+
   const generateAISummary = useCallback(async (item: ContractItem) => {
+
     // Evita loop infinito: se já tentamos processar este ID nesta sessão, aborta
     if (!item.id || processedAISummaryRefs.current.has(String(item.id))) return;
 
@@ -274,7 +353,7 @@ const AnnualHiringPlan: React.FC = () => {
           ...item.dadosSIPAC,
           resumoIA: detailedSummary,
           resumoIA_Flash: flashSummary,
-          analise_ia_estruturada: data.analise_ia_estruturada,
+          analise_ia_estruturada: data.analise_ia_estruturada || null,
           despachosCount: currentDespachosCount,
           health_score: score,
           dias_sem_movimentacao: daysIdle,
@@ -341,7 +420,7 @@ const AnnualHiringPlan: React.FC = () => {
   const processedData = useMemo(() => {
     if (!data || data.length === 0) return [];
 
-    const sorted = [...data].sort((a, b) => b.valor - a.valor);
+    let sorted = [...data]; // Initial sort handled by activeData logic now
 
     return sorted.map(item => {
       const daysToStart = Math.ceil((new Date(item.inicio).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
@@ -352,7 +431,16 @@ const AnnualHiringPlan: React.FC = () => {
 
       const computedStatus = getProcessStatus(item);
 
-      return { ...item, riskStatus: risk, computedStatus };
+      let computedSituation = 'Previsto';
+      if (item.protocoloSIPAC) {
+        computedSituation = 'Em Execução';
+      } else if (new Date() > new Date(item.inicio)) {
+        computedSituation = 'Atrasado';
+      } else {
+        computedSituation = 'Previsto';
+      }
+
+      return { ...item, riskStatus: risk, computedStatus, computedSituation };
     });
   }, [data]);
 
@@ -377,6 +465,7 @@ const AnnualHiringPlan: React.FC = () => {
       services: { qtd: services.length, val: services.reduce((acc, i) => acc + i.valor, 0) },
       obras: { qtd: 0, val: 0 },
       totalExecutado: processedData.filter(i => i.protocoloSIPAC).length, // Agora conta processos vinculados
+      totalDelayed: processedData.filter(i => !i.protocoloSIPAC && new Date(i.inicio) < new Date()).length, // New Logic
       monthlyPlan
     };
   }, [processedData]);
@@ -418,13 +507,19 @@ const AnnualHiringPlan: React.FC = () => {
           await linkItemsToProcess(editingItem.protocoloSIPAC, [String(editingItem.id)], editingItem.dadosSIPAC);
         } else {
           // Apenas atualização de campos sem processo (ou desvínculo)
+          // Se for um item oficial, o ID no Firestore é "{ano}-{officialId}"
           const docId = editingItem.isManual ? String(editingItem.id) : `${selectedYear}-${editingItem.id}`;
-          const docRef = doc(db, "pca_data", docId);
+
+          // Sanitização adicional: Garantir que não existam barras no docId para não criar subcoleções
+          const safeDocId = docId.replace(/\//g, '-');
+
+          const docRef = doc(db, "pca_data", safeDocId);
           await setDoc(docRef, {
             ...editingItem,
             updatedAt: Timestamp.now()
           }, { merge: true });
         }
+
 
         const internalPhase = editingItem.dadosSIPAC ? deriveInternalPhase(editingItem.dadosSIPAC.unidadeAtual || '') : undefined;
         const health = editingItem.dadosSIPAC ? calculateHealthScore(editingItem.dadosSIPAC.movimentacoes?.[0]?.data || editingItem.dadosSIPAC.dataAutuacion).score : undefined;
@@ -482,7 +577,9 @@ const AnnualHiringPlan: React.FC = () => {
     setSaving(true);
     try {
       const docId = item.isManual ? String(item.id) : `${selectedYear}-${item.id}`;
-      const docRef = doc(db, "pca_data", docId);
+      // Sanitização: evitar número ímpar de segmentos (barras no ID)
+      const safeDocId = docId.replace(/\//g, '-');
+      const docRef = doc(db, "pca_data", safeDocId);
 
       const saveData = {
         protocoloSIPAC: '',
@@ -491,6 +588,7 @@ const AnnualHiringPlan: React.FC = () => {
       };
 
       await setDoc(docRef, saveData, { merge: true });
+
 
       // Otimista
       setData(prevData => prevData.map(i =>
@@ -509,6 +607,74 @@ const AnnualHiringPlan: React.FC = () => {
       setToast({ message: "Erro ao remover vínculo.", type: "error" });
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Chat Auditor Logic (RAG)
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [chatMessages, isThinking]);
+
+  // Detector de conclusão de processamento de documentos
+  const prevProcessingCountRef = useRef(0);
+  useEffect(() => {
+    if (!lakeDocuments) return;
+
+    const processingCount = lakeDocuments.filter(d => d.status === 'PROCESSING').length;
+
+    // Se tínhamos documentos processando e agora zerou
+    if (prevProcessingCountRef.current > 0 && processingCount === 0) {
+      setToast({
+        message: "Processamento e indexação de documentos concluídos com sucesso!",
+        type: "success"
+      });
+    }
+
+    prevProcessingCountRef.current = processingCount;
+  }, [lakeDocuments]);
+
+  const handleSendMessage = async () => {
+    if (!chatQuery.trim() || !viewingItem || isThinking) return;
+
+    const userMessage = chatQuery.trim();
+    const cleanId = String(viewingItem.dadosSIPAC.numeroProcesso).replace(/[^\d]/g, '');
+
+    // 1. Add user message
+    const newChatMsg = { role: 'user' as const, content: userMessage, timestamp: new Date() };
+    setChatMessages(prev => [...prev, newChatMsg]);
+    setChatQuery('');
+    setIsThinking(true);
+
+    try {
+      const response = await fetch(`${API_SERVER_URL}/api/ai/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          processId: cleanId,
+          query: userMessage,
+          history: chatMessages.slice(-5).map(m => ({ role: m.role, content: m.content }))
+        })
+      });
+
+      if (!response.ok) throw new Error('Falha na resposta da IA');
+
+      const result = await response.json();
+
+      setChatMessages(prev => [...prev, {
+        role: 'assistant',
+        content: result.answer,
+        timestamp: new Date(),
+        sources: result.sources
+      }]);
+    } catch (error) {
+      console.error('[CHAT ERROR]', error);
+      setToast({ message: 'Erro ao conversar com a IA', type: 'error' });
+    } finally {
+      setIsThinking(false);
     }
   };
 
@@ -564,7 +730,7 @@ const AnnualHiringPlan: React.FC = () => {
           updatePcaCache(selectedYear, id, { dadosSIPAC: updatedItem.dadosSIPAC });
         });
 
-        setToast({ message: "Tudo atualizado! O que faremos a seguir?", type: "success" });
+        setToast({ message: "Dados do portal atualizados! Iniciando processamento de documentos...", type: "success" });
       } else {
         setEditingItem(updatedItem);
       }
@@ -679,7 +845,7 @@ const AnnualHiringPlan: React.FC = () => {
 
   // --- LÓGICA DE DADOS POR VISÃO ---
   const activeData = useMemo(() => {
-    // Base always processed (sorted by value desc)
+    // Base always processed
     let base = [...processedData];
 
     // Apply Global Search & Filters
@@ -690,11 +856,31 @@ const AnnualHiringPlan: React.FC = () => {
     if (selectedCategory !== 'Todas') base = base.filter(i => i.categoria === selectedCategory);
     if (statusFilter !== 'Todos') base = base.filter(i => i.computedStatus === statusFilter);
 
+    const sortFn = (a: ContractItem, b: ContractItem) => {
+      let valA = a[sortConfig.key];
+      let valB = b[sortConfig.key];
+
+      // Handle computed values if keys don't match direct properties (though we added computed fields to object map above)
+      // If sorting by strings, compare insensitive
+      if (typeof valA === 'string' && typeof valB === 'string') {
+        return sortConfig.direction === 'asc'
+          ? valA.localeCompare(valB)
+          : valB.localeCompare(valA);
+      }
+
+      // Handle numbers
+      if (typeof valA === 'number' && typeof valB === 'number') {
+        return sortConfig.direction === 'asc' ? valA - valB : valB - valA;
+      }
+
+      // Handle undefined
+      return 0;
+    };
+
     // View Specific Logic
     if (dashboardView === 'planning') {
       // PCA: Raw Data from PNCP (No Grouping, No Process Filter specific logic unless applied by user)
-      // Just return the base list
-      return base.sort((a, b) => b.valor - a.valor);
+      return base.sort(sortFn);
     } else {
       // Gestão de Processos: Agrupamento por Protocolo SIPAC
       const processItems = base.filter(i => i.protocoloSIPAC && i.protocoloSIPAC.length > 5);
@@ -717,19 +903,18 @@ const AnnualHiringPlan: React.FC = () => {
         return {
           ...first,
           id: `process-group-${first.protocoloSIPAC}`,
-          titulo: processTitle, // Override do título para o assunto do processo
+          titulo: processTitle,
           valor: totalValue,
           isGroup: true,
           itemCount: items.length,
           childItems: items,
-          // Mantém dadosSIPAC do primeiro item (todos devem ser iguais pois é o mesmo protocolo)
           dadosSIPAC: first.dadosSIPAC
         } as ContractItem;
       });
 
-      return result.sort((a, b) => b.valor - a.valor);
+      return result.sort(sortFn);
     }
-  }, [processedData, dashboardView, searchTerm, selectedCategory, statusFilter]);
+  }, [processedData, dashboardView, searchTerm, selectedCategory, statusFilter, sortConfig]);
 
   const pagedData = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -883,7 +1068,7 @@ const AnnualHiringPlan: React.FC = () => {
         {dashboardView === 'planning' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
             {/* CHART GRID FOR PCA */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
               {/* KPI 1: Valor Total */}
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-center relative overflow-hidden group hover:border-ifes-green/30 transition-all">
                 <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -902,6 +1087,29 @@ const AnnualHiringPlan: React.FC = () => {
                         className="h-full bg-ifes-green transition-all duration-500"
                         style={{ width: `${(summary.totalExecutado / (summary.totalItems || 1)) * 100}%` }}
                       ></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* KPI 2: Itens Atrasados (NOVO) */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-center relative overflow-hidden group hover:border-red-200 transition-all">
+                <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
+                  <AlertCircle size={80} className="text-red-500" />
+                </div>
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Atraso no Cronograma</p>
+                    <span className="bg-red-50 text-red-600 text-[9px] font-black px-1.5 py-0.5 rounded border border-red-100 uppercase">Atenção</span>
+                  </div>
+                  <h3 className="text-3xl font-black text-slate-900 mb-6">{summary.totalDelayed} <span className="text-xs text-slate-400 font-bold uppercase tracking-wide">Itens</span></h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[9px] font-black text-slate-400 uppercase">
+                      <span>Impacto no Plano</span>
+                      <span className="text-red-500">{((summary.totalDelayed / (summary.totalItems || 1)) * 100).toFixed(0)}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-red-500 transition-all duration-500" style={{ width: `${(summary.totalDelayed / (summary.totalItems || 1)) * 100}%` }}></div>
                     </div>
                   </div>
                 </div>
@@ -1280,126 +1488,165 @@ const AnnualHiringPlan: React.FC = () => {
               </button>
             </header>
 
-            <main className="p-10 grid grid-cols-1 md:grid-cols-2 gap-10">
-              {/* Coluna 1: Dados de Planejamento */}
-              <div className="space-y-6">
-                <div className="bg-slate-50/50 p-8 rounded-lg border border-slate-100 h-full flex flex-col">
-                  <div className="flex items-center gap-2 mb-6">
-                    <Target className="text-ifes-blue" size={16} strokeWidth={3} />
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Dados de Planejamento</span>
-                  </div>
-
-                  <div className="flex-1 space-y-5 overflow-y-auto pr-2 custom-scrollbar max-h-[280px]">
-                    {(editingItem.isGroup || editingItem.id === 'bulk-selection') ? (
-                      (editingItem.childItems || (editingItem.id === 'bulk-selection' ? data.filter(i => selectedIds.includes(String(i.id))) : [])).map((item, idx) => (
-                        <div key={idx} className="bg-white p-4 rounded-lg border border-slate-200/60 flex justify-between items-start gap-4">
-                          <p className="text-xs font-bold text-slate-700 leading-tight flex-1">{item.titulo}</p>
-                          <span className="text-[11px] font-black text-slate-500 font-mono whitespace-nowrap">{formatCurrency(item.valor)}</span>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="bg-white p-6 rounded-lg border border-slate-200/60 flex justify-between items-center">
-                        <p className="text-sm font-bold text-slate-700 flex-1">{editingItem.titulo}</p>
-                        <span className="text-sm font-black text-slate-500 font-mono">{formatCurrency(editingItem.valor)}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="mt-6 pt-6 border-t border-dashed border-slate-200 flex justify-between items-center">
-                    <div>
-                      <span className="block text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-1">Total Estimado</span>
-                      <span className="text-2xl font-black text-ifes-green tabular-nums">{formatCurrency(editingItem.valor)}</span>
+            <main className="p-10 space-y-10 custom-scrollbar overflow-y-auto max-h-[80vh]">
+              {/* Seção 1: Dados de Planejamento (Prioridade Total) */}
+              <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <header className="bg-slate-50/50 px-8 py-5 border-b border-slate-100 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+                      <Target size={20} strokeWidth={2.5} />
                     </div>
-                    {editingItem.isManual && (
-                      <button
-                        onClick={() => {
-                          handleDeleteItem(String(editingItem.id));
-                          setIsEditModalOpen(false);
-                        }}
-                        className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm"
-                        title="Remover Registro"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    )}
+                    <div>
+                      <h3 className="text-lg font-black text-slate-800 tracking-tight">Detalhes do Planejamento</h3>
+                      <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Informações Oficiais do PCA</p>
+                    </div>
+                  </div>
+                  <span className="text-sm font-black text-emerald-600 font-mono bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">
+                    {formatCurrency(editingItem.valor)}
+                  </span>
+                </header>
+
+                <div className="p-8">
+                  {(editingItem.isGroup || editingItem.id === 'bulk-selection') ? (
+                    <div className="space-y-4">
+                      <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Itens Agrupados</p>
+                      <div className="grid grid-cols-1 gap-3 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                        {(editingItem.childItems || (editingItem.id === 'bulk-selection' ? data.filter(i => selectedIds.includes(String(i.id))) : [])).map((item, idx) => (
+                          <div key={idx} className="bg-slate-50 p-4 rounded-lg border border-slate-100 flex justify-between items-center">
+                            <span className="text-xs font-bold text-slate-700">{item.titulo}</span>
+                            <span className="text-[10px] font-black text-slate-500 font-mono bg-white px-2 py-1 rounded border border-slate-200">{formatCurrency(item.valor)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-8">
+                      <div>
+                        <h4 className="text-2xl font-bold text-slate-800 leading-snug mb-2">{editingItem.titulo}</h4>
+                        <div className="flex flex-wrap gap-3 mt-4">
+                          <span className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wide border ${editingItem.categoria === 'Bens' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                            editingItem.categoria === 'TIC' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                              'bg-amber-50 text-amber-600 border-amber-100'
+                            }`}>
+                            {editingItem.categoria}
+                          </span>
+
+                          {editingItem.identificadorFuturaContratacao && (
+                            <span className="px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wide bg-slate-100 text-slate-600 border border-slate-200">
+                              IFC: {editingItem.identificadorFuturaContratacao}
+                            </span>
+                          )}
+
+                          <span className="px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wide bg-slate-50 text-slate-500 border border-slate-200">
+                            Data Início: {formatDate(editingItem.inicio)}
+                          </span>
+
+                          <span className="px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wide bg-slate-50 text-slate-500 border border-slate-200">
+                            Unidade: {editingItem.area}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {editingItem.isManual && (
+                  <div className="px-8 py-4 bg-red-50/30 border-t border-red-100 flex justify-end">
+                    <button
+                      onClick={() => {
+                        handleDeleteItem(String(editingItem.id));
+                        setIsEditModalOpen(false);
+                      }}
+                      className="flex items-center gap-2 text-xs font-black text-red-500 hover:text-red-700 uppercase tracking-widest transition-colors"
+                    >
+                      <Trash2 size={14} />
+                      Excluir Registro Manual
+                    </button>
+                  </div>
+                )}
+              </section>
+
+              {/* Seção 2: Vínculo SIPAC (Secundária) */}
+              <section className="bg-slate-50 rounded-xl border border-slate-200 p-8 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-white text-slate-400 border border-slate-200 rounded-lg">
+                      <Link size={16} strokeWidth={2.5} />
+                    </div>
+                    <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest">Conexão com Processo SIPAC</h3>
                   </div>
                 </div>
-              </div>
 
-              {/* Coluna 2: Vínculo SIPAC */}
-              <div className="space-y-8">
-                <div className="space-y-4">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Protocolo SIPAC</label>
-                  <div className="flex flex-col gap-3">
-                    <div className="relative">
-                      <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
+                <div className="flex flex-col md:flex-row gap-6 items-start">
+                  {/* Input Area */}
+                  <div className="flex-1 w-full space-y-4">
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Search className="text-slate-300 group-focus-within:text-ifes-blue transition-colors" size={18} />
+                      </div>
                       <input
                         type="text"
-                        placeholder="00000.000000/0000-00"
-                        maxLength={20}
-                        className="w-full pl-12 pr-6 py-5 bg-white border border-slate-200 rounded-lg text-sm font-black text-slate-700 outline-none focus:ring-4 focus:ring-ifes-blue/10 focus:border-ifes-blue transition-all shadow-sm"
+                        placeholder="Digite o número do processo (Ex: 23543.000...)"
+                        maxLength={30}
+                        className="w-full pl-11 pr-4 py-4 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-ifes-blue/10 focus:border-ifes-blue transition-all shadow-sm"
                         value={editingItem.protocoloSIPAC || ''}
                         onChange={(e) => setEditingItem({ ...editingItem, protocoloSIPAC: formatProtocolo(e.target.value) })}
                       />
                     </div>
+
                     <div className="flex gap-3">
                       <button
                         onClick={handleFetchSIPAC}
-                        disabled={isFetchingSIPAC}
-                        className="flex-1 py-4 bg-ifes-blue hover:bg-blue-700 text-white rounded-lg text-xs font-black transition-all shadow-lg shadow-blue-100 disabled:opacity-50 flex items-center justify-center gap-3 uppercase tracking-widest"
+                        disabled={isFetchingSIPAC || !editingItem.protocoloSIPAC}
+                        className="flex-1 py-3 bg-white border border-slate-200 hover:border-ifes-blue hover:text-ifes-blue text-slate-600 rounded-lg text-xs font-black transition-all shadow-sm disabled:opacity-50 disabled:hover:border-slate-200 uppercase tracking-widest flex items-center justify-center gap-2"
                       >
-                        {isFetchingSIPAC ? <RefreshCw size={16} className="animate-spin" /> : <Search size={16} />}
-                        {isFetchingSIPAC ? 'Consultando...' : 'Consultar'}
+                        {isFetchingSIPAC ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
+                        {isFetchingSIPAC ? 'Buscando...' : 'Consultar Protocolo'}
                       </button>
                       {editingItem.protocoloSIPAC && editingItem.dadosSIPAC && (
                         <button
                           onClick={() => handleUnlinkProcess(editingItem)}
-                          className="px-6 py-4 bg-red-50 text-red-600 rounded-lg font-black hover:bg-red-600 hover:text-white transition-all border border-red-100 shadow-sm text-xs uppercase tracking-widest"
+                          className="px-6 py-3 bg-red-50 text-red-600 rounded-lg font-black hover:bg-red-600 hover:text-white transition-all border border-red-100 shadow-sm text-xs uppercase tracking-widest"
                         >
-                          Limpar
+                          Desvincular
                         </button>
                       )}
                     </div>
                   </div>
-                </div>
 
-                {editingItem.dadosSIPAC ? (
-                  <div className="bg-ifes-blue/5 rounded-lg p-8 border border-ifes-blue/10 animate-in slide-in-from-right-4 duration-500 h-[240px] flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-ifes-blue animate-pulse" />
-                          <span className="text-[10px] font-black text-ifes-blue uppercase tracking-[0.2em]">Sincronizado via SIPAC</span>
+                  {/* Result Area */}
+                  <div className="flex-1 w-full">
+                    {editingItem.dadosSIPAC ? (
+                      <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm animate-in slide-in-from-right-4 duration-300">
+                        <div className="flex items-center gap-3 mb-4 pb-4 border-b border-slate-50">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                          <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Processo Encontrado e Sincronizado</span>
                         </div>
-                        <span className="text-[8px] font-bold text-slate-400 uppercase">{editingItem.dadosSIPAC.ultimaAtualizacao}</span>
+                        <div className="space-y-3">
+                          <div className="flex justify-between">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Status</span>
+                            <span className="text-[10px] font-bold text-slate-700 uppercase">{editingItem.dadosSIPAC.status}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Unidade</span>
+                            <span className="text-[10px] font-bold text-slate-700 uppercase">{editingItem.dadosSIPAC.unidadeAtual}</span>
+                          </div>
+                          <div className="pt-2">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Assunto</span>
+                            <p className="text-xs text-slate-600 italic line-clamp-2">"{editingItem.dadosSIPAC.assuntoDetalhado || editingItem.dadosSIPAC.assuntoDescricao}"</p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-6">
-                        <div>
-                          <span className="block text-[8px] font-black text-slate-400 uppercase mb-1 tracking-widest">Status Atual</span>
-                          <span className="text-xs font-black text-slate-800 uppercase tracking-tight line-clamp-1">{editingItem.dadosSIPAC.status}</span>
-                        </div>
-                        <div>
-                          <span className="block text-[8px] font-black text-slate-400 uppercase mb-1 tracking-widest">Unidade Atual</span>
-                          <span className="text-xs font-black text-slate-800 uppercase tracking-tight line-clamp-1">{editingItem.dadosSIPAC.unidadeAtual}</span>
-                        </div>
+                    ) : (
+                      <div className="h-full min-h-[160px] bg-slate-100/50 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-center p-6 text-slate-400">
+                        <Link size={24} className="mb-2 opacity-50" />
+                        <p className="text-xs font-bold">Nenhum vínculo ativo</p>
+                        <p className="text-[10px] mt-1 opacity-70">Utilize a busca ao lado para conectar este item a um processo real.</p>
                       </div>
-                    </div>
-                    <div className="pt-4 border-t border-ifes-blue/10">
-                      <span className="block text-[8px] font-black text-slate-400 uppercase mb-2 tracking-widest">Assunto Registrado</span>
-                      <p className="text-xs font-bold text-slate-600 leading-snug line-clamp-3 italic">
-                        "{editingItem.dadosSIPAC.assuntoDetalhado || 'Sem detalhamento no SIPAC.'}"
-                      </p>
-                    </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="h-[240px] bg-slate-50 border border-dashed border-slate-200 rounded-lg flex flex-col items-center justify-center text-center p-8">
-                    <div className="bg-white p-4 rounded-lg shadow-sm text-slate-300 mb-4">
-                      <Link size={32} strokeWidth={1.5} />
-                    </div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest max-w-[180px]">Aguardando vínculo de processo</p>
-                  </div>
-                )}
-              </div>
+                </div>
+              </section>
             </main>
 
             <footer className="p-8 bg-slate-50/80 border-t border-slate-100 flex gap-4 backdrop-blur-sm">
@@ -1569,8 +1816,19 @@ const AnnualHiringPlan: React.FC = () => {
                   </div>
                 </div>
               </div>
-
               <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsChatOpen(!isChatOpen)}
+                  disabled={lakeDocuments.some(d => d.status === 'PROCESSING')}
+                  title={lakeDocuments.some(d => d.status === 'PROCESSING') ? "Aguarde o processamento dos documentos para consultar." : "Falar com Consultor Digital"}
+                  className={`flex items-center gap-2 px-4 py-2 border rounded-md text-xs font-black transition-all shadow-sm ${lakeDocuments.some(d => d.status === 'PROCESSING')
+                    ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-70'
+                    : (isChatOpen ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-blue-100 text-blue-600 hover:bg-blue-50')
+                    }`}
+                >
+                  {lakeDocuments.some(d => d.status === 'PROCESSING') ? <RefreshCw size={16} className="animate-spin" /> : <Bot size={16} />}
+                  Consultor Digital
+                </button>
                 <button
                   onClick={() => {
                     setIsDetailsModalOpen(false);
@@ -1597,6 +1855,7 @@ const AnnualHiringPlan: React.FC = () => {
                 </button>
               </div>
             </header>
+
 
             <main className="flex-1 overflow-y-auto px-8 py-10">
               <div className="max-w-6xl mx-auto space-y-8 pb-20">
@@ -1757,95 +2016,13 @@ const AnnualHiringPlan: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Seção 2.1: Resumo IA (Opcional - Gerado em segundo plano) */}
+                {/* Seção 2.1: Resumo IA (DESATIVADO TEMPORARIAMENTE) */}
+                {/* 
                 {(isGeneratingSummary || viewingItem?.dadosSIPAC?.resumoIA) && (
-                  <div className="bg-white rounded-lg text-slate-700 border border-slate-100 shadow-sm relative overflow-hidden group">
-                    <div className="absolute -right-4 -top-4 text-blue-500/5 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
-                      <Sparkles size={160} />
-                    </div>
-
-                    <div className="relative z-10">
-                      <div
-                        className="flex items-center justify-between p-8 cursor-pointer hover:bg-slate-50/50 transition-colors"
-                        onClick={() => setExpandedSections(p => ({ ...p, resumoIA: !p.resumoIA }))}
-                      >
-                        <div className="flex items-center gap-2">
-                          <div className="bg-blue-50 p-2 rounded-lg text-blue-600">
-                            <Sparkles size={16} />
-                          </div>
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Resumo Inteligente do Andamento</span>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          {isGeneratingSummary && (
-                            <div className="flex items-center gap-2 px-3 py-1 bg-blue-50/50 rounded-full border border-blue-100">
-                              <RefreshCw size={10} className="animate-spin text-blue-500" />
-                              <span className="text-[8px] font-black uppercase tracking-widest text-blue-600 animate-pulse">Processando Despachos...</span>
-                            </div>
-                          )}
-                          <div className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 transition-all">
-                            {expandedSections.resumoIA ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                          </div>
-                        </div>
-                      </div>
-
-                      {expandedSections.resumoIA && (
-                        <div className="px-8 pb-8 animate-in slide-in-from-top-2 duration-300">
-                          {isGeneratingSummary && !viewingItem?.dadosSIPAC?.resumoIA ? (
-                            <div className="space-y-3">
-                              <div className="h-4 bg-slate-100 rounded-full w-3/4 animate-pulse" />
-                              <div className="h-4 bg-slate-100 rounded-full w-full animate-pulse" />
-                              <div className="h-4 bg-slate-100 rounded-full w-5/6 animate-pulse" />
-                            </div>
-                          ) : (
-                            <div className="space-y-8">
-                              {/* Structured Analysis Cards */}
-                              {viewingItem?.dadosSIPAC?.analise_ia_estruturada && (
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                                  <div className="bg-slate-50 border border-slate-100 p-4 rounded-lg">
-                                    <span className="block text-[8px] font-black text-slate-400 uppercase mb-2">Parecer de Risco</span>
-                                    <div className="flex items-center gap-2">
-                                      <div className={`w-2 h-2 rounded-full ${viewingItem.dadosSIPAC.analise_ia_estruturada.parecer_risco === 'Alto' ? 'bg-red-500' :
-                                        viewingItem.dadosSIPAC.analise_ia_estruturada.parecer_risco === 'Médio' ? 'bg-amber-500' : 'bg-emerald-500'
-                                        }`} />
-                                      <span className="text-sm font-black text-slate-700">{viewingItem.dadosSIPAC.analise_ia_estruturada.parecer_risco}</span>
-                                    </div>
-                                  </div>
-                                  <div className="bg-blue-50/50 border border-blue-100/50 p-4 rounded-lg md:col-span-2">
-                                    <span className="block text-[8px] font-black text-blue-400 uppercase mb-2">Próxima Etapa Sugerida</span>
-                                    <p className="text-sm font-bold text-blue-700">{viewingItem.dadosSIPAC.analise_ia_estruturada.proxima_etapa_sugerida}</p>
-                                  </div>
-                                  {(viewingItem.dadosSIPAC.analise_ia_estruturada.pendencias_detectadas || []).length > 0 && (
-                                    <div className="md:col-span-3 bg-amber-50/50 border border-amber-100/50 p-4 rounded-lg">
-                                      <span className="block text-[8px] font-black text-amber-500 uppercase mb-2">Pendências Detectadas</span>
-                                      <div className="flex flex-wrap gap-2">
-                                        {viewingItem.dadosSIPAC.analise_ia_estruturada.pendencias_detectadas.map((p, i) => (
-                                          <span key={i} className="text-[10px] font-bold bg-white border border-amber-100 text-amber-700 px-2 py-1 rounded-lg">
-                                            {p}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-
-                              <div className="text-sm font-medium leading-relaxed text-slate-600 selection:bg-blue-50 prose prose-slate max-w-none">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                  {viewingItem?.dadosSIPAC?.resumoIA || ""}
-                                </ReactMarkdown>
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="mt-6 flex items-center gap-2 text-slate-400 font-medium italic text-[10px]">
-                            <Info size={12} className="text-blue-400" />
-                            Este resumo foi gerado automaticamente por IA analisando os textos extraídos dos despachos.
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  ... resto do código do resumo IA ...
                 )}
+                */}
+
 
                 <div className="space-y-4">
 
@@ -1908,41 +2085,98 @@ const AnnualHiringPlan: React.FC = () => {
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                              {(viewingItem.dadosSIPAC.documentos || []).map((doc, i) => (
-                                <tr key={i} className="hover:bg-slate-50 transition-colors">
-                                  <td className="px-6 py-4 text-xs font-black text-slate-400">#{doc.ordem}</td>
-                                  <td className="px-6 py-4">
-                                    <span className="text-xs font-bold text-slate-800">{doc.tipo}</span>
-                                  </td>
-                                  <td className="px-6 py-4 text-xs text-slate-600 font-medium">{doc.data}</td>
-                                  <td className="px-6 py-4 text-xs text-slate-600 font-medium uppercase">{doc.unidadeOrigem}</td>
-                                  <td className="px-6 py-4 text-xs text-slate-500 font-bold uppercase">{doc.natureza || 'OSTENSIVO'}</td>
-                                  <td className="px-6 py-4 text-center">
-                                    {doc.url ? (
-                                      doc.tipo.toUpperCase().includes('DESPACHO') ? (
-                                        <button
-                                          onClick={() => setPreviewUrl(doc.url as string)}
-                                          className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm"
-                                          title="Visualizar despacho"
-                                        >
-                                          <Eye size={14} />
-                                        </button>
-                                      ) : (
-                                        <button
-                                          onClick={() => window.open(doc.url as string, '_blank')}
-                                          className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
-                                          title="Baixar / Ver Documento"
-                                        >
-                                          <Download size={14} />
-                                        </button>
-                                      )
-                                    ) : (
-                                      <span className="text-[10px] font-bold text-slate-300 uppercase">N/D</span>
-                                    )}
-                                  </td>
-                                </tr>
-                              ))}
+                              {(viewingItem.dadosSIPAC.documentos || []).map((doc, i) => {
+                                // Busca se o documento existe no Data Lake
+                                const lakeDoc = lakeDocuments.find(ld =>
+                                  String(ld.sipacMetadata?.ordem) === String(doc.ordem) &&
+                                  String(ld.sipacMetadata?.tipo) === String(doc.tipo)
+                                );
+
+                                return (
+                                  <tr key={i} className="hover:bg-slate-50 transition-colors">
+                                    <td className="px-6 py-4 text-xs font-black text-slate-400">#{doc.ordem}</td>
+                                    <td className="px-6 py-4">
+                                      <div className="flex flex-col">
+                                        <span className="text-xs font-bold text-slate-800">{doc.tipo}</span>
+                                        {lakeDoc && (
+                                          <div className="flex flex-col gap-1 mt-0.5">
+                                            {/* Status de Armazenamento */}
+                                            <span className="text-[8px] font-black text-blue-500 uppercase tracking-tighter flex items-center gap-1 animate-in fade-in slide-in-from-left-2">
+                                              <div className="w-1 h-1 bg-blue-500 rounded-full" />
+                                              Data Lake Seguro
+                                            </span>
+
+                                            {lakeDoc.status === 'COMPLETED' && (
+                                              <span className="text-[8px] font-black text-purple-600 uppercase tracking-tighter flex items-center gap-1 animate-in fade-in slide-in-from-left-2">
+                                                <Sparkles size={8} className="text-purple-600" />
+                                                IA Indexada
+                                              </span>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+
+                                    </td>
+                                    <td className="px-6 py-4 text-xs text-slate-600 font-medium">{doc.data}</td>
+                                    <td className="px-6 py-4 text-xs text-slate-600 font-medium uppercase">{doc.unidadeOrigem}</td>
+                                    <td className="px-6 py-4 text-xs text-slate-500 font-bold uppercase">{doc.natureza || 'OSTENSIVO'}</td>
+                                    <td className="px-6 py-4 text-center">
+                                      <div className="flex items-center justify-center gap-2">
+                                        {/* Ações de Visualização/Download - Interface Limpa */}
+                                        {lakeDoc && lakeDoc.status === 'PROCESSING' ? (
+                                          <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-lg">
+                                            <RefreshCw size={12} className="animate-spin text-blue-500" />
+                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Processando...</span>
+                                          </div>
+                                        ) : lakeDoc ? (
+                                          <>
+                                            <button
+                                              onClick={() => handleOpenLakeDoc(lakeDoc)}
+                                              className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center gap-2"
+                                              title="Visualização via Data Lake"
+                                            >
+                                              <Eye size={14} strokeWidth={3} />
+                                              <span className="text-[10px] font-black uppercase tracking-tight">Ver</span>
+                                            </button>
+                                            <button
+                                              onClick={() => window.open(lakeDoc.downloadUrl, '_blank')}
+                                              className="p-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-all font-black text-[10px] uppercase flex items-center gap-1"
+                                              title="Download do Data Lake"
+                                            >
+                                              <Download size={14} />
+                                            </button>
+                                          </>
+                                        ) : doc.url ? (
+                                          doc.tipo.toUpperCase().includes('DESPACHO') ? (
+                                            <button
+                                              onClick={() => setPreviewUrl(doc.url as string)}
+                                              className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm flex items-center gap-2"
+                                              title="Visualizar despacho (SIPAC)"
+                                            >
+                                              <Eye size={14} />
+                                              <span className="text-[10px] font-black uppercase tracking-tight">Ver</span>
+                                            </button>
+                                          ) : (
+                                            <button
+                                              onClick={() => window.open(doc.url as string, '_blank')}
+                                              className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-all shadow-sm flex items-center gap-2"
+                                              title="Baixar / Ver Documento (SIPAC)"
+                                            >
+                                              <Download size={14} />
+                                              <span className="text-[10px] font-black uppercase tracking-tight">Baixar</span>
+                                            </button>
+                                          )
+                                        ) : (
+                                          <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Pendente</span>
+                                        )}
+                                      </div>
+                                    </td>
+
+                                  </tr>
+                                );
+                              })}
                             </tbody>
+
                           </table>
                         </div>
                       </div>
@@ -2269,7 +2503,274 @@ const AnnualHiringPlan: React.FC = () => {
           </div>
         )
       }
-    </div >
+
+      {/* Modal de Visualização do Data Lake */}
+      {
+        isLakeModalOpen && selectedLakeDoc && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-300">
+            <div className="bg-white rounded-2xl w-full max-w-6xl h-[90vh] shadow-2xl overflow-hidden border border-white/20 flex flex-col">
+              <header className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-white shrink-0">
+                <div className="flex items-center gap-4">
+                  <div className="bg-blue-600 p-3 rounded-xl text-white shadow-lg shadow-blue-100">
+                    <FileText size={24} strokeWidth={2.5} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-slate-900 tracking-tight line-clamp-1 max-w-xl">{selectedLakeDoc.fileName}</h3>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100 italic">Data Lake BSF</span>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        Tipo: {selectedLakeDoc.sipacMetadata?.tipo} • {((selectedLakeDoc.sizeBytes || 0) / 1024 / 1024).toFixed(2)} MB
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => window.open(selectedLakeDoc.downloadUrl, '_blank')}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-ifes-blue text-white rounded-lg text-xs font-black hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 uppercase tracking-widest"
+                  >
+                    <Download size={16} strokeWidth={3} />
+                    Download
+                  </button>
+                  <button
+                    onClick={() => setIsLakeModalOpen(false)}
+                    className="p-3 hover:bg-red-50 hover:text-red-500 rounded-xl transition-all text-slate-400"
+                  >
+                    <X size={28} />
+                  </button>
+                </div>
+              </header>
+
+              <div className="flex-1 bg-slate-100 p-1 relative overflow-hidden flex items-center justify-center">
+                {isFetchingUrl ? (
+                  <div className="flex flex-col items-center gap-4">
+                    <RefreshCw className="animate-spin text-blue-600" size={48} strokeWidth={3} />
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest animate-pulse">Gerando acesso seguro...</p>
+                  </div>
+                ) : lakeDocUrl ? (
+                  <iframe
+                    src={`${lakeDocUrl}#toolbar=0`}
+                    className="w-full h-full rounded-lg bg-white border-0 shadow-inner"
+                    title="Document Viewer"
+                  />
+                ) : (
+                  <div className="text-center p-10 space-y-4">
+                    <div className="bg-red-50 text-red-500 p-4 rounded-full w-16 h-16 mx-auto flex items-center justify-center">
+                      <AlertCircle size={32} />
+                    </div>
+                    <p className="text-sm font-bold text-slate-500">Ops! Não conseguimos carregar o preview.</p>
+                  </div>
+                )}
+
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-5">
+
+                  <Building2 size={300} />
+                </div>
+              </div>
+
+              <footer className="px-8 py-4 bg-white border-t border-slate-100 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-3 text-slate-400">
+                  <div className="p-1.5 bg-blue-50 rounded-lg text-blue-400">
+                    <Sparkles size={14} />
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] italic">Análise de IA disponível para este documento</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">
+                    Hash: {selectedLakeDoc.fileHash}
+                  </div>
+                  <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" title="Documento Íntegro" />
+                </div>
+              </footer>
+            </div>
+          </div>
+        )
+      }
+      {/* Chat flutuante do Auditor Digital */}
+      {
+        isChatOpen && viewingItem && (
+          <div className="fixed bottom-6 right-6 z-[150] w-[450px] h-[650px] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in slide-in-from-bottom-10 duration-500">
+            {/* Header do Chat */}
+            <header className="px-6 py-4 bg-slate-900 text-white flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="bg-blue-600 p-2 rounded-lg">
+                  <Bot size={20} strokeWidth={3} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black tracking-tight">Consultor Digital</h3>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Baseado em Gemini 3 Flash</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsChatOpen(false)}
+                className="p-1 hover:bg-white/10 rounded-md transition-all"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            {/* Área de Mensagens */}
+            <div
+              ref={chatScrollRef}
+              className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50"
+            >
+              {chatMessages.length === 0 && (
+                <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50 px-10">
+                  <div className="p-4 bg-white rounded-3xl border border-slate-100 shadow-sm">
+                    <Sparkles size={32} className="text-blue-500" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-slate-800 uppercase tracking-widest mb-2">Inicie uma auditoria</p>
+                    <p className="text-[11px] font-medium text-slate-500 leading-relaxed">
+                      Pergunte qualquer coisa sobre prazos, valores ou cláusulas deste contrato. Eu busco nos documentos para você.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {chatMessages.map((msg, i) => (
+                <div
+                  key={i}
+                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}
+                >
+                  <div
+                    className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm ${msg.role === 'user'
+                      ? 'bg-blue-600 text-white rounded-tr-none'
+                      : 'bg-white text-slate-700 border border-slate-100 shadow-sm rounded-tl-none'
+                      }`}
+                  >
+                    <div className="prose-sm prose-slate max-w-none break-words">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {msg.content}
+                      </ReactMarkdown>
+                    </div>
+
+                    {/* Sources / Citations */}
+                    {msg.sources && msg.sources.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-slate-100 flex flex-col gap-2">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Fontes Utilizadas:</span>
+                        <div className="flex flex-wrap gap-2">
+                          {msg.sources.map((source, idx) => {
+                            const linkedDoc = lakeDocuments.find(ld => ld.id === source.fileId || ld.fileHash === source.fileId);
+                            let label = 'Documento Processado';
+
+                            if (linkedDoc) {
+                              if (linkedDoc.sipacMetadata) {
+                                label = `${linkedDoc.sipacMetadata.ordem} - ${linkedDoc.sipacMetadata.tipo}`;
+                              } else {
+                                label = linkedDoc.fileName;
+                              }
+                            } else {
+                              label = source.fileId.includes('-') ? source.fileId.split('-').slice(1).join('-') : source.fileId;
+                            }
+
+                            return (
+                              <div
+                                key={idx}
+                                className={`group relative ${linkedDoc ? 'cursor-pointer' : 'cursor-help'}`}
+                                title={source.preview}
+                                onClick={() => linkedDoc && handleOpenLakeDoc(linkedDoc)}
+                              >
+                                <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md transition-all border ${linkedDoc ? 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 hover:border-blue-200' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
+                                  {linkedDoc ? <BookOpen size={10} strokeWidth={2.5} /> : <FileText size={10} />}
+                                  <span className="text-[9px] font-black max-w-[150px] truncate">
+                                    {label}
+                                  </span>
+                                  {linkedDoc && <ExternalLink size={8} className="opacity-50" />}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    <div className={`mt-1.5 text-[8px] font-black uppercase tracking-tighter ${msg.role === 'user' ? 'text-blue-100/60 text-right' : 'text-slate-400'}`}>
+                      {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {isThinking && (
+                <div className="flex justify-start animate-pulse">
+                  <div className="bg-white px-4 py-3 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
+                    <div className="flex gap-1">
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" />
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:0.2s]" />
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:0.4s]" />
+                    </div>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Auditor Analisando...</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Input do Chat */}
+            <div className="p-4 bg-white border-t border-slate-100 shrink-0">
+              <div className="relative flex items-center">
+                <input
+                  type="text"
+                  value={chatQuery}
+                  onChange={(e) => setChatQuery(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  placeholder="Ex: Qual o prazo de entrega estipulado?"
+                  className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                />
+                <button
+                  onClick={handleSendMessage}
+                  disabled={isThinking || !chatQuery.trim()}
+                  className="absolute right-2 p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-30 disabled:hover:bg-blue-600 transition-all shadow-lg active:scale-95"
+                >
+                  <Send size={16} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+      {/* Floating Progress Widget for Document Processing */}
+      {isDetailsModalOpen && viewingItem?.dadosSIPAC?.documentos && (
+        (() => {
+          const totalDocs = viewingItem.dadosSIPAC.documentos.length;
+          const processedDocs = lakeDocuments.filter(d => d.status === 'COMPLETED' || d.status === 'ERROR').length;
+          const processingDocs = lakeDocuments.filter(d => d.status === 'PROCESSING').length;
+          const progress = totalDocs > 0 ? Math.round((processedDocs / totalDocs) * 100) : 0;
+
+          if (processingDocs > 0) {
+            return (
+              <div className="fixed bottom-8 right-8 z-[250] bg-white rounded-xl shadow-2xl border border-blue-100 p-4 w-80 animate-in slide-in-from-right duration-500">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-blue-50 p-2 rounded-lg text-blue-600 animate-pulse">
+                      <RefreshCw size={18} className="animate-spin" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-slate-800 uppercase tracking-wide">Processando Documentos</h4>
+                      <p className="text-[10px] font-bold text-slate-400">Vetorizando para IA...</p>
+                    </div>
+                  </div>
+                  <span className="text-lg font-black text-blue-600 tabular-nums">{progress}%</span>
+                </div>
+
+                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-blue-600 h-full rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+
+                <div className="mt-2 flex justify-between items-center text-[10px] font-medium text-slate-400">
+                  <span>{processedDocs} de {totalDocs} analisados</span>
+                  <span className="text-blue-500 font-bold uppercase tracking-wider animate-pulse">Em Andamento</span>
+                </div>
+              </div>
+            );
+          }
+          return null;
+        })()
+      )}
+
+    </div>
   );
 };
 
