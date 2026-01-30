@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import mime from 'mime-types';
 import axios from 'axios';
+import os from 'os';
 
 
 
@@ -490,7 +491,7 @@ export async function downloadSIPACDocument(url) {
         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
         // Configura pasta temporária para downloads
-        const downloadPath = path.resolve('./temp_downloads', crypto.randomBytes(16).toString('hex'));
+        const downloadPath = path.join(os.tmpdir(), crypto.randomBytes(16).toString('hex'));
         if (!fs.existsSync(downloadPath)) {
             fs.mkdirSync(downloadPath, { recursive: true });
         }

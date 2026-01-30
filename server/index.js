@@ -11,6 +11,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Carrega variáveis do arquivo .env.local na raiz do projeto
+// Carrega variáveis de ambiente
+dotenv.config({ path: path.join(__dirname, '.env') });
 dotenv.config({ path: path.join(__dirname, '..', '.env.local') });
 
 const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT || path.join(__dirname, '..', 'serviceAccountKey.json');
@@ -367,8 +369,20 @@ async function performAutomaticSync() {
   }
 }
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Servidor rodando em http://localhost:${PORT}`);
-});
+import { onRequest } from "firebase-functions/v2/https";
+
+// Exporta como Cloud Function (Gen 2) com memória ajustada para Puppeteer
+export const api = onRequest({
+  memory: '2GiB',
+  timeoutSeconds: 300,
+  region: 'us-central1' // Ajuste conforme sua região preferida do Firebase
+}, app);
+
+// Executa servidor local apenas se NÃO estivermos no ambiente Cloud Functions
+if (!process.env.FUNCTION_TARGET && !process.env.FIREBASE_CONFIG) {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Servidor rodando em http://localhost:${PORT}`);
+  });
+}
 
 setInterval(() => { }, 60000);
