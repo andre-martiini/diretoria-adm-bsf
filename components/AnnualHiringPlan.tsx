@@ -84,6 +84,9 @@ import ProcessDashboard from './ProcessDashboard';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { calculateHealthScore, deriveInternalPhase, linkItemsToProcess } from '../services/acquisitionService';
+import { analyzeProcessFinancials } from '../utils/analysis/smartScanner';
+import { ProcessFinancials } from '../types';
+import FinancialTimeline from './FinancialTimeline';
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import * as pdfjsLib from 'pdfjs-dist';
@@ -146,7 +149,21 @@ const AnnualHiringPlan: React.FC = () => {
   const [isItemsListModalOpen, setIsItemsListModalOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string, type: ToastType } | null>(null);
 
-  // Client-side AI State
+  const processedAISummaryRefs = useRef<Set<string>>(new Set());
+
+  // Data Lake States
+  const [lakeDocuments, setLakeDocuments] = useState<any[]>([]);
+  const [isLakeModalOpen, setIsLakeModalOpen] = useState(false);
+  const [selectedLakeDoc, setSelectedLakeDoc] = useState<any>(null);
+  const [lakeDocUrl, setLakeDocUrl] = useState<string | null>(null);
+  const [isFetchingUrl, setIsFetchingUrl] = useState(false);
+  const [loadingLake, setLoadingLake] = useState(false);
+
+  // Financial Analysis States
+  const [financialData, setFinancialData] = useState<ProcessFinancials | null>(null);
+  const [isAnalyzingFinancials, setIsAnalyzingFinancials] = useState(false);
+
+  // Chat Auditor Regional States (RAG)
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant', content: string, timestamp: Date }[]>([]);
   const [chatQuery, setChatQuery] = useState('');
@@ -294,23 +311,42 @@ Cite a fonte (tipo do documento ou página) quando possível.
       const result = await model.generateContent(prompt);
       const response = result.response.text();
 
-      setChatMessages(prev => [...prev, {
-        role: 'assistant',
-        content: response,
-        timestamp: new Date()
-      }]);
+  // Trigger para resumo IA em segundo plano quando visualiza o processo
+  useEffect(() => {
+    if (isDetailsModalOpen && viewingItem?.dadosSIPAC) {
+      generateAISummary(viewingItem);
+      // Reset financial data when opening new item
+      setFinancialData(viewingItem.dadosSIPAC.analise_financeira || null);
+    }
+  };
 
-    } catch (error: any) {
-      console.error('[CHAT ERROR]', error);
-      setToast({ message: 'Erro ao analisar com IA: ' + error.message, type: 'error' });
-      setChatMessages(prev => [...prev, {
-        role: 'assistant',
-        content: "Desculpe, encontrei um erro ao tentar processar sua solicitação ou ler os documentos.",
-        timestamp: new Date()
-      }]);
+  const handleRunFinancialAnalysis = async () => {
+    if (!viewingItem?.dadosSIPAC) return;
+    setIsAnalyzingFinancials(true);
+    try {
+        // Run the smart scanner
+        const results = await analyzeProcessFinancials(viewingItem.dadosSIPAC);
+        setFinancialData(results);
+
+        // Update local state and viewingItem
+        const updatedSipac = { ...viewingItem.dadosSIPAC, analise_financeira: results };
+        setViewingItem({ ...viewingItem, dadosSIPAC: updatedSipac });
+
+        // Persist to Firestore (Optimistic)
+        // Note: Ideally we should update Firestore here similar to generateAISummary
+         if (viewingItem.protocoloSIPAC) {
+            const q = query(collection(db, 'pca_data'), where('protocoloSIPAC', '==', viewingItem.protocoloSIPAC));
+            const querySnapshot = await getDocs(q);
+            const batch = writeBatch(db);
+            querySnapshot.forEach((docSnap) => batch.update(docSnap.ref, { 'dadosSIPAC.analise_financeira': results }));
+            if (!querySnapshot.empty) await batch.commit();
+        }
+
+    } catch (error) {
+        console.error("Financial Analysis failed", error);
+        setToast({ message: "Falha ao realizar análise financeira dos documentos.", type: 'error' });
     } finally {
-      setIsThinking(false);
-      setIsExtracting(false);
+        setIsAnalyzingFinancials(false);
     }
   };
 
@@ -730,25 +766,600 @@ Cite a fonte (tipo do documento ou página) quando possível.
                   <div className="flex items-center gap-3"><div className="bg-blue-50 p-2 rounded-md text-blue-600"><FileText size={20} /></div><span className="font-black text-slate-800 uppercase text-xs tracking-widest">Documentos</span></div>
                   {expandedSections.documentos ? <ChevronUp size={20} className="text-slate-300" /> : <ChevronDown size={20} className="text-slate-300" />}
                 </button>
-                {expandedSections.documentos && (
-                  <div className="px-8 pb-8 animate-in slide-in-from-top-2 duration-300">
-                    <div className="overflow-hidden border border-slate-100 rounded-lg">
-                      <table className="w-full text-left">
-                        <thead className="bg-slate-50/50"><tr><th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Ordem</th><th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Tipo</th><th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Data</th><th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase text-center">Ações</th></tr></thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {(viewingItem.dadosSIPAC.documentos || []).map((doc, i) => (
-                            <tr key={i} className="hover:bg-slate-50 transition-colors">
-                              <td className="px-6 py-4 text-xs font-black text-slate-400">#{doc.ordem}</td>
-                              <td className="px-6 py-4"><span className="text-xs font-bold text-slate-800">{doc.tipo}</span></td>
-                              <td className="px-6 py-4 text-xs text-slate-600 font-medium">{doc.data}</td>
-                              <td className="px-6 py-4 text-center">
-                                <div className="flex items-center justify-center gap-2">
-                                  {doc.url ? (
-                                    <>
-                                      <button onClick={() => window.open(`${API_SERVER_URL}/api/proxy/pdf?url=${encodeURIComponent(doc.url)}`, '_blank')} className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-all shadow-sm flex items-center gap-2" title="Baixar PDF Original"><Download size={14} /><span className="text-[10px] font-black uppercase tracking-tight">Baixar</span></button>
-                                      {doc.tipo.toUpperCase().includes('DESPACHO') && <button onClick={() => setPreviewUrl(`${API_SERVER_URL}/api/proxy/pdf?url=${encodeURIComponent(doc.url)}`)} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm" title="Visualizar"><Eye size={14} /></button>}
-                                    </>
-                                  ) : <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Pendente</span>}
+              </header>
+
+              <div className="p-10 space-y-8">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Descrição Curta da Necessidade</label>
+                  <textarea
+                    className="w-full px-6 py-4 bg-white border border-slate-200 rounded-lg text-sm font-bold outline-none focus:ring-4 focus:ring-ifes-blue/10 focus:border-ifes-blue transition-all shadow-sm"
+                    rows={3}
+                    placeholder="Ex: Aquisição emergencial de suprimentos para laboratório..."
+                    value={newItem.titulo}
+                    onChange={(e) => setNewItem({ ...newItem, titulo: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Categoria de Compra</label>
+                    <div className="relative">
+                      <select
+                        className="w-full px-6 py-4 bg-white border border-slate-200 rounded-[24px] text-sm font-black outline-none focus:ring-4 focus:ring-ifes-blue/10 focus:border-ifes-blue transition-all appearance-none cursor-pointer"
+                        value={newItem.categoria}
+                        onChange={(e) => setNewItem({ ...newItem, categoria: e.target.value as Category })}
+                      >
+                        <option value={Category.Bens}>🏢 Bens (Materiais)</option>
+                        <option value={Category.Servicos}>🛠️ Serviços</option>
+                        <option value={Category.TIC}>💻 Tecnologia (TIC)</option>
+                      </select>
+                      <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Estimativa de Investimento</label>
+                    <div className="relative">
+                      <span className="absolute left-6 top-1/2 -translate-y-1/2 text-sm font-black text-slate-400">R$</span>
+                      <input
+                        type="number"
+                        className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-[24px] text-sm font-black outline-none focus:ring-4 focus:ring-ifes-blue/10 focus:border-ifes-blue transition-all"
+                        value={newItem.valor}
+                        onChange={(e) => setNewItem({ ...newItem, valor: Number(e.target.value) })}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Cronograma Desejado</label>
+                    <input
+                      type="date"
+                      className="w-full px-6 py-4 bg-white border border-slate-200 rounded-[24px] text-sm font-black outline-none focus:ring-4 focus:ring-ifes-blue/10 focus:border-ifes-blue transition-all"
+                      value={newItem.inicio}
+                      onChange={(e) => setNewItem({ ...newItem, inicio: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Unidade Responsável</label>
+                    <input
+                      type="text"
+                      className="w-full px-6 py-4 bg-white border border-slate-200 rounded-[24px] text-sm font-bold outline-none focus:ring-4 focus:ring-ifes-blue/10 focus:border-ifes-blue transition-all"
+                      value={newItem.area}
+                      onChange={(e) => setNewItem({ ...newItem, area: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-amber-50/50 p-6 rounded-3xl border border-amber-100 flex gap-4 items-center">
+                  <div className="p-2 bg-amber-100 rounded-xl text-amber-600">
+                    <AlertCircle size={20} />
+                  </div>
+                  <p className="text-[10px] font-black text-amber-800 leading-relaxed uppercase tracking-tight">
+                    Nota: Demandas manuais não consultam o banco oficial do PNCP automaticamente.
+                  </p>
+                </div>
+              </div>
+
+              <footer className="p-8 bg-slate-50/80 border-t border-slate-100 flex gap-4 backdrop-blur-sm">
+                <button
+                  onClick={() => setIsManualModalOpen(false)}
+                  className="flex-1 px-8 py-4 bg-white border border-slate-200 text-slate-500 rounded-lg text-xs font-black hover:bg-slate-100 hover:text-slate-800 transition-all uppercase tracking-widest"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleAddManualItem}
+                  disabled={saving}
+                  className="flex-[2] px-8 py-4 bg-ifes-blue text-white rounded-lg text-xs font-black hover:bg-blue-700 transition-all shadow-xl shadow-blue-200 flex items-center justify-center gap-3 disabled:opacity-50 uppercase tracking-widest"
+                >
+                  {saving ? <RefreshCw size={18} className="animate-spin" /> : <Plus size={18} strokeWidth={3} />}
+                  Prontinho! Registrar Demanda
+                </button>
+              </footer>
+            </div>
+          </div>
+        )
+      }
+      {/* Modal de Detalhes SIPAC - FULL PAGE EDITION */}
+      {
+        isDetailsModalOpen && viewingItem && viewingItem.dadosSIPAC && (
+          <div className="fixed inset-0 z-[70] bg-slate-50 flex flex-col font-sans animate-in fade-in duration-300">
+            {/* Header Superior Fixo */}
+            <header className="bg-white border-b border-slate-200 px-10 py-6 flex items-center justify-between shadow-sm shrink-0 sticky top-0 z-[80]">
+              <div className="flex items-center gap-6">
+                <div className="bg-ifes-blue p-3.5 rounded-lg shadow-lg shadow-blue-100">
+                  <Search size={28} className="text-white" strokeWidth={3} />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                    Processo {viewingItem.dadosSIPAC.numeroProcesso}
+                    <span className={`text-[10px] px-3 py-1 rounded-md uppercase font-black tracking-widest ${getStatusColor(getProcessStatus(viewingItem))}`}>
+                      {getProcessStatus(viewingItem)}
+                    </span>
+                  </h2>
+                  <div className="flex items-center gap-4 mt-1.5">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Sincronizado via SIPAC em {viewingItem.dadosSIPAC.ultimaAtualizacao}</span>
+                    <div className="w-1.5 h-1.5 bg-slate-200 rounded-full" />
+                    <button
+                      onClick={() => handleUpdateSIPACItem(viewingItem, true)}
+                      disabled={isFetchingSIPAC}
+                      className="flex items-center gap-2 px-3 py-1 bg-ifes-blue/5 hover:bg-ifes-blue/10 text-ifes-blue rounded-full text-[10px] font-black uppercase transition-all disabled:opacity-50"
+                    >
+                      <RefreshCw size={12} className={isFetchingSIPAC ? 'animate-spin' : ''} strokeWidth={3} />
+                      {isFetchingSIPAC ? 'Sincronizando...' : 'Tudo certo! Atualizar AGORA'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsChatOpen(!isChatOpen)}
+                  disabled={lakeDocuments.some(d => d.status === 'PROCESSING')}
+                  title={lakeDocuments.some(d => d.status === 'PROCESSING') ? "Aguarde o processamento dos documentos para consultar." : "Falar com Consultor Digital"}
+                  className={`flex items-center gap-2 px-4 py-2 border rounded-md text-xs font-black transition-all shadow-sm ${lakeDocuments.some(d => d.status === 'PROCESSING')
+                    ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-70'
+                    : (isChatOpen ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-blue-100 text-blue-600 hover:bg-blue-50')
+                    }`}
+                >
+                  {lakeDocuments.some(d => d.status === 'PROCESSING') ? <RefreshCw size={16} className="animate-spin" /> : <Bot size={16} />}
+                  Consultor Digital
+                </button>
+                <button
+                  onClick={() => {
+                    setIsDetailsModalOpen(false);
+                    setEditingItem(viewingItem);
+                    setIsEditModalOpen(true);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-md text-xs font-black text-slate-600 hover:bg-slate-50 transition-all shadow-sm"
+                >
+                  <PencilLine size={16} />
+                  Editar Vínculo
+                </button>
+                <button
+                  onClick={() => handleUnlinkProcess(viewingItem)}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-100 rounded-md text-xs font-black text-red-600 hover:bg-red-600 hover:text-white transition-all shadow-sm group"
+                >
+                  <Link size={16} className="rotate-45" />
+                  Desvincular
+                </button>
+                <button
+                  onClick={() => setIsDetailsModalOpen(false)}
+                  className="p-2.5 hover:bg-red-50 hover:text-red-500 rounded-md transition-all text-slate-400 bg-white border border-slate-100"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+            </header>
+
+
+            <main className="flex-1 overflow-y-auto px-8 py-10">
+              <div className="max-w-6xl mx-auto space-y-8 pb-20">
+
+                {/* Seção 1: Dados de Planejamento */}
+                <div className="bg-white rounded-lg border border-slate-200 p-10 shadow-sm">
+                  <div className="flex items-center gap-2 mb-6">
+                    <div className="p-1 px-2 bg-ifes-blue/10 rounded-md text-ifes-blue">
+                      <Target size={14} strokeWidth={3} />
+                    </div>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Dados de Planejamento do PCA</span>
+                  </div>
+
+                  <div className="flex flex-col gap-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <h3 className="text-3xl font-black text-slate-900 leading-tight">
+                        {viewingItem.titulo}
+                      </h3>
+                    </div>
+
+                    <div className="flex items-center gap-4 flex-wrap pt-4">
+                      <div>
+                        <span className="block text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest">Valor Estimado</span>
+                        <div className="bg-slate-50 px-4 py-2 rounded-lg border border-slate-100 h-10 flex items-center">
+                          <span className="text-sm font-black text-slate-600 tracking-tighter">{formatCurrency(viewingItem.valor)}</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="block text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest">Categoria</span>
+                        <div className="bg-slate-50 px-4 py-2 rounded-lg border border-slate-100 h-10 flex items-center">
+                          <span className="text-sm font-black text-slate-600">{viewingItem.categoria}</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="block text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest">Início Previsto</span>
+                        <div className="bg-slate-50 px-4 py-2 rounded-lg border border-slate-100 h-10 flex items-center">
+                          <span className="text-sm font-black text-slate-600">{formatDate(viewingItem.inicio)}</span>
+                        </div>
+                      </div>
+
+                      {viewingItem.isGroup && (
+                        <div>
+                          <span className="block text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest">Itens do Agrupamento</span>
+                          <button
+                            onClick={() => setIsItemsListModalOpen(true)}
+                            className="bg-blue-50 px-4 py-2 rounded-lg border border-blue-100 h-10 flex items-center gap-2 hover:bg-blue-100 transition-colors group cursor-pointer"
+                          >
+                            <List size={14} className="text-blue-500 group-hover:text-blue-600" strokeWidth={3} />
+                            <span className="text-sm font-black text-blue-600 uppercase tracking-tight">{viewingItem.childItems?.length || 0} Itens do PCA</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {viewingItem.identificadorFuturaContratacao && (
+                        <div>
+                          <span className="block text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest">Código do Item (IFC)</span>
+                          <div className="bg-slate-50 px-4 py-2 rounded-lg border border-slate-100 h-10 flex items-center">
+                            <span className="text-sm font-black text-slate-600 tracking-tighter">
+                              {viewingItem.identificadorFuturaContratacao}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pt-6 border-t border-dashed border-slate-100">
+                      <span className="block text-[9px] font-black text-slate-400 uppercase mb-4 tracking-widest">Justificativa / Objeto no SIPAC</span>
+                      <p className="text-sm text-slate-600 font-medium leading-relaxed italic border-l-4 border-ifes-blue/40 pl-6 bg-ifes-blue/5 py-4 rounded-r-lg">
+                        "{viewingItem.dadosSIPAC.assuntoDetalhado || 'Sem descrição detalhada disponível no SIPAC.'}"
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Seção 2: Identificação do Processo (SIPAC) */}
+                <div className="bg-white rounded-lg border border-slate-200 p-10 shadow-sm">
+                  <div className="flex items-center gap-2 mb-6">
+                    <div className="p-1 px-2 bg-slate-950 rounded-md text-white">
+                      <Info size={14} strokeWidth={3} />
+                    </div>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Identificação do Processo no SIPAC</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-y-6 gap-x-6">
+                    <div>
+                      <span className="block text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest">Número do Processo</span>
+                      <div className="bg-slate-50 px-4 py-2 rounded-lg border border-slate-100 h-10 flex items-center">
+                        <span className="text-sm font-black text-slate-600 tracking-tighter">{viewingItem.dadosSIPAC.numeroProcesso}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="block text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest">Status no SIPAC</span>
+                      <div className={`px-4 py-2 rounded-lg border h-10 flex items-center gap-2 ${getStatusColor(getProcessStatus(viewingItem)).replace('text-', 'bg-').replace('700', '50').replace('600', '50')} ${getStatusColor(getProcessStatus(viewingItem)).replace('text-', 'border-').replace('700', '100').replace('600', '100')}`}>
+                        <div className={`w-2 h-2 rounded-full ${getStatusColor(getProcessStatus(viewingItem)).replace('text-', 'bg-').replace('700', '500').replace('600', '500')}`} />
+                        <span className={`text-xs font-black uppercase truncate ${getStatusColor(getProcessStatus(viewingItem)).replace('text-', 'text-').replace('700', '700').replace('600', '700')}`}>
+                          {getProcessStatus(viewingItem)}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="block text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest">Data de Autuação</span>
+                      <div className="bg-slate-50 px-4 py-2 rounded-lg border border-slate-100 h-10 flex items-center">
+                        <span className="text-sm font-black text-slate-600">{viewingItem.dadosSIPAC.dataAutuacion}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="block text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest">Última Tramitação</span>
+                      <div className="bg-slate-50 px-4 py-2 rounded-lg border border-slate-100 h-10 flex items-center">
+                        <span className="text-xs font-black text-slate-600 uppercase truncate">
+                          {viewingItem.dadosSIPAC.movimentacoes && viewingItem.dadosSIPAC.movimentacoes.length > 0
+                            ? `${viewingItem.dadosSIPAC.movimentacoes[0].data}`
+                            : 'Recente'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="lg:col-span-2">
+                      <span className="block text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest">Assunto do Processo</span>
+                      <div className="bg-slate-50 px-4 py-2 rounded-lg border border-slate-100 h-10 flex items-center">
+                        <span className="text-xs font-black text-slate-600 uppercase truncate">
+                          <span className="text-ifes-blue mr-2 font-black">{viewingItem.dadosSIPAC.assuntoCodigo}</span>
+                          {viewingItem.dadosSIPAC.assuntoDescricao}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="block text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest">Natureza</span>
+                      <div className="bg-slate-50 px-4 py-2 rounded-lg border border-slate-100 h-10 flex items-center">
+                        <span className="text-xs font-black text-slate-600 uppercase truncate">{viewingItem.dadosSIPAC.natureza || 'OSTENSIVO'}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="block text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest">Usuário de Autuação</span>
+                      <div className="bg-slate-50 px-4 py-2 rounded-lg border border-slate-100 h-10 flex items-center">
+                        <p className="text-xs font-black text-slate-600 truncate uppercase italic" title={viewingItem.dadosSIPAC.usuarioAutuacion}>
+                          {viewingItem.dadosSIPAC.usuarioAutuacion}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="lg:col-span-2">
+                      <span className="block text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest">Unidade de Origem</span>
+                      <div className="bg-slate-50 px-4 py-2 rounded-lg border border-slate-100 h-10 flex items-center">
+                        <span className="text-xs font-black text-slate-600 uppercase truncate">{viewingItem.dadosSIPAC.unidadeOrigem || 'Não identificada'}</span>
+                      </div>
+                    </div>
+                    <div className="lg:col-span-2">
+                      <span className="block text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest">Unidade sob Custódia (Local Atual)</span>
+                      <div className="bg-slate-50 px-4 py-2 rounded-lg border border-slate-100 h-10 flex items-center">
+                        <span className="text-xs font-black text-slate-600 uppercase truncate">
+                          {viewingItem.dadosSIPAC.movimentacoes && viewingItem.dadosSIPAC.movimentacoes.length > 0
+                            ? viewingItem.dadosSIPAC.movimentacoes[0].unidadeDestino
+                            : viewingItem.dadosSIPAC.unidadeOrigem}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Seção 2.5: Análise Financeira Inteligente */}
+                <div className="bg-white rounded-lg border border-slate-200 p-10 shadow-sm">
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-2">
+                            <div className="p-1 px-2 bg-emerald-50 rounded-md text-emerald-600">
+                                <DollarSign size={14} strokeWidth={3} />
+                            </div>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Execução Financeira (Smart Scan)</span>
+                        </div>
+
+                        {!financialData && (
+                            <button
+                                onClick={handleRunFinancialAnalysis}
+                                disabled={isAnalyzingFinancials}
+                                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 disabled:opacity-50 uppercase tracking-widest"
+                            >
+                                {isAnalyzingFinancials ? <RefreshCw size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                                {isAnalyzingFinancials ? 'Analisando Docs...' : 'Realizar Varredura Financeira'}
+                            </button>
+                        )}
+                    </div>
+
+                    {financialData ? (
+                         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                             <div className="flex justify-end mb-4">
+                                 <button onClick={handleRunFinancialAnalysis} className="text-[10px] font-bold text-emerald-600 hover:underline flex items-center gap-1">
+                                     <RefreshCw size={10} /> Atualizar Análise
+                                 </button>
+                             </div>
+                             <FinancialTimeline financials={financialData} loading={isAnalyzingFinancials} />
+                         </div>
+                    ) : (
+                        <div className="bg-slate-50 border border-dashed border-slate-200 rounded-xl p-8 text-center">
+                            <div className="mx-auto w-12 h-12 bg-white rounded-full flex items-center justify-center mb-3 shadow-sm text-slate-300">
+                                <DollarSign size={24} />
+                            </div>
+                            <h4 className="text-sm font-bold text-slate-600">Nenhuma análise financeira disponível</h4>
+                            <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+                                Clique em "Realizar Varredura" para que o sistema identifique automaticamente Notas de Empenho, Faturas e Pagamentos nos documentos anexados.
+                            </p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Seção 2.1: Resumo IA (DESATIVADO TEMPORARIAMENTE) */}
+                {/* 
+                {(isGeneratingSummary || viewingItem?.dadosSIPAC?.resumoIA) && (
+                  ... resto do código do resumo IA ...
+                )}
+                */}
+
+
+                <div className="space-y-4">
+
+                  {/* 1. Interessados */}
+                  <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all">
+                    <button
+                      onClick={() => setExpandedSections(p => ({ ...p, interessados: !p.interessados }))}
+                      className="w-full px-8 py-5 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="bg-indigo-50 p-2 rounded-md text-indigo-600">
+                          <Users size={20} />
+                        </div>
+                        <span className="font-black text-slate-800 uppercase text-xs tracking-widest">Interessados e Responsáveis</span>
+                        <span className="bg-indigo-100 text-indigo-700 text-[10px] font-black px-2 py-0.5 rounded-full">{(viewingItem.dadosSIPAC.interessados || []).length}</span>
+                      </div>
+                      {expandedSections.interessados ? <ChevronUp size={20} className="text-slate-300" /> : <ChevronDown size={20} className="text-slate-300" />}
+                    </button>
+                    {expandedSections.interessados && (
+                      <div className="px-8 pb-8 animate-in slide-in-from-top-2 duration-300">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {(viewingItem.dadosSIPAC.interessados || []).map((interessado, i) => (
+                            <div key={i} className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                              <span className="text-[10px] font-black text-slate-400 uppercase mb-1 block">{interessado.tipo}</span>
+                              <p className="text-sm font-bold text-slate-700">{interessado.nome}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 2. Documentos do Processo */}
+                  <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all">
+                    <button
+                      onClick={() => setExpandedSections(p => ({ ...p, documentos: !p.documentos }))}
+                      className="w-full px-8 py-5 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="bg-blue-50 p-2 rounded-md text-blue-600">
+                          <FileText size={20} />
+                        </div>
+                        <span className="font-black text-slate-800 uppercase text-xs tracking-widest">Documentos e Atas</span>
+                        <span className="bg-blue-100 text-blue-700 text-[10px] font-black px-2 py-0.5 rounded-full">{(viewingItem.dadosSIPAC.documentos || []).length}</span>
+                      </div>
+                      {expandedSections.documentos ? <ChevronUp size={20} className="text-slate-300" /> : <ChevronDown size={20} className="text-slate-300" />}
+                    </button>
+                    {expandedSections.documentos && (
+                      <div className="px-8 pb-8 animate-in slide-in-from-top-2 duration-300">
+                        <div className="overflow-hidden border border-slate-100 rounded-lg">
+                          <table className="w-full text-left">
+                            <thead className="bg-slate-50/50">
+                              <tr>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Ordem</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Tipo de Documento</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Data</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Origem</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Natureza</th>
+                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase text-center">Ações</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {(viewingItem.dadosSIPAC.documentos || []).map((doc, i) => {
+                                // Busca se o documento existe no Data Lake
+                                const lakeDoc = lakeDocuments.find(ld =>
+                                  String(ld.sipacMetadata?.ordem) === String(doc.ordem) &&
+                                  String(ld.sipacMetadata?.tipo) === String(doc.tipo)
+                                );
+
+                                return (
+                                  <tr key={i} className="hover:bg-slate-50 transition-colors">
+                                    <td className="px-6 py-4 text-xs font-black text-slate-400">#{doc.ordem}</td>
+                                    <td className="px-6 py-4">
+                                      <div className="flex flex-col">
+                                        <span className="text-xs font-bold text-slate-800">{doc.tipo}</span>
+                                        {lakeDoc && (
+                                          <div className="flex flex-col gap-1 mt-0.5">
+                                            {/* Status de Armazenamento */}
+                                            <span className="text-[8px] font-black text-blue-500 uppercase tracking-tighter flex items-center gap-1 animate-in fade-in slide-in-from-left-2">
+                                              <div className="w-1 h-1 bg-blue-500 rounded-full" />
+                                              Data Lake Seguro
+                                            </span>
+
+                                            {lakeDoc.status === 'COMPLETED' && (
+                                              <span className="text-[8px] font-black text-purple-600 uppercase tracking-tighter flex items-center gap-1 animate-in fade-in slide-in-from-left-2">
+                                                <Sparkles size={8} className="text-purple-600" />
+                                                IA Indexada
+                                              </span>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+
+                                    </td>
+                                    <td className="px-6 py-4 text-xs text-slate-600 font-medium">{doc.data}</td>
+                                    <td className="px-6 py-4 text-xs text-slate-600 font-medium uppercase">{doc.unidadeOrigem}</td>
+                                    <td className="px-6 py-4 text-xs text-slate-500 font-bold uppercase">{doc.natureza || 'OSTENSIVO'}</td>
+                                    <td className="px-6 py-4 text-center">
+                                      <div className="flex items-center justify-center gap-2">
+                                        {/* Ações de Visualização/Download - Interface Limpa */}
+                                        {lakeDoc && lakeDoc.status === 'PROCESSING' ? (
+                                          <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-lg">
+                                            <RefreshCw size={12} className="animate-spin text-blue-500" />
+                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Processando...</span>
+                                          </div>
+                                        ) : lakeDoc ? (
+                                          <>
+                                            <button
+                                              onClick={() => handleOpenLakeDoc(lakeDoc)}
+                                              className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center gap-2"
+                                              title="Visualização via Data Lake"
+                                            >
+                                              <Eye size={14} strokeWidth={3} />
+                                              <span className="text-[10px] font-black uppercase tracking-tight">Ver</span>
+                                            </button>
+                                            <button
+                                              onClick={() => window.open(lakeDoc.downloadUrl, '_blank')}
+                                              className="p-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-all font-black text-[10px] uppercase flex items-center gap-1"
+                                              title="Download do Data Lake"
+                                            >
+                                              <Download size={14} />
+                                            </button>
+                                          </>
+                                        ) : doc.url ? (
+                                          doc.tipo.toUpperCase().includes('DESPACHO') ? (
+                                            <button
+                                              onClick={() => setPreviewUrl(doc.url as string)}
+                                              className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm flex items-center gap-2"
+                                              title="Visualizar despacho (SIPAC)"
+                                            >
+                                              <Eye size={14} />
+                                              <span className="text-[10px] font-black uppercase tracking-tight">Ver</span>
+                                            </button>
+                                          ) : (
+                                            <button
+                                              onClick={() => window.open(doc.url as string, '_blank')}
+                                              className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-all shadow-sm flex items-center gap-2"
+                                              title="Baixar / Ver Documento (SIPAC)"
+                                            >
+                                              <Download size={14} />
+                                              <span className="text-[10px] font-black uppercase tracking-tight">Baixar</span>
+                                            </button>
+                                          )
+                                        ) : (
+                                          <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Pendente</span>
+                                        )}
+                                      </div>
+                                    </td>
+
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 3. Movimentações */}
+                  <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all">
+                    <button
+                      onClick={() => setExpandedSections(p => ({ ...p, movimentacoes: !p.movimentacoes }))}
+                      className="w-full px-8 py-5 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="bg-emerald-50 p-2 rounded-md text-emerald-600">
+                          <History size={20} />
+                        </div>
+                        <span className="font-black text-slate-800 uppercase text-xs tracking-widest">Histórico de Tramitação</span>
+                        <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-2 py-0.5 rounded-full">{(viewingItem.dadosSIPAC.movimentacoes || []).length}</span>
+                      </div>
+                      {expandedSections.movimentacoes ? <ChevronUp size={20} className="text-slate-300" /> : <ChevronDown size={20} className="text-slate-300" />}
+                    </button>
+                    {expandedSections.movimentacoes && (
+                      <div className="px-8 pb-8 animate-in slide-in-from-top-2 duration-300">
+                        <div className="relative pl-8 space-y-6 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
+                          {[...(viewingItem.dadosSIPAC.movimentacoes || [])].reverse().map((mov, i) => (
+                            <div key={i} className="relative">
+                              <div className="absolute left-[-21px] top-1.5 w-2 h-2 rounded-full bg-white border-2 border-emerald-500 z-10" />
+                              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+                                <div className="flex items-center justify-between border-b border-slate-50 pb-3">
+                                  <div className="flex items-center gap-4">
+                                    <div className="shrink-0 flex flex-col items-center bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
+                                      <span className="text-[10px] font-black text-slate-700 leading-none">{mov.data}</span>
+                                      <span className="text-[8px] font-bold text-slate-400 mt-1 uppercase">{mov.horario}</span>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-xs font-bold text-slate-700 uppercase">{mov.unidadeOrigem}</span>
+                                      <ChevronRight size={14} className="text-slate-300" />
+                                      <span className="text-xs font-black text-blue-600 uppercase">{mov.unidadeDestino}</span>
+                                    </div>
+                                  </div>
+                                  {mov.urgente && mov.urgente.toLowerCase().includes('sim') && (
+                                    <span className="bg-red-50 text-red-600 text-[8px] font-black px-2 py-1 rounded-lg border border-red-100 animate-pulse">URGENTE</span>
+                                  )}
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-1">
+                                  <div className="space-y-1">
+                                    <span className="text-[8px] font-black text-slate-300 uppercase block">Enviado por (Remetente)</span>
+                                    <p className="text-[11px] font-bold text-slate-600 uppercase italic">
+                                      {mov.usuarioRemetente || 'Não informado'}
+                                    </p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <span className="text-[8px] font-black text-slate-300 uppercase block">Recebimento</span>
+                                    <p className="text-[11px] font-bold text-slate-800 uppercase italic">
+                                      {mov.usuarioRecebedor ? mov.usuarioRecebedor : 'PENDENTE DE RECEBIMENTO'}
+                                    </p>
+                                    {mov.dataRecebimento && (
+                                      <p className="text-[9px] font-medium text-slate-400">
+                                        Confirmado em {mov.dataRecebimento} às {mov.horarioRecebimento}
+                                      </p>
+                                    )}
+                                  </div>
                                 </div>
                               </td>
                             </tr>
