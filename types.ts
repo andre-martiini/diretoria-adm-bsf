@@ -116,6 +116,26 @@ export interface AIStructuredAnalysis {
   pendencias_detectadas: string[];
 }
 
+export type FinancialEventType = 'EMPENHO' | 'LIQUIDACAO' | 'PAGAMENTO' | 'ANULACAO';
+
+export interface FinancialEvent {
+  id: string; // Document ID/Order
+  date: string; // ISO date
+  type: FinancialEventType;
+  value: number;
+  documentTitle: string;
+  documentUrl?: string;
+  originalText?: string;
+}
+
+export interface ProcessFinancials {
+  totalEmpenhado: number;
+  totalLiquidado: number;
+  totalPago: number;
+  events: FinancialEvent[];
+  lastAnalysisDate: string;
+}
+
 export interface SIPACProcess {
   // Cabeçalho e Identificação
   numeroProcesso: string;
@@ -157,6 +177,7 @@ export interface SIPACProcess {
   last_ai_hash?: string;
   scraping_last_error?: string;
   analise_ia_estruturada?: AIStructuredAnalysis;
+  analise_financeira?: ProcessFinancials;
 }
 
 export interface ProcessoAquisicao {

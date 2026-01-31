@@ -88,6 +88,9 @@ import ProcessDashboard from './ProcessDashboard';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { calculateHealthScore, deriveInternalPhase, linkItemsToProcess } from '../services/acquisitionService';
+import { analyzeProcessFinancials } from '../utils/analysis/smartScanner';
+import { ProcessFinancials } from '../types';
+import FinancialTimeline from './FinancialTimeline';
 
 const AnnualHiringPlan: React.FC = () => {
   const navigate = useNavigate();
@@ -157,6 +160,10 @@ const AnnualHiringPlan: React.FC = () => {
   const [lakeDocUrl, setLakeDocUrl] = useState<string | null>(null);
   const [isFetchingUrl, setIsFetchingUrl] = useState(false);
   const [loadingLake, setLoadingLake] = useState(false);
+
+  // Financial Analysis States
+  const [financialData, setFinancialData] = useState<ProcessFinancials | null>(null);
+  const [isAnalyzingFinancials, setIsAnalyzingFinancials] = useState(false);
 
   // Chat Auditor Regional States (RAG)
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -414,8 +421,40 @@ const AnnualHiringPlan: React.FC = () => {
   useEffect(() => {
     if (isDetailsModalOpen && viewingItem?.dadosSIPAC) {
       generateAISummary(viewingItem);
+      // Reset financial data when opening new item
+      setFinancialData(viewingItem.dadosSIPAC.analise_financeira || null);
     }
   }, [isDetailsModalOpen, viewingItem, generateAISummary]);
+
+  const handleRunFinancialAnalysis = async () => {
+    if (!viewingItem?.dadosSIPAC) return;
+    setIsAnalyzingFinancials(true);
+    try {
+        // Run the smart scanner
+        const results = await analyzeProcessFinancials(viewingItem.dadosSIPAC);
+        setFinancialData(results);
+
+        // Update local state and viewingItem
+        const updatedSipac = { ...viewingItem.dadosSIPAC, analise_financeira: results };
+        setViewingItem({ ...viewingItem, dadosSIPAC: updatedSipac });
+
+        // Persist to Firestore (Optimistic)
+        // Note: Ideally we should update Firestore here similar to generateAISummary
+         if (viewingItem.protocoloSIPAC) {
+            const q = query(collection(db, 'pca_data'), where('protocoloSIPAC', '==', viewingItem.protocoloSIPAC));
+            const querySnapshot = await getDocs(q);
+            const batch = writeBatch(db);
+            querySnapshot.forEach((docSnap) => batch.update(docSnap.ref, { 'dadosSIPAC.analise_financeira': results }));
+            if (!querySnapshot.empty) await batch.commit();
+        }
+
+    } catch (error) {
+        console.error("Financial Analysis failed", error);
+        setToast({ message: "Falha ao realizar análise financeira dos documentos.", type: 'error' });
+    } finally {
+        setIsAnalyzingFinancials(false);
+    }
+  };
 
   const processedData = useMemo(() => {
     if (!data || data.length === 0) return [];
@@ -2014,6 +2053,50 @@ const AnnualHiringPlan: React.FC = () => {
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* Seção 2.5: Análise Financeira Inteligente */}
+                <div className="bg-white rounded-lg border border-slate-200 p-10 shadow-sm">
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-2">
+                            <div className="p-1 px-2 bg-emerald-50 rounded-md text-emerald-600">
+                                <DollarSign size={14} strokeWidth={3} />
+                            </div>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Execução Financeira (Smart Scan)</span>
+                        </div>
+
+                        {!financialData && (
+                            <button
+                                onClick={handleRunFinancialAnalysis}
+                                disabled={isAnalyzingFinancials}
+                                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 disabled:opacity-50 uppercase tracking-widest"
+                            >
+                                {isAnalyzingFinancials ? <RefreshCw size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                                {isAnalyzingFinancials ? 'Analisando Docs...' : 'Realizar Varredura Financeira'}
+                            </button>
+                        )}
+                    </div>
+
+                    {financialData ? (
+                         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                             <div className="flex justify-end mb-4">
+                                 <button onClick={handleRunFinancialAnalysis} className="text-[10px] font-bold text-emerald-600 hover:underline flex items-center gap-1">
+                                     <RefreshCw size={10} /> Atualizar Análise
+                                 </button>
+                             </div>
+                             <FinancialTimeline financials={financialData} loading={isAnalyzingFinancials} />
+                         </div>
+                    ) : (
+                        <div className="bg-slate-50 border border-dashed border-slate-200 rounded-xl p-8 text-center">
+                            <div className="mx-auto w-12 h-12 bg-white rounded-full flex items-center justify-center mb-3 shadow-sm text-slate-300">
+                                <DollarSign size={24} />
+                            </div>
+                            <h4 className="text-sm font-bold text-slate-600">Nenhuma análise financeira disponível</h4>
+                            <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+                                Clique em "Realizar Varredura" para que o sistema identifique automaticamente Notas de Empenho, Faturas e Pagamentos nos documentos anexados.
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Seção 2.1: Resumo IA (DESATIVADO TEMPORARIAMENTE) */}
