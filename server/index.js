@@ -12,6 +12,7 @@ const __dirname = path.dirname(__filename);
 
 // Carrega variáveis do arquivo .env.local na raiz do projeto
 // Carrega variáveis de ambiente
+dotenv.config({ path: path.join(__dirname, 'deploy.env') });
 dotenv.config({ path: path.join(__dirname, '.env') });
 dotenv.config({ path: path.join(__dirname, '..', '.env.local') });
 
