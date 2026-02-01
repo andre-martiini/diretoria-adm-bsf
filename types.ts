@@ -101,6 +101,8 @@ export interface ContractItem {
   grupoContratacao?: string;
   descricaoDetalhada?: string;
   numeroDfd?: string;
+  ifc?: string;
+  sequencialItemPca?: number;
 }
 
 export interface PCAMetadata {

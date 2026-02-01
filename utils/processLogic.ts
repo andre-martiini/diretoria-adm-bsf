@@ -259,12 +259,15 @@ export const generateSankeyData = (items: ContractItem[]) => {
 // ==========================================
 
 export interface DfdGroup {
+  id: string;
   numeroDfd: string;
-  unidadeRequisitante: string;
+  descricaoGrupo: string;
   itemCount: number;
   totalValue: number;
   status: 'Vinculado' | 'Pendente';
   items: ContractItem[];
+  dataInicio?: string;
+  dataFim?: string;
 }
 
 export const groupItemsByDfd = (items: ContractItem[]): DfdGroup[] => {
@@ -272,23 +275,20 @@ export const groupItemsByDfd = (items: ContractItem[]): DfdGroup[] => {
   const noDfdKey = 'NO_DFD';
 
   items.forEach(item => {
-    // Determine the key (DFD Number)
-    // Priority: numeroDfd -> identificadorFuturaContratacao (as fallback) -> NO_DFD
-    let key = item.numeroDfd;
-
-    if (!key) {
-        // Fallback: use identificadorFuturaContratacao if available, otherwise mark as NO_DFD
-        key = item.identificadorFuturaContratacao || noDfdKey;
-    }
+    // Treat each item as its own DFD (flattened)
+    const key = item.id;
 
     if (!groups[key]) {
       groups[key] = {
-        numeroDfd: key === noDfdKey ? 'Sem DFD' : key,
-        unidadeRequisitante: item.unidadeRequisitante || 'Desconhecida',
+        id: String(item.id),
+        numeroDfd: item.numeroDfd || 'N/D',
+        descricaoGrupo: item.titulo || 'Sem descrição',
         itemCount: 0,
         totalValue: 0,
         status: 'Pendente',
-        items: []
+        items: [],
+        dataInicio: item.inicio,
+        dataFim: item.fim
       };
     }
 
@@ -297,10 +297,18 @@ export const groupItemsByDfd = (items: ContractItem[]): DfdGroup[] => {
     group.itemCount++;
     group.totalValue += item.valor;
 
+    // Update earliest start date and latest end date
+    if (item.inicio && (!group.dataInicio || item.inicio < group.dataInicio)) {
+      group.dataInicio = item.inicio;
+    }
+    if (item.fim && (!group.dataFim || item.fim > group.dataFim)) {
+      group.dataFim = item.fim;
+    }
+
     // Update status if any item is linked.
     // If one item is linked, the DFD is considered linked (Vinculado).
     if (item.protocoloSIPAC && item.protocoloSIPAC.length > 3) {
-        group.status = 'Vinculado';
+      group.status = 'Vinculado';
     }
   });
 
@@ -308,7 +316,7 @@ export const groupItemsByDfd = (items: ContractItem[]): DfdGroup[] => {
     // Sort logic: Pendente first? Or by Value?
     // Let's sort by Status (Pendente first) then Value (Desc)
     if (a.status !== b.status) {
-        return a.status === 'Pendente' ? -1 : 1;
+      return a.status === 'Pendente' ? -1 : 1;
     }
     return b.totalValue - a.totalValue;
   });

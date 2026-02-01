@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ArrowUpDown, RefreshCw, Eye, PencilLine, Sparkles } from 'lucide-react';
+import { ArrowUpDown, RefreshCw, Eye, PencilLine, Sparkles, Info } from 'lucide-react';
 import { ContractItem, SortConfig } from '../types';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { getProcessStatus, getStatusColor } from '../utils/processLogic';
@@ -44,25 +44,26 @@ const ContractTable: React.FC<ContractTableProps> = ({
       <table className="w-full border-collapse">
         <thead>
           <tr className={`${viewMode === 'planning' ? 'bg-slate-50/30' : 'bg-blue-50/30'}`}>
-            {!isPublic && (
-              <th className="p-6 border-b border-[#E5E5E5] text-center w-10">
-                <input
-                  type="checkbox"
-                  className="rounded border-slate-300 text-ifes-green focus:ring-ifes-green"
-                  onChange={() => onToggleAll && onToggleAll()}
-                  checked={data.length > 0 && selectedIds.length === data.length}
-                />
-              </th>
-            )}
             {viewMode === 'planning' ? (
               <>
-                <TableHeader label="ID" sortKey="numeroItem" align="center" />
+                <TableHeader label="DFD" sortKey="numeroDfd" align="center" />
                 <TableHeader label="Tipo" sortKey="categoria" align="center" />
                 <TableHeader label="Descrição do Item / Classe / Grupo" sortKey="titulo" />
-                <TableHeader label="IFC" sortKey="identificadorFuturaContratacao" align="right" />
+                <th
+                  className="p-6 text-right text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors whitespace-nowrap group"
+                  onClick={() => onSort('ifc')}
+                  title="IFC: Identificador de Futura Contratação"
+                >
+                  <div className="flex items-center gap-1 justify-end">
+                    <span className="flex items-center gap-1">
+                      IFC
+                      <Info size={10} className="text-slate-300 group-hover:text-blue-400 transition-colors" />
+                    </span>
+                    <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'ifc' ? 'opacity-100 text-blue-600' : 'opacity-20'}`} />
+                  </div>
+                </th>
                 <TableHeader label="Valor total estimado" sortKey="valor" align="right" />
                 <TableHeader label="Data desejada" sortKey="inicio" align="center" />
-                {!isPublic && <TableHeader label="Vincular" align="center" />}
               </>
             ) : (
               <>
@@ -78,7 +79,7 @@ const ContractTable: React.FC<ContractTableProps> = ({
         <tbody className="divide-y divide-[#E5E5E5]">
           {loading ? (
             <tr>
-              <td colSpan={isPublic ? 5 : 7} className="p-20 text-center">
+              <td colSpan={5} className="p-20 text-center">
                 <div className="flex flex-col items-center gap-3">
                   <RefreshCw className="animate-spin text-ifes-green" size={24} />
                   <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Carregando Planejamento...</span>
@@ -109,22 +110,13 @@ const ContractTable: React.FC<ContractTableProps> = ({
                     }
                   }}
                 >
-                  {!isPublic && (
-                    <td className="p-6 text-center" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        className="rounded border-slate-300 text-ifes-green focus:ring-ifes-green"
-                        checked={isSelected}
-                        onChange={() => onToggleSelection && onToggleSelection(String(item.id))}
-                      />
-                    </td>
-                  )}
+
                   {viewMode === 'planning' ? (
                     <>
-                      {/* ID Column */}
+                      {/* DFD Column */}
                       <td className="p-6 text-center">
                         <span className="text-xs font-bold text-slate-700 font-mono">
-                          #{item.numeroItem || '-'}
+                          {item.numeroDfd || '-'}
                         </span>
                       </td>
 
@@ -145,10 +137,10 @@ const ContractTable: React.FC<ContractTableProps> = ({
                       }}>
                         <div className="flex flex-col max-w-[500px]">
                           <span className="text-xs font-black text-slate-800 uppercase leading-none mb-1">
-                            {item.grupoContratacao || 'Sem Classe/Grupo'}
-                          </span>
-                          <span className="text-xs font-bold text-slate-700 leading-tight">
                             {item.titulo}
+                          </span>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">
+                            Grupo: {item.grupoContratacao || 'N/A'}
                           </span>
                           <div className="flex items-center gap-2 mt-2">
                             {item.isManual && <span className="text-[8px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-sm uppercase font-black tracking-widest leading-none">Extra-PCA</span>}
@@ -164,7 +156,12 @@ const ContractTable: React.FC<ContractTableProps> = ({
                       {/* IFC Column */}
                       <td className="p-6 text-right">
                         <span className="text-xs font-bold text-slate-700 font-mono tracking-widest bg-slate-50 border border-slate-100 px-2 py-1 rounded-md">
-                          {item.identificadorFuturaContratacao || 'N/D'}
+                          {(() => {
+                            if (!item.isGroup || !item.childItems || item.childItems.length <= 1) return item.ifc || 'N/D';
+                            const firstIfc = item.childItems[0].ifc;
+                            const allSame = item.childItems.every(c => c.ifc === firstIfc);
+                            return allSame ? (firstIfc || 'N/D') : 'Múltiplos';
+                          })()}
                         </span>
                       </td>
 
@@ -180,32 +177,6 @@ const ContractTable: React.FC<ContractTableProps> = ({
                         </span>
                       </td>
 
-                      {!isPublic && (
-                        <td className="p-6 text-center">
-                          <div className="flex items-center justify-center">
-                            {item.protocoloSIPAC ? (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (onViewDetails) onViewDetails(item);
-                                }}
-                                title="Visualizar Processo no SIPAC"
-                                className="text-[11px] font-black text-ifes-blue bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg hover:bg-ifes-blue hover:text-white transition-all shadow-sm"
-                              >
-                                {item.protocoloSIPAC}
-                              </button>
-                            ) : (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); onEdit && onEdit(item); }}
-                                title="Vincular Novo Processo SIPAC"
-                                className="p-2.5 bg-slate-50 border border-slate-100 text-slate-400 hover:text-ifes-blue hover:bg-blue-50 hover:border-blue-100 rounded-xl transition-all cursor-pointer shadow-sm"
-                              >
-                                <PencilLine size={18} strokeWidth={2.5} />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      )}
                     </>
                   ) : (
                     <>
@@ -255,7 +226,7 @@ const ContractTable: React.FC<ContractTableProps> = ({
             })
           ) : (
             <tr>
-              <td colSpan={isPublic ? 5 : 7} className="p-20 text-center text-slate-400 font-medium italic">
+              <td colSpan={5} className="p-20 text-center text-slate-400 font-medium italic">
                 Nenhum registro encontrado para os filtros selecionados.
               </td>
             </tr>

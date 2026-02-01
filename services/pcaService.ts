@@ -38,7 +38,7 @@ export const fetchLocalPcaSnapshot = async (year: string): Promise<ContractItem[
         if (response.ok) {
             const jsonData = await response.json();
             const raw = jsonData.data || (Array.isArray(jsonData) ? jsonData : []);
-            return raw.map((item: any, index: number) => {
+            const mappedSnapshot = raw.map((item: any, index: number) => {
                 const officialId = String(item.id || item.numeroItem || index).trim();
                 const pncpCategory = String(item.categoriaItemPcaNome || item.nomeClassificacao || '').toLowerCase();
                 let categoria = Category.Bens;
@@ -47,9 +47,31 @@ export const fetchLocalPcaSnapshot = async (year: string): Promise<ContractItem[
                 } else if (pncpCategory.includes('tic') || pncpCategory.includes('tecnologia')) {
                     categoria = Category.TIC;
                 }
+
+                // Nomenclature Correction (User FINAL definition):
+                // DFD = the short code (e.g., 9/2026)
+                // IFC = the full code (e.g., 158886-9/2026)
+
+                const fullCode = item.grupoContratacaoCodigo || '';
+                let dfdNumber = '';
+                let ifcCode = fullCode;
+
+                if (fullCode.includes('-')) {
+                    dfdNumber = fullCode.split('-').slice(1).join('-');
+                } else {
+                    dfdNumber = fullCode;
+                }
+
+                // Title Logic: Use specific description if possible
+                const itemTitle = item.descricao ||
+                    item.pdmDescricao ||
+                    item.classificacaoSuperiorNome ||
+                    item.grupoContratacaoNome ||
+                    "Item do PCA";
+
                 return {
                     id: officialId,
-                    titulo: item.descricao || item.grupoContratacaoNome || "Item do Plano de Contratação",
+                    titulo: itemTitle,
                     categoria: categoria,
                     valor: Number(item.valorTotal || (Number(item.valorUnitario || 0) * Number(item.quantidade || 0)) || 0),
                     valorExecutado: 0,
@@ -67,9 +89,15 @@ export const fetchLocalPcaSnapshot = async (year: string): Promise<ContractItem[
                     unidadeRequisitante: item.unidadeRequisitante || item.nomeUnidade || '',
                     grupoContratacao: item.grupoContratacaoNome || '',
                     descricaoDetalhada: item.descricao || "Item do Plano de Contratação",
-                    numeroDfd: item.numeroDfd || item.idDfd || item.dfdId || item.codigoDfd || null
+                    numeroDfd: dfdNumber,
+                    ifc: ifcCode,
+                    sequencialItemPca: item.numeroItem || index + 1,
+                    protocoloSIPAC: '',
+                    dadosSIPAC: null
                 };
             });
+
+            return mappedSnapshot;
         }
     } catch (e) {
         console.warn("[PCA Service] Erro no snapshot local:", e);
@@ -122,7 +150,7 @@ export const fetchPcaData = async (
     // 3. Tentar carregar Snapshot Local PRIMEIRO (para não travar a tela)
     report(10);
     rawOfficialItems = await tryLocalJson();
-    console.log(`[PCA Service] Snapshot local carregado: ${rawOfficialItems.length} itens.`);
+    console.log(`[PCA Service] ✅ Snapshot local carregado: ${rawOfficialItems.length} itens brutos.`);
 
     // 4. Buscar no Firestore
     try {
@@ -156,6 +184,8 @@ export const fetchPcaData = async (
                         protocoloSIPAC: d.protocoloSIPAC || '',
                         dadosSIPAC: d.dadosSIPAC || null,
                         identificadorFuturaContratacao: d.identificadorFuturaContratacao || '',
+                        numeroDfd: d.numeroDfd || d.identificadorFuturaContratacao || '',
+                        ifc: d.ifc || '',
                         isManual: true,
                         ano: String(year)
                     } as any);
@@ -189,6 +219,9 @@ export const fetchPcaData = async (
             if (firstRes.ok) {
                 const firstData = await firstRes.json();
                 rawOfficialItems = firstData.data || (Array.isArray(firstData) ? firstData : []);
+                if (rawOfficialItems.length > 0) {
+                    console.log('[PCA DEBUG] Exemplo de Item PNCP (Raw):', JSON.stringify(rawOfficialItems[0], null, 2));
+                }
                 const totalPages = firstData.totalPaginas || 1;
 
                 for (let p = 2; p <= totalPages; p++) {
@@ -229,9 +262,30 @@ export const fetchPcaData = async (
         const valor = Number(item.valorTotal || (Number(item.valorUnitario || 0) * Number(item.quantidade || 0)) || 0);
         const extra = firestoreDataUpdates[officialId] || {};
 
+        // Nomenclature Correction (User FINAL definition):
+        // DFD = the short code (e.g., 9/2026)
+        // IFC = the full code (e.g., 158886-9/2026)
+
+        const fullCode = item.grupoContratacaoCodigo || '';
+        let dfdNumber = '';
+        let ifcCode = fullCode;
+
+        if (fullCode.includes('-')) {
+            dfdNumber = fullCode.split('-').slice(1).join('-');
+        } else {
+            dfdNumber = fullCode;
+        }
+
+        // Title Logic: Use specific description if possible
+        const itemTitle = item.descricao ||
+            item.pdmDescricao ||
+            item.classificacaoSuperiorNome ||
+            item.grupoContratacaoNome ||
+            "Item do PCA";
+
         return {
             id: officialId,
-            titulo: item.descricao || item.grupoContratacaoNome || "Item do Plano de Contratação",
+            titulo: itemTitle,
             categoria: categoria,
             valor: valor,
             valorExecutado: Number(extra.valorExecutado || 0),
@@ -253,7 +307,9 @@ export const fetchPcaData = async (
             unidadeRequisitante: item.unidadeRequisitante || item.nomeUnidade || '',
             grupoContratacao: item.grupoContratacaoNome || '',
             descricaoDetalhada: item.descricao || "Item do Plano de Contratação",
-            numeroDfd: item.numeroDfd || item.idDfd || item.dfdId || item.codigoDfd || null
+            numeroDfd: dfdNumber,
+            ifc: ifcCode,
+            sequencialItemPca: item.numeroItem || index + 1
         };
     });
 

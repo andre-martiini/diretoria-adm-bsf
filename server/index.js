@@ -117,14 +117,53 @@ app.get('/api/pncp/pca/:cnpj/:ano/meta', async (req, res) => {
 });
 
 // Endpoint para itens PNCP (PCA)
+// Endpoint para itens PNCP (PCA) - Updated to use /pcas/ (plural) and optional sequencial
 app.get('/api/pncp/pca/:cnpj/:ano', async (req, res) => {
   const { cnpj, ano } = req.params;
-  const { pagina = 1, tamanhoPagina = 100, sequencial = 12 } = req.query;
+  const { pagina = 1, tamanhoPagina = 100, sequencial } = req.query;
   try {
-    const url = `https://pncp.gov.br/api/pncp/v1/orgaos/${cnpj}/pca/${ano}/${sequencial}/itens?pagina=${pagina}&tamanhoPagina=${tamanhoPagina}`;
-    const response = await axios.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    // User suggestion: GET /v1/orgaos/{cnpj}/pcas/{ano}/itens
+    // We prioritize this pattern. If sequencial is provided, we might append it, 
+    // but the user instruction suggests checking the year-based item list directly.
+
+    let url = `https://pncp.gov.br/api/pncp/v1/orgaos/${cnpj}/pcas/${ano}/itens?pagina=${pagina}&tamanhoPagina=${tamanhoPagina}`;
+
+    // Fallback/Legacy support: if specifically requested via some logic, we could keep the old one,
+    // but the user strongly implies the current one is broken/wrong for DFDs.
+    // If we need consistency with the existing sequencial logic which might be "12" for "2026":
+    // The previous URL was .../pca/${ano}/${sequencial}/itens.
+    // Let's try the user's recommended URL first.
+
+    console.log(`[PNCP PROXY] Fetching items from: ${url}`);
+
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json'
+      }
+    });
     res.json(response.data);
   } catch (error) {
+    console.error(`[PNCP PROXY ERROR] Url: ${req.url} - Msg: ${error.message}`);
+    if (error.response) {
+      // If the year-based endpoint fails (404), maybe we DO need the sequencial?
+      if (error.response.status === 404 && sequencial) {
+        console.log(`[PNCP PROXY] Retrying with sequencial...`);
+        try {
+          const urlSeq = `https://pncp.gov.br/api/pncp/v1/orgaos/${cnpj}/pcas/${ano}/${sequencial}/itens?pagina=${pagina}&tamanhoPagina=${tamanhoPagina}`;
+          const responseSeq = await axios.get(urlSeq, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept': 'application/json'
+            }
+          });
+          return res.json(responseSeq.data);
+        } catch (errSeq) {
+          console.error(`[PNCP PROXY RETRY ERROR]`, errSeq.message);
+        }
+      }
+      return res.status(error.response.status).json(error.response.data);
+    }
     res.status(500).json({ error: error.message });
   }
 });

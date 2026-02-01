@@ -6,7 +6,16 @@ import {
     Clock,
     TrendingUp,
     ChevronDown,
-    ChevronUp
+    ChevronUp,
+    ChevronRight,
+    CheckCircle,
+    FileText,
+    Link as LinkIcon,
+    X,
+    Search,
+    ArrowUpDown,
+    ArrowUp,
+    ArrowDown
 } from 'lucide-react';
 import {
     ResponsiveContainer,
@@ -24,34 +33,111 @@ import {
 import { ContractItem } from '../types';
 import { formatCurrency } from '../utils/formatters';
 import { groupItemsByDfd, DfdGroup } from '../utils/processLogic';
-import { FileText, Link as LinkIcon, X } from 'lucide-react';
 import { linkItemsToProcess } from '../services/acquisitionService';
 import { API_SERVER_URL } from '../constants';
 
 interface ProcessDashboardProps {
     data: ContractItem[];
+    showGraphs?: boolean;
+    showDfdTable?: boolean;
+    onUnlinkDfd?: (group: DfdGroup) => void;
 }
 
-const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data }) => {
+const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = true, showDfdTable = true, onUnlinkDfd }) => {
     const [isMounted, setIsMounted] = useState(false);
     const [isChartsVisible, setIsChartsVisible] = useState(true);
     const [linkModalOpen, setLinkModalOpen] = useState(false);
     const [selectedDfd, setSelectedDfd] = useState<DfdGroup | null>(null);
     const [sipacProtocolInput, setSipacProtocolInput] = useState('');
     const [isLinking, setIsLinking] = useState(false);
+    const [expandedDfds, setExpandedDfds] = useState<Set<string>>(new Set());
+    const [dfdCurrentPage, setDfdCurrentPage] = useState(1);
+    const [viewingItem, setViewingItem] = useState<ContractItem | null>(null);
+    const [dfdSearchTerm, setDfdSearchTerm] = useState('');
+    const [dfdStatusFilter, setDfdStatusFilter] = useState<'Todos' | 'Pendente' | 'Vinculado'>('Todos');
+    const [dfdSortConfig, setDfdSortConfig] = useState<{ key: keyof DfdGroup, direction: 'asc' | 'desc' }>({ key: 'totalValue', direction: 'desc' });
+    const dfdItemsPerPage = 10;
 
     useEffect(() => {
         setIsMounted(true);
     }, []);
 
-    const dfdGroups = useMemo(() => groupItemsByDfd(data), [data]);
-    const pendingDfds = useMemo(() => dfdGroups.filter(g => g.status === 'Pendente'), [dfdGroups]);
+    const toggleDfdExpansion = (dfdNumber: string) => {
+        setExpandedDfds(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(dfdNumber)) {
+                newSet.delete(dfdNumber);
+            } else {
+                newSet.add(dfdNumber);
+            }
+            return newSet;
+        });
+    };
+
+    const dfdGroups = useMemo(() => {
+        return groupItemsByDfd(data);
+    }, [data]);
+
+    // Logic for filtering and sorting DFDs
+    const allDfds = useMemo(() => {
+        let filtered = dfdGroups.filter(group => {
+            const lowSearch = dfdSearchTerm.toLowerCase();
+            const matchesSearch =
+                group.numeroDfd.toLowerCase().includes(lowSearch) ||
+                group.descricaoGrupo.toLowerCase().includes(lowSearch) ||
+                group.items.some(i =>
+                    (i.ifc && i.ifc.toLowerCase().includes(lowSearch)) ||
+                    (i.protocoloSIPAC && i.protocoloSIPAC.toLowerCase().includes(lowSearch)) ||
+                    (i.codigoItem && i.codigoItem.toLowerCase().includes(lowSearch))
+                );
+
+            const matchesStatus = dfdStatusFilter === 'Todos' || group.status === dfdStatusFilter;
+
+            return matchesSearch && matchesStatus;
+        });
+
+        return filtered.sort((a, b) => {
+            const { key, direction } = dfdSortConfig;
+            let valA = a[key];
+            let valB = b[key];
+
+            if (typeof valA === 'string') {
+                valA = valA.toLowerCase();
+                valB = (valB as string).toLowerCase();
+            }
+
+            if (valA < valB) return direction === 'asc' ? -1 : 1;
+            if (valA > valB) return direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }, [dfdGroups, dfdSearchTerm, dfdStatusFilter, dfdSortConfig]);
+
+    const handleDfdSort = (key: keyof DfdGroup) => {
+        setDfdSortConfig(prev => ({
+            key,
+            direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+        }));
+    };
+
+    const getSortIcon = (key: keyof DfdGroup) => {
+        if (dfdSortConfig.key !== key) return <ArrowUpDown size={12} className="text-slate-300" />;
+        return dfdSortConfig.direction === 'asc' ? <ArrowUp size={12} className="text-blue-500" /> : <ArrowDown size={12} className="text-blue-500" />;
+    };
+
+    // Pagination for DFDs
+    const paginatedDfds = useMemo(() => {
+        const start = (dfdCurrentPage - 1) * dfdItemsPerPage;
+        return allDfds.slice(start, start + dfdItemsPerPage);
+    }, [allDfds, dfdCurrentPage, dfdItemsPerPage]);
+
+    const totalDfdPages = Math.ceil(allDfds.length / dfdItemsPerPage);
+    const pendingCount = dfdGroups.filter(g => g.status === 'Pendente').length;
+    const linkedCount = dfdGroups.filter(g => g.status === 'Vinculado').length;
 
     const handleLinkProcess = async (dfdNumber: string, protocol: string) => {
         if (!selectedDfd) return;
         setIsLinking(true);
         try {
-            // 1. Fetch SIPAC Data
             const response = await fetch(`${API_SERVER_URL}/api/sipac/processo?protocolo=${protocol}`);
             if (!response.ok) throw new Error('Falha ao buscar dados no SIPAC');
             const sipacData = await response.json();
@@ -62,18 +148,13 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data }) => {
                 return;
             }
 
-            // 2. Link Items
             const itemIds = selectedDfd.items.map(i => i.id);
             const year = selectedDfd.items[0]?.ano;
-            await linkItemsToProcess(protocol, itemIds, sipacData, year);
+            await linkItemsToProcess(protocol, itemIds, sipacData, year, dfdNumber);
 
             alert('Processo vinculado e dados atualizados com sucesso!');
             setLinkModalOpen(false);
             setSipacProtocolInput('');
-            // Note: The parent component or data fetcher needs to refresh to show changes.
-            // Since data comes from props, we can't force refresh here easily unless we reload or have a callback.
-            // For now, reload window is a crude but effective way given the architecture constraints,
-            // or we rely on live sync if implemented.
             window.location.reload();
 
         } catch (err) {
@@ -84,57 +165,70 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data }) => {
         }
     };
 
-    // Filtra apenas itens que possuem um processo SIPAC (ou seja, estão em execução)
     const processItems = useMemo(() =>
         data.filter(item => item.protocoloSIPAC && item.protocoloSIPAC.length > 5),
         [data]
     );
 
+    const uniqueProcesses = useMemo(() => {
+        const processMap = new Map<string, ContractItem[]>();
+        processItems.forEach(item => {
+            const protocol = item.protocoloSIPAC!;
+            if (!processMap.has(protocol)) {
+                processMap.set(protocol, []);
+            }
+            processMap.get(protocol)!.push(item);
+        });
+        return Array.from(processMap.entries()).map(([protocol, items]) => ({
+            protocol,
+            items,
+            firstItem: items[0]
+        }));
+    }, [processItems]);
+
     const stats = useMemo(() => {
         const totalValue = processItems.reduce((acc, item) => acc + item.valor, 0);
-        // Consideramos em andamento o que não está contratado nem encerrado
-        const inProgress = processItems.filter(item =>
-            !['Contratado', 'Encerrado/Arquivado', 'Adjudicado/Homologado'].includes(item.computedStatus || '')
+        const inProgress = uniqueProcesses.filter(p =>
+            !['Contratado', 'Encerrado/Arquivado', 'Adjudicado/Homologado'].includes(p.firstItem.computedStatus || '')
         ).length;
 
-        // Processos Estagnados (Baseado no Health Score dinâmico)
-        const stalled = processItems.filter(item => {
-            const score = (item.dadosSIPAC as any)?.health_score || 100;
-            return score < 70; // Score abaixo de 70 indica estagnação ou muitos dias parado
+        const stalled = uniqueProcesses.filter(p => {
+            const score = (p.firstItem.dadosSIPAC as any)?.health_score || 100;
+            return score < 70;
         }).length;
 
         return {
-            totalCount: processItems.length,
+            totalCount: uniqueProcesses.length,
             totalValue,
             inProgress,
             stalled
         };
-    }, [processItems]);
+    }, [processItems, uniqueProcesses]);
 
     const statusData = useMemo(() => {
         const counts: Record<string, number> = {};
-        processItems.forEach(item => {
-            const status = item.computedStatus || 'Indefinido';
+        uniqueProcesses.forEach(p => {
+            const status = p.firstItem.computedStatus || 'Indefinido';
             counts[status] = (counts[status] || 0) + 1;
         });
 
         return Object.entries(counts)
             .map(([name, value]) => ({ name, value }))
             .sort((a, b) => b.value - a.value);
-    }, [processItems]);
+    }, [uniqueProcesses]);
 
     const movementData = useMemo(() => {
-        return processItems
-            .map(item => ({
-                name: item.titulo.substring(0, 20) + '...',
-                fullTitle: item.titulo,
-                value: item.dadosSIPAC?.movimentacoes?.length || 0,
-                incidentes: item.dadosSIPAC?.incidentes?.length || 0,
-                health: (item.dadosSIPAC as any)?.health_score || 100
+        return uniqueProcesses
+            .map(p => ({
+                name: p.protocol.substring(0, 20),
+                fullTitle: p.firstItem.titulo,
+                value: p.firstItem.dadosSIPAC?.movimentacoes?.length || 0,
+                incidentes: p.firstItem.dadosSIPAC?.incidentes?.length || 0,
+                health: (p.firstItem.dadosSIPAC as any)?.health_score || 100
             }))
             .sort((a, b) => b.value - a.value)
             .slice(0, 5);
-    }, [processItems]);
+    }, [uniqueProcesses]);
 
     const STATUS_COLORS: Record<string, string> = {
         'Planejamento da Contratação': '#3b82f6',
@@ -150,59 +244,63 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data }) => {
     return (
         <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-300">
             {/* Linha 1: KPIs Rápidos */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm group hover:border-blue-400 transition-all">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="bg-blue-50 p-2 rounded-xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                            <Activity size={20} />
+            {showGraphs && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm group hover:border-blue-400 transition-all">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="bg-blue-50 p-2 rounded-xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                <Activity size={20} />
+                            </div>
                         </div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Processos Ativos</p>
+                        <h3 className="text-2xl font-black text-slate-900">{stats.totalCount}</h3>
+                        <p className="text-[9px] font-bold text-slate-400 mt-2 italic">{stats.inProgress} em trâmite atual</p>
                     </div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Processos Ativos</p>
-                    <h3 className="text-2xl font-black text-slate-900">{stats.totalCount}</h3>
-                    <p className="text-[9px] font-bold text-slate-400 mt-2 italic">{stats.inProgress} em trâmite atual</p>
-                </div>
 
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm group hover:border-emerald-400 transition-all">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="bg-emerald-50 p-2 rounded-xl text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all">
-                            <TrendingUp size={20} />
+                    <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm group hover:border-emerald-400 transition-all">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="bg-emerald-50 p-2 rounded-xl text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                                <TrendingUp size={20} />
+                            </div>
                         </div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Valor sob Gestão</p>
+                        <h3 className="text-2xl font-black text-slate-900">{formatCurrency(stats.totalValue)}</h3>
+                        <p className="text-[9px] font-bold text-slate-400 mt-2 italic">Volume financeiro em processos</p>
                     </div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Valor sob Gestão</p>
-                    <h3 className="text-2xl font-black text-slate-900">{formatCurrency(stats.totalValue)}</h3>
-                    <p className="text-[9px] font-bold text-slate-400 mt-2 italic">Volume financeiro em processos</p>
-                </div>
 
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm group hover:border-amber-400 transition-all">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="bg-amber-50 p-2 rounded-xl text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-all">
-                            <Clock size={20} />
+                    <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm group hover:border-amber-400 transition-all">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="bg-amber-50 p-2 rounded-xl text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-all">
+                                <Clock size={20} />
+                            </div>
                         </div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Engajamento (Saúde)</p>
+                        <h3 className="text-2xl font-black text-slate-900">{stats.stalled} alertas</h3>
+                        <p className="text-[9px] font-bold text-slate-400 mt-2 italic">Processos com score de saúde crítico</p>
                     </div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Engajamento (Saúde)</p>
-                    <h3 className="text-2xl font-black text-slate-900">{stats.stalled} alertas</h3>
-                    <p className="text-[9px] font-bold text-slate-400 mt-2 italic">Processos com score de saúde crítico</p>
                 </div>
-            </div>
+            )}
 
             {/* Seção de Controle de Gráficos */}
-            <div className="flex items-center gap-3 py-2">
-                <div className="h-px flex-1 bg-slate-100" />
-                <button
-                    onClick={() => setIsChartsVisible(!isChartsVisible)}
-                    className="flex items-center gap-2 px-4 py-1.5 bg-white border border-slate-200 rounded-full shadow-sm hover:border-blue-500 hover:text-blue-600 transition-all group"
-                >
-                    <BarChart3 size={14} className="text-slate-400 group-hover:text-blue-500" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 group-hover:text-blue-700">
-                        {isChartsVisible ? "Ocultar Dashboards de Processos" : "Exibir Dashboards de Processos"}
-                    </span>
-                    {isChartsVisible ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                </button>
-                <div className="h-px flex-1 bg-slate-100" />
-            </div>
+            {showGraphs && (
+                <div className="flex items-center gap-3 py-2">
+                    <div className="h-px flex-1 bg-slate-100" />
+                    <button
+                        onClick={() => setIsChartsVisible(!isChartsVisible)}
+                        className="flex items-center gap-2 px-4 py-1.5 bg-white border border-slate-200 rounded-full shadow-sm hover:border-blue-500 hover:text-blue-600 transition-all group"
+                    >
+                        <BarChart3 size={14} className="text-slate-400 group-hover:text-blue-500" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 group-hover:text-blue-700">
+                            {isChartsVisible ? "Ocultar Dashboards de Processos" : "Exibir Dashboards de Processos"}
+                        </span>
+                        {isChartsVisible ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                    <div className="h-px flex-1 bg-slate-100" />
+                </div>
+            )}
 
             {/* Linha 2: Gráficos */}
-            {isChartsVisible && (
+            {showGraphs && isChartsVisible && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top-2 duration-300">
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col min-w-0">
                         <h3 className="text-sm font-black text-slate-800 mb-6 flex items-center gap-2">
@@ -270,51 +368,155 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data }) => {
                 </div>
             )}
 
-            {/* Seção A: DFDs Pendentes de Autuação */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mt-6">
-                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-wide flex items-center gap-2">
-                        <FileText size={16} className="text-slate-400" /> DFDs Pendentes de Autuação
-                    </h3>
-                    <span className="text-[10px] font-bold text-slate-400 bg-white border border-slate-200 px-2 py-1 rounded-full">{pendingDfds.length} Pendentes</span>
-                </div>
+            {/* Seção A: Grupos de Contratação (DFDs) */}
+            {showDfdTable && (
+                <div className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden mt-6">
+                    <div className="px-6 py-4 border-b border-blue-100 bg-blue-50/30 flex justify-between items-center">
+                        <div>
+                            <h3 className="text-sm font-black text-blue-900 uppercase tracking-wide flex items-center gap-2">
+                                <FileText size={16} className="text-blue-400" /> Grupos de Contratação (DFDs)
+                            </h3>
+                            <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-1 italic">
+                                Todo o planejamento do PCA
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-4">
+                            <div className="relative w-64">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar DFD ou objeto..."
+                                    className="w-full pl-9 pr-4 py-2 bg-white border border-blue-100 rounded-xl text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500/20 transition-all shadow-sm"
+                                    value={dfdSearchTerm}
+                                    onChange={(e) => { setDfdSearchTerm(e.target.value); setDfdCurrentPage(1); }}
+                                />
+                            </div>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setDfdStatusFilter('Todos')}
+                                    className={`text-[10px] font-bold px-3 py-1.5 rounded-full transition-all border ${dfdStatusFilter === 'Todos' ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-400'}`}
+                                >
+                                    Todos
+                                </button>
+                                <button
+                                    onClick={() => setDfdStatusFilter('Pendente')}
+                                    className={`text-[10px] font-bold px-3 py-1.5 rounded-full transition-all border ${dfdStatusFilter === 'Pendente' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-white text-slate-400 border-slate-200 hover:border-blue-300'}`}
+                                >
+                                    {pendingCount} Pendentes
+                                </button>
+                                <button
+                                    onClick={() => setDfdStatusFilter('Vinculado')}
+                                    className={`text-[10px] font-bold px-3 py-1.5 rounded-full transition-all border ${dfdStatusFilter === 'Vinculado' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-white text-slate-400 border-slate-200 hover:border-emerald-300'}`}
+                                >
+                                    {linkedCount} Vinculados
+                                </button>
+                            </div>
+                        </div>
+                    </div>
 
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="bg-white border-b border-slate-100">
-                                <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº DFD</th>
-                                <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade Requisitante</th>
-                                <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Qtd. Itens</th>
-                                <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Valor Total</th>
-                                <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Ação</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                            {pendingDfds.length === 0 ? (
-                                <tr><td colSpan={5} className="px-6 py-8 text-center text-xs text-slate-400 font-bold">Nenhum DFD pendente encontrado.</td></tr>
-                            ) : (
-                                pendingDfds.map((group) => (
-                                    <tr key={group.numeroDfd} className="hover:bg-slate-50 transition-colors">
-                                        <td className="px-6 py-3 text-xs font-black text-slate-700">{group.numeroDfd}</td>
-                                        <td className="px-6 py-3 text-xs font-medium text-slate-600 truncate max-w-[200px]" title={group.unidadeRequisitante}>{group.unidadeRequisitante}</td>
-                                        <td className="px-6 py-3 text-xs font-bold text-slate-600 text-center">{group.itemCount}</td>
-                                        <td className="px-6 py-3 text-xs font-bold text-slate-600 text-right">{formatCurrency(group.totalValue)}</td>
-                                        <td className="px-6 py-3 text-center">
-                                            <button
-                                                onClick={() => { setSelectedDfd(group); setLinkModalOpen(true); }}
-                                                className="px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg text-[10px] font-black hover:bg-blue-100 transition-all flex items-center gap-1 mx-auto"
-                                            >
-                                                <LinkIcon size={12} /> Vincular
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="bg-white border-b border-slate-100">
+                                    <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleDfdSort('numeroDfd')}>
+                                        <div className="flex items-center gap-2">DFD {getSortIcon('numeroDfd')}</div>
+                                    </th>
+                                    <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleDfdSort('descricaoGrupo')}>
+                                        <div className="flex items-center gap-2">Objeto / Descrição {getSortIcon('descricaoGrupo')}</div>
+                                    </th>
+                                    <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleDfdSort('itemCount')}>
+                                        <div className="flex items-center justify-center gap-2">Qtd. Itens {getSortIcon('itemCount')}</div>
+                                    </th>
+                                    <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleDfdSort('dataInicio')}>
+                                        <div className="flex items-center justify-center gap-2">Prev. Início {getSortIcon('dataInicio')}</div>
+                                    </th>
+                                    <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleDfdSort('dataFim')}>
+                                        <div className="flex items-center justify-center gap-2">Prev. Término {getSortIcon('dataFim')}</div>
+                                    </th>
+                                    <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleDfdSort('totalValue')}>
+                                        <div className="flex items-center justify-end gap-2">Valor Total {getSortIcon('totalValue')}</div>
+                                    </th>
+                                    <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {paginatedDfds.length === 0 ? (
+                                    <tr><td colSpan={7} className="px-6 py-8 text-center text-xs text-slate-400 font-bold">Nenhum processo pendente encontrado.</td></tr>
+                                ) : (
+                                    paginatedDfds.map((group) => {
+                                        return (
+                                            <tr key={group.id} className="hover:bg-blue-50/30 transition-colors">
+                                                <td className="px-6 py-4 text-xs font-black text-slate-700 font-mono">{group.numeroDfd}</td>
+                                                <td className="px-6 py-4 text-xs font-medium text-slate-600">
+                                                    <span title={group.descricaoGrupo}>{group.descricaoGrupo}</span>
+                                                </td>
+                                                <td className="px-6 py-4 text-xs font-bold text-slate-600 text-center">{group.itemCount || 1}</td>
+                                                <td className="px-6 py-4 text-xs font-medium text-slate-600 text-center">
+                                                    {group.dataInicio ? new Date(group.dataInicio).toLocaleDateString('pt-BR') : '-'}
+                                                </td>
+                                                <td className="px-6 py-4 text-xs font-medium text-slate-600 text-center">
+                                                    {group.dataFim ? new Date(group.dataFim).toLocaleDateString('pt-BR') : '-'}
+                                                </td>
+                                                <td className="px-6 py-4 text-xs font-bold text-slate-600 text-right">{formatCurrency(group.totalValue)}</td>
+                                                <td className="px-6 py-4 text-center">
+                                                    {group.status === 'Vinculado' ? (
+                                                        <div className="flex flex-col items-center gap-1">
+                                                            <div className="flex items-center justify-center gap-1">
+                                                                <CheckCircle size={10} className="text-emerald-500" />
+                                                                <span className="text-[9px] font-black text-emerald-600">
+                                                                    {group.items.find(i => i.protocoloSIPAC)?.protocoloSIPAC}
+                                                                </span>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => onUnlinkDfd?.(group)}
+                                                                className="text-[8px] font-black text-red-400 hover:text-red-600 uppercase tracking-tighter transition-colors"
+                                                            >
+                                                                Remover vínculo
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => { setSelectedDfd(group); setLinkModalOpen(true); }}
+                                                            className="px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg text-[10px] font-black hover:bg-blue-100 transition-all flex items-center gap-1 mx-auto"
+                                                        >
+                                                            <LinkIcon size={12} /> Vincular
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Pagination */}
+                    {totalDfdPages > 1 && (
+                        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/30 flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-500">
+                                Página {dfdCurrentPage} de {totalDfdPages}
+                            </span>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setDfdCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={dfdCurrentPage === 1}
+                                    className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                >
+                                    Anterior
+                                </button>
+                                <button
+                                    onClick={() => setDfdCurrentPage(p => Math.min(totalDfdPages, p + 1))}
+                                    disabled={dfdCurrentPage === totalDfdPages}
+                                    className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                >
+                                    Próxima
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
-            </div>
+            )}
 
             {/* Modal de Vínculo */}
             {linkModalOpen && selectedDfd && (
@@ -357,6 +559,94 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data }) => {
                                 className="px-6 py-3 bg-blue-600 text-white rounded-xl text-xs font-black hover:bg-blue-700 disabled:opacity-50 transition-all shadow-lg shadow-blue-200"
                             >
                                 {isLinking ? 'Vinculando...' : 'Confirmar Vínculo'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Detalhes do Item PCA */}
+            {viewingItem && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl border border-slate-200 overflow-hidden font-sans max-h-[90vh] overflow-y-auto">
+                        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 sticky top-0 z-10">
+                            <div>
+                                <h3 className="text-sm font-black text-slate-800">Detalhes do Item do PCA</h3>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                    {viewingItem.identificadorFuturaContratacao || viewingItem.codigoItem}
+                                </p>
+                            </div>
+                            <button onClick={() => setViewingItem(null)} className="text-slate-400 hover:text-red-500 transition-colors">
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">IFC</label>
+                                    <p className="text-sm font-bold text-slate-700">{viewingItem.identificadorFuturaContratacao || '-'}</p>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Categoria</label>
+                                    <p className="text-sm font-bold text-slate-700">{viewingItem.categoria}</p>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Descrição</label>
+                                <p className="text-sm font-medium text-slate-600 leading-relaxed">{viewingItem.titulo || viewingItem.descricaoDetalhada}</p>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Quantidade</label>
+                                    <p className="text-sm font-bold text-slate-700">{viewingItem.quantidade || '-'}</p>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Valor Unit.</label>
+                                    <p className="text-sm font-bold text-slate-700">{formatCurrency(viewingItem.valorUnitario || 0)}</p>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Valor Total</label>
+                                    <p className="text-sm font-bold text-blue-600">{formatCurrency(viewingItem.valor)}</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Previsão de Início</label>
+                                    <p className="text-sm font-medium text-slate-600">
+                                        {viewingItem.inicio ? new Date(viewingItem.inicio).toLocaleDateString('pt-BR') : '-'}
+                                    </p>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Previsão de Término</label>
+                                    <p className="text-sm font-medium text-slate-600">
+                                        {viewingItem.fim ? new Date(viewingItem.fim).toLocaleDateString('pt-BR') : '-'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {viewingItem.unidadeRequisitante && (
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Unidade Requisitante</label>
+                                    <p className="text-sm font-medium text-slate-600">{viewingItem.unidadeRequisitante}</p>
+                                </div>
+                            )}
+
+                            {viewingItem.grupoContratacao && (
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Grupo de Contratação</label>
+                                    <p className="text-sm font-medium text-slate-600">{viewingItem.grupoContratacao}</p>
+                                </div>
+                            )}
+                        </div>
+                        <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+                            <button
+                                onClick={() => setViewingItem(null)}
+                                className="px-6 py-3 bg-slate-900 text-white rounded-xl text-xs font-black hover:bg-slate-700 transition-all"
+                            >
+                                Fechar
                             </button>
                         </div>
                     </div>

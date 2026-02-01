@@ -55,8 +55,9 @@ export const deriveInternalPhase = (unidadeAtual: string): string => {
 /**
  * Vincula um ou mais itens do PCA a um processo SIPAC.
  * @param year Opcional: Ano do PCA. Se não informado, tenta extrair do protocolo.
+ * @param numeroDfd Opcional: Número do DFD para preservar o agrupamento.
  */
-export const linkItemsToProcess = async (protocolo: string, itemIds: (string | number)[], sipacData: SIPACProcess, year?: string) => {
+export const linkItemsToProcess = async (protocolo: string, itemIds: (string | number)[], sipacData: SIPACProcess, year?: string, numeroDfd?: string) => {
     const batch = writeBatch(db);
 
     // 1. Criar/Atualizar o ProcessoAquisicao (Pai)
@@ -98,14 +99,14 @@ export const linkItemsToProcess = async (protocolo: string, itemIds: (string | n
             }
             docId = `${itemYear}-${docId}`;
         } else if (!itemYear) {
-             // Se já tem hífen (ex: 2024-1), extrair o ano dele
-             itemYear = docId.split('-')[0];
+            // Se já tem hífen (ex: 2024-1), extrair o ano dele
+            itemYear = docId.split('-')[0];
         }
 
         const safeDocId = docId.replace(/\//g, '-');
         const itemRef = doc(db, "pca_data", safeDocId);
 
-        batch.set(itemRef, {
+        const updateData: any = {
             officialId: String(id), // Importante: mantém o ID original do PNCP aqui
             vinculo_processo_id: protocolo,
             status_item: 'Em Processo',
@@ -114,7 +115,14 @@ export const linkItemsToProcess = async (protocolo: string, itemIds: (string | n
             "dadosSIPAC.unidadeAtual": sipacData.unidadeAtual,
             "dadosSIPAC.fase_interna_status": processData.fase_interna_status,
             updatedAt: Timestamp.now()
-        }, { merge: true });
+        };
+
+        // Preserve numeroDfd if provided
+        if (numeroDfd) {
+            updateData.numeroDfd = numeroDfd;
+        }
+
+        batch.set(itemRef, updateData, { merge: true });
     }
 
     await batch.commit();

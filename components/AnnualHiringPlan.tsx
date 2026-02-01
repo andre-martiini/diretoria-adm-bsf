@@ -286,6 +286,8 @@ const AnnualHiringPlan: React.FC = () => {
   const [syncProgress, setSyncProgress] = useState<number>(0);
   const [isItemsListModalOpen, setIsItemsListModalOpen] = useState(false);
   const [isPcaModalOpen, setIsPcaModalOpen] = useState(false);
+  const [isUnlinkModalOpen, setIsUnlinkModalOpen] = useState(false);
+  const [itemToUnlink, setItemToUnlink] = useState<ContractItem | null>(null);
   const [toast, setToast] = useState<{ message: string, type: ToastType } | null>(null);
 
   const processedAISummaryRefs = useRef<Set<string>>(new Set());
@@ -303,7 +305,9 @@ const AnnualHiringPlan: React.FC = () => {
     categoria: Category.Bens,
     valor: 0,
     inicio: new Date().toISOString().split('T')[0],
-    area: 'Diretoria de Adm. e Planejamento'
+    area: 'Diretoria de Adm. e Planejamento',
+    numeroDfd: '',
+    ifc: ''
   });
 
   const fetchData = useCallback(async (year: string, forceSync: boolean = false) => {
@@ -554,7 +558,7 @@ const AnnualHiringPlan: React.FC = () => {
       setIsEditModalOpen(false);
     } catch (err) {
       console.error("Erro ao salvar:", err);
-      alert(`Erro ao salvar: ${err instanceof Error ? err.message : String(err)}`);
+      setToast({ message: `Erro ao salvar: ${err instanceof Error ? err.message : String(err)}`, type: "error" });
     } finally {
       setSaving(false);
     }
@@ -580,24 +584,47 @@ const AnnualHiringPlan: React.FC = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleUnlinkProcess = async (item: ContractItem) => {
-    if (!window.confirm("Remover vínculo?")) return;
+  const handleUnlinkProcess = (item: ContractItem) => {
+    setItemToUnlink(item);
+    setIsUnlinkModalOpen(true);
+  };
+
+  const confirmUnlinkProcess = async () => {
+    if (!itemToUnlink) return;
     setSaving(true);
     try {
-      const docId = item.isManual ? String(item.id) : `${selectedYear}-${item.id}`;
-      const safeDocId = docId.replace(/\//g, '-');
-      const docRef = doc(db, "pca_data", safeDocId);
-      await setDoc(docRef, { protocoloSIPAC: '', dadosSIPAC: null, updatedAt: Timestamp.now() }, { merge: true });
+      const itemsToUpdate = itemToUnlink.isGroup && itemToUnlink.childItems
+        ? itemToUnlink.childItems
+        : [itemToUnlink];
+
+      const batch = writeBatch(db);
+      const itemIds = itemsToUpdate.map(i => String(i.id));
+
+      for (const item of itemsToUpdate) {
+        const docId = item.isManual ? String(item.id) : `${selectedYear}-${item.id}`;
+        const safeDocId = docId.replace(/\//g, '-');
+        const docRef = doc(db, "pca_data", safeDocId);
+        batch.update(docRef, {
+          protocoloSIPAC: '',
+          dadosSIPAC: null,
+          updatedAt: Timestamp.now()
+        });
+      }
+
+      await batch.commit();
 
       setData(prevData => prevData.map(i =>
-        String(i.id) === String(item.id) ? { ...i, protocoloSIPAC: '', dadosSIPAC: null } : i
+        itemIds.includes(String(i.id)) ? { ...i, protocoloSIPAC: '', dadosSIPAC: null } : i
       ));
 
-      if (viewingItem && String(viewingItem.id) === String(item.id)) {
+      if (viewingItem && itemIds.includes(String(viewingItem.id))) {
         setViewingItem({ ...viewingItem, protocoloSIPAC: '', dadosSIPAC: null });
         setIsDetailsModalOpen(false);
       }
+
       setToast({ message: "Vínculo removido.", type: "success" });
+      setIsUnlinkModalOpen(false);
+      setItemToUnlink(null);
       setIsEditModalOpen(false);
     } catch (err) {
       console.error("Erro ao desvincular:", err);
@@ -678,7 +705,7 @@ const AnnualHiringPlan: React.FC = () => {
       });
       await fetchData(selectedYear);
       setIsManualModalOpen(false);
-      setNewItem({ titulo: '', categoria: Category.Bens, valor: 0, inicio: new Date().toISOString().split('T')[0], area: 'Diretoria de Adm. e Planejamento' });
+      setNewItem({ titulo: '', categoria: Category.Bens, valor: 0, inicio: new Date().toISOString().split('T')[0], area: 'Diretoria de Adm. e Planejamento', numeroDfd: '', ifc: '' });
       setToast({ message: "Demanda registrada!", type: "success" });
     } catch (err) {
       console.error("Erro ao adicionar:", err);
@@ -708,7 +735,14 @@ const AnnualHiringPlan: React.FC = () => {
     let base = [...processedData];
     if (searchTerm) {
       const low = searchTerm.toLowerCase();
-      base = base.filter(i => i.titulo.toLowerCase().includes(low) || i.area.toLowerCase().includes(low));
+      base = base.filter(i =>
+        i.titulo.toLowerCase().includes(low) ||
+        i.area.toLowerCase().includes(low) ||
+        (i.numeroDfd && i.numeroDfd.toLowerCase().includes(low)) ||
+        (i.ifc && i.ifc.toLowerCase().includes(low)) ||
+        (i.protocoloSIPAC && i.protocoloSIPAC.toLowerCase().includes(low)) ||
+        (i.grupoContratacao && i.grupoContratacao.toLowerCase().includes(low))
+      );
     }
     if (selectedCategory !== 'Todas') base = base.filter(i => i.categoria === selectedCategory);
     if (statusFilter !== 'Todos') base = base.filter(i => i.computedStatus === statusFilter);
@@ -721,8 +755,13 @@ const AnnualHiringPlan: React.FC = () => {
       return 0;
     };
 
-    if (dashboardView === 'planning') return base.sort(sortFn);
+    if (dashboardView === 'planning') {
+      return base.sort(sortFn);
+    }
     else {
+      // For 'status' view: ProcessDashboard needs ALL items to show pending DFDs
+      // It will filter internally for process-specific metrics
+      // But for the table below, we still group by process
       const processItems = base.filter(i => i.protocoloSIPAC && i.protocoloSIPAC.length > 5);
       const groups: Record<string, ContractItem[]> = {};
       processItems.forEach(item => {
@@ -746,6 +785,22 @@ const AnnualHiringPlan: React.FC = () => {
       return result.sort(sortFn);
     }
   }, [processedData, dashboardView, searchTerm, selectedCategory, statusFilter, sortConfig]);
+
+  // Separate data for ProcessDashboard - includes ALL items for DFD analysis
+  // Separate data for ProcessDashboard - includes ALL items for DFD analysis
+  const processDashboardData = useMemo(() => {
+    if (dashboardView !== 'status') return [];
+    // Also apply a basic filter based on searchTerm to keep them somewhat in sync
+    if (!searchTerm) return processedData;
+    const low = searchTerm.toLowerCase();
+    return processedData.filter(i =>
+      i.titulo.toLowerCase().includes(low) ||
+      i.area.toLowerCase().includes(low) ||
+      (i.numeroDfd && i.numeroDfd.toLowerCase().includes(low)) ||
+      (i.ifc && i.ifc.toLowerCase().includes(low)) ||
+      (i.protocoloSIPAC && i.protocoloSIPAC.toLowerCase().includes(low))
+    );
+  }, [processedData, dashboardView, searchTerm]);
 
   const pagedData = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -941,18 +996,54 @@ const AnnualHiringPlan: React.FC = () => {
           </div>
         )}
 
-        {dashboardView === 'status' && <div className="animate-in fade-in slide-in-from-bottom-4 duration-500"><ProcessDashboard data={activeData} /></div>}
+        {/* 1. KPIs e Gráficos do Processo - Apenas na view 'status' */}
+        {dashboardView === 'status' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 mb-6">
+            <ProcessDashboard
+              data={processDashboardData}
+              showDfdTable={false}
+              onUnlinkDfd={(dfd) => handleUnlinkProcess({
+                ...dfd.items[0],
+                id: `dfd-group-${dfd.numeroDfd}`,
+                isGroup: true,
+                childItems: dfd.items
+              } as ContractItem)}
+            />
+          </div>
+        )}
 
-        <div className={`bg-white rounded-2xl border ${dashboardView === 'planning' ? 'border-slate-200' : 'border-blue-100'} shadow-sm overflow-hidden flex flex-col font-sans mb-20`}>
+        {/* 2. Tabela de Processos em Andamento / Detalhamento do Plano */}
+        <div className={`bg-white rounded-2xl border ${dashboardView === 'planning' ? 'border-slate-200' : 'border-blue-100'} shadow-sm overflow-hidden flex flex-col font-sans mb-6`}>
           <div className={`p-6 border-b ${dashboardView === 'planning' ? 'border-slate-100 bg-slate-50/30' : 'border-blue-100 bg-blue-50/30'} flex flex-col md:flex-row items-center justify-between gap-6`}>
-            <div><h2 className={`text-xl font-black ${dashboardView === 'planning' ? 'text-slate-800' : 'text-blue-900'} tracking-tight`}>{dashboardView === 'planning' ? 'Detalhamento do Plano (PNCP)' : 'Processos em Andamento'}</h2><p className={`text-[10px] font-bold ${dashboardView === 'planning' ? 'text-slate-400' : 'text-blue-400'} uppercase tracking-widest mt-1 italic`}>{dashboardView === 'planning' ? `Lista completa de itens importados do PNCP - Ano ${selectedYear}` : 'Listagem de processos com protocolo SIPAC vinculado'}</p></div>
+            <div>
+              <h2 className={`text-xl font-black ${dashboardView === 'planning' ? 'text-slate-800' : 'text-blue-900'} tracking-tight`}>
+                {dashboardView === 'planning' ? 'Detalhamento do Plano (PNCP)' : 'Processos em Andamento'}
+              </h2>
+              <p className={`text-[10px] font-bold ${dashboardView === 'planning' ? 'text-slate-400' : 'text-blue-400'} uppercase tracking-widest mt-1 italic`}>
+                {dashboardView === 'planning' ? `Lista completa de itens importados do PNCP - Ano ${selectedYear}` : 'Listagem de processos com protocolo SIPAC vinculado'}
+              </p>
+            </div>
             <div className="flex flex-wrap items-center gap-3">
-              <div className="relative w-64"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} /><input type="text" placeholder="Buscar por descrição ou área..." className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:ring-2 focus:ring-ifes-green/20 transition-all" value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }} /></div>
-              <button onClick={() => setIsManualModalOpen(true)} className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-black hover:bg-slate-700 transition-colors shadow-sm"><Plus size={16} /><span>Nova Demanda</span></button>
+              <div className="relative w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
+                <input
+                  type="text"
+                  placeholder="Buscar por descrição ou área..."
+                  className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:ring-2 focus:ring-ifes-green/20 transition-all"
+                  value={searchTerm}
+                  onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                />
+              </div>
+              <button
+                onClick={() => setIsManualModalOpen(true)}
+                className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-black hover:bg-slate-700 transition-colors shadow-sm"
+              >
+                <Plus size={16} />
+                <span>Nova Demanda</span>
+              </button>
             </div>
           </div>
 
-          {/* Paginação Superior */}
           {!loading && totalPages > 1 && (
             <div className={`px-6 py-4 border-b ${dashboardView === 'planning' ? 'border-slate-50 bg-slate-50/10' : 'border-blue-50 bg-blue-50/10'} flex items-center justify-between`}>
               <div className="flex items-center gap-2">
@@ -965,6 +1056,7 @@ const AnnualHiringPlan: React.FC = () => {
               <span className="text-[10px] font-bold text-slate-400 italic">Exibindo {pagedData.length} de {activeData.length} itens</span>
             </div>
           )}
+
           <ContractTable
             viewMode={dashboardView}
             data={pagedData}
@@ -979,6 +1071,7 @@ const AnnualHiringPlan: React.FC = () => {
             onViewPcaDetails={(item) => { setViewingItem(item); setIsPcaModalOpen(true); }}
             onViewSummary={(item) => { setViewingItem(item); setIsFlashModalOpen(true); }}
           />
+
           {!loading && totalPages > 1 && (
             <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -992,6 +1085,13 @@ const AnnualHiringPlan: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* 3. Tabela de Grupos de Contratação (DFDs) - Apenas na view 'status' */}
+        {dashboardView === 'status' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 mb-20">
+            <ProcessDashboard data={processDashboardData} showGraphs={false} />
+          </div>
+        )}
       </main>
 
       {/* MODALS */}
@@ -1438,7 +1538,9 @@ const AnnualHiringPlan: React.FC = () => {
                           <thead>
                             <tr className="bg-slate-50 border-b border-slate-200">
                               <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">IFC</th>
-                              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Item</th>
+                              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">DFD</th>
+                              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">#</th>
+                              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Objeto</th>
                               <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Valor Estimado</th>
                             </tr>
                           </thead>
@@ -1452,6 +1554,11 @@ const AnnualHiringPlan: React.FC = () => {
                                 <td className="px-6 py-4">
                                   <span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded-md group-hover:bg-white group-hover:text-blue-600 border border-slate-200 group-hover:border-blue-200 transition-colors inline-block min-w-[60px] text-center">
                                     {item.identificadorFuturaContratacao || '---'}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <span className="text-[10px] font-black text-slate-500 bg-orange-50 px-2 py-1 rounded-md border border-orange-100 inline-block min-w-[60px] text-center" title="Documento de Formalização da Demanda">
+                                    {item.numeroDfd || '---'}
                                   </span>
                                 </td>
                                 <td className="px-6 py-4 text-xs font-bold text-slate-400 group-hover:text-blue-500 transition-colors">
@@ -2280,19 +2387,16 @@ const AnnualHiringPlan: React.FC = () => {
           </div>
         </div>
       )}
-      {/* Modal de Detalhes do Planejamento PCA */}
+      {/* Modal de Detalhes do Planejamento PCA - Standardized Design */}
       {isPcaModalOpen && viewingItem && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-[32px] w-full max-w-4xl shadow-2xl border border-slate-200 overflow-hidden font-sans flex flex-col max-h-[90vh]">
-            <header className="px-10 py-8 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
-              <div className="flex items-center gap-5">
-                <div className="p-2 bg-ifes-blue/10 rounded-xl text-ifes-blue">
-                  <Package size={24} strokeWidth={2.5} />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">Detalhes do Planejamento (PCA)</h2>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Dados oficiais extraídos do PNCP</p>
-                </div>
+          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl border border-slate-200 overflow-hidden font-sans max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 sticky top-0 z-10">
+              <div>
+                <h3 className="text-sm font-black text-slate-800">Detalhes do Item do PCA</h3>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                  Item #{viewingItem.sequencialItemPca || viewingItem.numeroItem} • DFD {viewingItem.numeroDfd}
+                </p>
               </div>
               <div className="flex items-center gap-3">
                 {!viewingItem.protocoloSIPAC && (
@@ -2302,136 +2406,125 @@ const AnnualHiringPlan: React.FC = () => {
                       setEditingItem(viewingItem);
                       setIsEditModalOpen(true);
                     }}
-                    className="px-4 py-2 bg-ifes-blue text-white rounded-lg text-xs font-black hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-100"
+                    className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-black hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-200"
                   >
-                    <Link size={14} /> Vincular Agora
+                    <Link size={12} /> Vincular
                   </button>
                 )}
-                <button
-                  onClick={() => setIsPcaModalOpen(false)}
-                  className="p-3 hover:bg-red-50 hover:text-red-500 rounded-2xl transition-all text-slate-400"
-                >
-                  <X size={28} />
+                <button onClick={() => setIsPcaModalOpen(false)} className="text-slate-400 hover:text-red-500 transition-colors">
+                  <X size={18} />
                 </button>
               </div>
-            </header>
-
-
-
-            <div className="flex-1 overflow-y-auto p-10 custom-scrollbar space-y-8">
-              {/* Card de Identificação */}
-              <section className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Informações Gerais</span>
-                  <div className="flex-1 h-px bg-slate-100" />
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-left">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">DFD</label>
+                  <p className="text-sm font-bold text-slate-700">{viewingItem.numeroDfd || '-'}</p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <span className="block text-[9px] font-black text-slate-400 uppercase mb-1">Cód. / Número Item</span>
-                    <span className="text-sm font-black text-slate-700">#{viewingItem.numeroItem || 'N/A'}</span>
-                  </div>
-                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 col-span-2">
-                    <span className="block text-[9px] font-black text-slate-400 uppercase mb-1">Código do Catálogo (CATMAT/CATSER)</span>
-                    <span className="text-sm font-black text-slate-700">{viewingItem.codigoItem || 'Não informado'}</span>
-                  </div>
-                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <span className="block text-[9px] font-black text-slate-400 uppercase mb-1">Categoria</span>
-                    <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase inline-block mt-1 ${viewingItem.categoria === Category.Bens ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                      viewingItem.categoria === Category.TIC ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                        'bg-amber-50 text-amber-600 border-amber-100'
-                      }`}>
-                      {viewingItem.categoria}
-                    </span>
-                  </div>
-                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <span className="block text-[9px] font-black text-slate-400 uppercase mb-1">Data Desejada</span>
-                    <span className="text-sm font-black text-slate-700">{formatDate(viewingItem.inicio)}</span>
-                  </div>
-                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                    <span className="block text-[9px] font-black text-slate-400 uppercase mb-1">Unidade Requisitante</span>
-                    <span className="text-sm font-black text-slate-700 truncate block transition-all" title={viewingItem.unidadeRequisitante || viewingItem.area}>
-                      {viewingItem.unidadeRequisitante || viewingItem.area}
-                    </span>
-                  </div>
+                <div className="text-left">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">IFC (Item)</label>
+                  <p className="text-sm font-bold text-slate-700">{viewingItem.ifc || '-'}</p>
                 </div>
-              </section>
+                <div className="text-left">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Categoria</label>
+                  <p className="text-sm font-bold text-slate-700">{viewingItem.categoria}</p>
+                </div>
+              </div>
 
-              {/* Descrição Detalhada */}
-              <section className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Descrição do Objeto</span>
-                  <div className="flex-1 h-px bg-slate-100" />
+              <div className="text-left">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Descrição</label>
+                <p className="text-sm font-medium text-slate-600 leading-relaxed">{viewingItem.titulo || viewingItem.descricaoDetalhada}</p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-left">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Quantidade</label>
+                  <p className="text-sm font-bold text-slate-700">{viewingItem.quantidade || '-'}</p>
                 </div>
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm leading-relaxed">
-                  <p className="text-sm font-bold text-slate-800 uppercase tracking-tight mb-2">{viewingItem.titulo}</p>
-                  <p className="text-sm text-slate-600 leading-relaxed">
-                    {viewingItem.descricaoDetalhada || 'Sem descrição detalhada adicional disponível.'}
+                <div className="text-left">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Valor Unit.</label>
+                  <p className="text-sm font-bold text-slate-700">{formatCurrency(viewingItem.valorUnitario || 0)}</p>
+                </div>
+                <div className="text-left">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Valor Total</label>
+                  <p className="text-sm font-bold text-blue-600">{formatCurrency(viewingItem.valor)}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-left">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Previsão de Início</label>
+                  <p className="text-sm font-medium text-slate-600">
+                    {viewingItem.inicio ? new Date(viewingItem.inicio).toLocaleDateString('pt-BR') : '-'}
                   </p>
                 </div>
-              </section>
-
-              {/* Quantidades e Valores */}
-              <section className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Metrificação e Orçamento</span>
-                  <div className="flex-1 h-px bg-slate-100" />
+                <div className="text-left">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Previsão de Término</label>
+                  <p className="text-sm font-medium text-slate-600">
+                    {viewingItem.fim ? new Date(viewingItem.fim).toLocaleDateString('pt-BR') : '-'}
+                  </p>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
-                    <span className="block text-[9px] font-black text-blue-400 uppercase mb-1">Unidade de Medida</span>
-                    <span className="text-sm font-black text-blue-700 uppercase">{viewingItem.unidadeMedida || 'UN'}</span>
-                  </div>
-                  <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
-                    <span className="block text-[9px] font-black text-blue-400 uppercase mb-1">Quantidade</span>
-                    <span className="text-sm font-black text-blue-700">{viewingItem.quantidade || 0}</span>
-                  </div>
-                  <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
-                    <span className="block text-[9px] font-black text-blue-400 uppercase mb-1">Valor Unitário</span>
-                    <span className="text-sm font-black text-blue-700">{formatCurrency(viewingItem.valorUnitario || 0)}</span>
-                  </div>
-                  <div className="bg-ifes-blue p-4 rounded-2xl shadow-lg shadow-blue-100">
-                    <span className="block text-[9px] font-black text-white/60 uppercase mb-1">Valor Total Estimado</span>
-                    <span className="text-sm font-black text-white">{formatCurrency(viewingItem.valor)}</span>
-                  </div>
-                </div>
-              </section>
+              </div>
 
-              {/* Agrupamento */}
+              {viewingItem.unidadeRequisitante && (
+                <div className="text-left">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Unidade Requisitante</label>
+                  <p className="text-sm font-medium text-slate-600">{viewingItem.unidadeRequisitante}</p>
+                </div>
+              )}
+
               {viewingItem.grupoContratacao && (
-                <section className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Agrupamento de Contratação</span>
-                    <div className="flex-1 h-px bg-slate-100" />
-                  </div>
-                  <div className="bg-amber-50/50 p-4 rounded-2xl border border-amber-100 flex items-center gap-4">
-                    <div className="p-2 bg-amber-100 rounded-lg text-amber-600">
-                      <Target size={18} />
-                    </div>
-                    <div>
-                      <span className="block text-[9px] font-black text-amber-500 uppercase tracking-wider leading-none mb-1">Nome do Agrupamento</span>
-                      <span className="text-sm font-black text-amber-900">{viewingItem.grupoContratacao}</span>
-                    </div>
-                  </div>
-                </section>
+                <div className="text-left">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Grupo de Contratação</label>
+                  <p className="text-sm font-medium text-slate-600">{viewingItem.grupoContratacao}</p>
+                </div>
               )}
             </div>
-
-            <footer className="p-8 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
-              <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">
-                <Info size={14} className="text-slate-300" />
-                Dados sincronizados via integração oficial PNCP
-              </div>
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
               <button
                 onClick={() => setIsPcaModalOpen(false)}
-                className="px-8 py-4 bg-white border border-slate-200 text-slate-500 rounded-xl text-xs font-black hover:bg-slate-100 hover:text-slate-800 transition-all uppercase tracking-widest shadow-sm"
+                className="px-6 py-3 bg-slate-900 text-white rounded-xl text-xs font-black hover:bg-slate-700 transition-all font-sans"
               >
-                Voltar
+                Fechar
               </button>
-            </footer>
+            </div>
           </div>
         </div>
-      )
-      }
+      )}
+      {/* Modal de Confirmação de Desvínculo */}
+      {isUnlinkModalOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl border border-slate-200 overflow-hidden font-sans">
+            <div className="p-8 text-center">
+              <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <AlertTriangle size={32} />
+              </div>
+              <h3 className="text-xl font-black text-slate-900 mb-2">Confirmar Remoção</h3>
+              <p className="text-sm font-bold text-slate-500 leading-relaxed">
+                Você está prestes a remover o vínculo deste processo.
+                {itemToUnlink?.isGroup ? ` Isso afetará ${itemToUnlink.childItems?.length} itens vinculados.` : " Esta ação não pode ser desfeita."}
+              </p>
+            </div>
+            <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
+              <button
+                onClick={() => { setIsUnlinkModalOpen(false); setItemToUnlink(null); }}
+                className="flex-1 px-6 py-4 bg-white border border-slate-200 text-slate-500 rounded-xl text-xs font-black hover:bg-slate-100 transition-all uppercase tracking-widest shadow-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmUnlinkProcess}
+                disabled={saving}
+                className="flex-1 px-6 py-4 bg-red-600 text-white rounded-xl text-xs font-black hover:bg-red-700 transition-all uppercase tracking-widest shadow-lg shadow-red-100 flex items-center justify-center gap-2"
+              >
+                {saving ? <RefreshCw size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                Remover Vínculo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div >
   );
 };
