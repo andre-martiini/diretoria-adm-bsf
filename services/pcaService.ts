@@ -64,9 +64,10 @@ export const fetchLocalPcaSnapshot = async (year: string): Promise<ContractItem[
                     unidadeMedida: item.unidadeMedida || '',
                     quantidade: Number(item.quantidade || 0),
                     valorUnitario: Number(item.valorUnitario || 0),
-                    unidadeRequisitante: item.nomeUnidade || '',
+                    unidadeRequisitante: item.unidadeRequisitante || item.nomeUnidade || '',
                     grupoContratacao: item.grupoContratacaoNome || '',
-                    descricaoDetalhada: item.descricao || "Item do Plano de Contratação"
+                    descricaoDetalhada: item.descricao || "Item do Plano de Contratação",
+                    numeroDfd: item.numeroDfd || item.idDfd || item.dfdId || item.codigoDfd || null
                 };
             });
         }
@@ -249,9 +250,10 @@ export const fetchPcaData = async (
             unidadeMedida: item.unidadeMedida || '',
             quantidade: Number(item.quantidade || 0),
             valorUnitario: Number(item.valorUnitario || 0),
-            unidadeRequisitante: item.nomeUnidade || '',
+            unidadeRequisitante: item.unidadeRequisitante || item.nomeUnidade || '',
             grupoContratacao: item.grupoContratacaoNome || '',
-            descricaoDetalhada: item.descricao || "Item do Plano de Contratação"
+            descricaoDetalhada: item.descricao || "Item do Plano de Contratação",
+            numeroDfd: item.numeroDfd || item.idDfd || item.dfdId || item.codigoDfd || null
         };
     });
 

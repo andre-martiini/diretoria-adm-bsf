@@ -407,7 +407,7 @@ const AnnualHiringPlan: React.FC = () => {
       if (editingItem.id === 'bulk-selection') {
         const itemIds = selectedIds.map(id => String(id));
         if (editingItem.dadosSIPAC && editingItem.protocoloSIPAC) {
-          await linkItemsToProcess(editingItem.protocoloSIPAC, itemIds, editingItem.dadosSIPAC);
+          await linkItemsToProcess(editingItem.protocoloSIPAC, itemIds, editingItem.dadosSIPAC, selectedYear);
         }
         setData(prev => prev.map(item =>
           selectedIds.includes(String(item.id))
@@ -426,7 +426,7 @@ const AnnualHiringPlan: React.FC = () => {
         setSelectedIds([]);
       } else {
         if (editingItem.dadosSIPAC && editingItem.protocoloSIPAC) {
-          await linkItemsToProcess(editingItem.protocoloSIPAC, [String(editingItem.id)], editingItem.dadosSIPAC);
+          await linkItemsToProcess(editingItem.protocoloSIPAC, [String(editingItem.id)], editingItem.dadosSIPAC, selectedYear);
         } else {
           const docId = editingItem.isManual ? String(editingItem.id) : `${selectedYear}-${editingItem.id}`;
           const safeDocId = docId.replace(/\//g, '-');
@@ -529,7 +529,7 @@ const AnnualHiringPlan: React.FC = () => {
       if (isFromDetails) {
         setViewingItem(updatedItem);
         const targetIds = item.isGroup && item.childItems ? item.childItems.map(c => String(c.id)) : [String(item.id)];
-        await linkItemsToProcess(item.protocoloSIPAC, targetIds, updatedItem.dadosSIPAC!);
+        await linkItemsToProcess(item.protocoloSIPAC, targetIds, updatedItem.dadosSIPAC!, item.ano || selectedYear);
 
         const metrics = calculateHealthScore(updatedItem.dadosSIPAC!.movimentacoes?.[0]?.data || updatedItem.dadosSIPAC!.dataAutuacion);
         const enhancedSipacData = {
