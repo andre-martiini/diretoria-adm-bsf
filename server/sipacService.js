@@ -394,6 +394,34 @@ export async function scrapeSIPACProcess(protocol) {
     }
 }
 
+export async function scrapeSIPACDocumentHTML(url) {
+    console.log(`[SIPAC] Fetching document HTML from: ${url}`);
+    const browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+    });
+
+    try {
+        const page = await browser.newPage();
+        await page.setDefaultNavigationTimeout(45000);
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
+        await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
+
+        // Extrai o conteúdo relevante do despacho ou o body inteiro se não achar seletor
+        const html = await page.evaluate(() => {
+            const contentArea = document.querySelector('div.conteudo, table.listagem, #visualizacaoDocumento') || document.body;
+            // Remove botões de impressão e scripts para uma visualização limpa
+            return contentArea.innerHTML;
+        });
+
+        // Fix encoding: SIPAC often uses ISO-8859-1 in meta tags, but Puppeteer returns UTF-8
+        return html.replace(/ISO-8859-1/gi, 'UTF-8');
+    } finally {
+        await browser.close();
+    }
+}
+
 export async function scrapeSIPACDocumentContent(url) {
     console.log(`[SIPAC] Fetching document content from: ${url}`);
     const browser = await puppeteer.launch({
@@ -451,13 +479,26 @@ export async function downloadSIPACDocument(url) {
             });
 
             const contentType = response.headers['content-type'];
-            const buffer = Buffer.from(response.data);
+            let buffer = Buffer.from(response.data);
 
-            // Verificação de Integridade: Detectar página de erro "Anomaly Detected" / WAF
+            // Verificação de Integridade e Correção de Encoding: SIPAC usa ISO-8859-1
             if (contentType && contentType.includes('text/html')) {
-                const htmlContent = buffer.toString('utf-8');
-                if (htmlContent.includes('Anomaly Detected') || htmlContent.includes('think that you are a bot')) {
-                    throw new Error('WAF/Bot Detection triggered (Axios)');
+                try {
+                    // Converte de ISO-8859-1 (nativo SIPAC) para UTF-8 string
+                    const decoder = new TextDecoder('iso-8859-1');
+                    let htmlContent = decoder.decode(buffer);
+
+                    if (htmlContent.includes('Anomaly Detected') || htmlContent.includes('think that you are a bot')) {
+                        throw new Error('WAF/Bot Detection triggered (Axios)');
+                    }
+
+                    // Corrige meta tags e retorna como UTF-8
+                    htmlContent = htmlContent.replace(/ISO-8859-1/gi, 'UTF-8');
+                    buffer = Buffer.from(htmlContent, 'utf-8');
+                    contentType = 'text/html; charset=utf-8';
+                } catch (encError) {
+                    console.warn(`[SIPAC] Axios block error: ${encError.message}`);
+                    throw encError; // Rethrow to trigger Puppeteer fallback
                 }
             }
 
@@ -476,6 +517,8 @@ export async function downloadSIPACDocument(url) {
             return { buffer, contentType, fileName, fileHash: hash, sizeBytes: buffer.length };
         } catch (e) {
             console.warn(`[SIPAC] Axios download failed/blocked (${e.message}), falling back to Puppeteer Stealth...`);
+            // Pequeno delay para o WAF "esquecer" o IP se for por frequência
+            await new Promise(r => setTimeout(r, 2000 + Math.random() * 2000));
         }
     }
 
@@ -518,12 +561,13 @@ export async function downloadSIPACDocument(url) {
                 contentType = response.headers()['content-type'];
                 if (contentType && contentType.includes('text/html')) {
                     // É uma página HTML (Ex: Despacho ou Erro)
-                    console.log(`[SIPAC] Document is HTML (not a direct download).`);
-                    // Se for página de erro do WAF, já convertemos ou lançamos erro?
-                    // Vamos converter para PDF para manter padrão
-                    fileName = 'documento_visualizacao_sipac.pdf';
-                    buffer = await page.pdf({ format: 'A4', printBackground: true });
-                    contentType = 'application/pdf';
+                    console.log(`[SIPAC] Document is HTML (Despacho detected). Fixing encoding...`);
+                    fileName = 'despacho_sipac.html';
+                    let htmlContent = await page.content();
+                    // Fix encoding: SIPAC often uses ISO-8859-1 in meta tags, but page.content() is UTF-8
+                    htmlContent = htmlContent.replace(/ISO-8859-1/gi, 'UTF-8');
+                    buffer = Buffer.from(htmlContent, 'utf-8');
+                    contentType = 'text/html; charset=utf-8';
                 }
             }
         } catch (gotoError) {

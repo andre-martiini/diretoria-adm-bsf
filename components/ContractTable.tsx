@@ -66,6 +66,7 @@ const ContractTable: React.FC<ContractTableProps> = ({
             )}
 
             <TableHeader label="Valor Previsto" sortKey="valor" align="right" />
+            {viewMode === 'status' && <TableHeader label="Valor Empenhado" align="right" />}
             {!isPublic && <TableHeader label="Configurar" align="center" />}
           </tr>
         </thead>
@@ -196,6 +197,13 @@ const ContractTable: React.FC<ContractTableProps> = ({
                   <td className="p-6 text-right text-sm font-bold text-slate-800 tabular-nums">
                     {formatCurrency(item.valor)}
                   </td>
+                  {viewMode === 'status' && (
+                    <td className="p-6 text-right text-sm font-black text-emerald-600 tabular-nums">
+                      {item.dadosSIPAC?.analise_financeira?.totalEmpenhado
+                        ? formatCurrency(item.dadosSIPAC.analise_financeira.totalEmpenhado)
+                        : '---'}
+                    </td>
+                  )}
                   {!isPublic && (
                     <td className="p-6 text-center">
                       <div className="flex items-center justify-center">

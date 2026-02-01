@@ -177,15 +177,22 @@ app.get('/api/proxy/pdf', async (req, res) => {
 
 // Endpoint para conteúdo de documento (HTML/Texto)
 app.get('/api/sipac/documento/conteudo', async (req, res) => {
-    const { url } = req.query;
-    if (!url) return res.status(400).json({ error: 'URL é obrigatória' });
+  const { url } = req.query;
+  if (!url) return res.status(400).json({ error: 'URL é obrigatória' });
 
-    try {
-        const text = await scrapeSIPACDocumentContent(url);
-        res.json({ text });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+  console.log(`[CONTENT ENPOINT] Request for: ${url.substring(0, 100)}...`);
+  try {
+    const text = await scrapeSIPACDocumentContent(url);
+    if (!text) {
+      console.warn(`[CONTENT ENPOINT] Scraper returned empty for: ${url.substring(0, 50)}`);
+      return res.json({ text: '', error: 'Conteúdo vazio ou bloqueado' });
     }
+    console.log(`[CONTENT ENPOINT] Extracted ${text.length} chars`);
+    res.json({ text });
+  } catch (error) {
+    console.error(`[CONTENT ENPOINT ERROR] ${error.message}`);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 
