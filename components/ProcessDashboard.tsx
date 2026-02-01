@@ -27,6 +27,12 @@ interface ProcessDashboardProps {
 }
 
 const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data }) => {
+    const [isMounted, setIsMounted] = React.useState(false);
+
+    React.useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
     // Filtra apenas itens que possuem um processo SIPAC (ou seja, estão em execução)
     const processItems = useMemo(() =>
         data.filter(item => item.protocoloSIPAC && item.protocoloSIPAC.length > 5),
@@ -131,45 +137,47 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data }) => {
             {/* Linha 2: Gráficos */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Distribuição por Status */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col min-w-0">
                     <h3 className="text-sm font-black text-slate-800 mb-6 flex items-center gap-2">
                         <BarChart3 size={16} className="text-blue-500" />
                         Volume por Fase do Processo
                     </h3>
-                    <div className="h-[280px] w-full relative">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={statusData}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={80}
-                                    paddingAngle={2}
-                                    dataKey="value"
-                                    stroke="none"
-                                >
-                                    {statusData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name] || '#cbd5e1'} />
-                                    ))}
-                                </Pie>
-                                <Tooltip
-                                    formatter={(value: number, name: string) => [
-                                        `${value} processos`,
-                                        name
-                                    ]}
-                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                                />
-                                <Legend
-                                    layout="horizontal"
-                                    verticalAlign="bottom"
-                                    align="center"
-                                    iconType="circle"
-                                    iconSize={8}
-                                    wrapperStyle={{ fontSize: '10px', fontWeight: 700, color: '#64748b', paddingTop: '10px' }}
-                                />
-                            </PieChart>
-                        </ResponsiveContainer>
+                    <div className="w-full h-[400px] relative">
+                        {isMounted && (
+                            <ResponsiveContainer width="99%" height={380}>
+                                <PieChart>
+                                    <Pie
+                                        data={statusData}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={60}
+                                        outerRadius={80}
+                                        paddingAngle={2}
+                                        dataKey="value"
+                                        stroke="none"
+                                    >
+                                        {statusData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name] || '#cbd5e1'} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip
+                                        formatter={(value: number, name: string) => [
+                                            `${value} processos`,
+                                            name
+                                        ]}
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                    />
+                                    <Legend
+                                        layout="horizontal"
+                                        verticalAlign="bottom"
+                                        align="center"
+                                        iconType="circle"
+                                        iconSize={8}
+                                        wrapperStyle={{ fontSize: '10px', fontWeight: 700, color: '#64748b', paddingTop: '10px' }}
+                                    />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        )}
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none pb-6">
                             <span className="text-3xl font-black text-slate-800 leading-none">{stats.totalCount}</span>
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-tight">Total</span>
@@ -178,35 +186,37 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data }) => {
                 </div>
 
                 {/* Análise de Retrabalho e Complexidade */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col relative overflow-hidden">
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col relative overflow-hidden min-w-0">
                     <h3 className="text-sm font-black text-slate-800 mb-6 flex items-center gap-2">
                         <Layers size={16} className="text-emerald-500" />
                         Nível de Complexidade (Trâmites)
                     </h3>
-                    <div className="h-[200px] w-full relative">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={movementData} layout="vertical" margin={{ left: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
-                                <XAxis type="number" hide />
-                                <YAxis
-                                    dataKey="name"
-                                    type="category"
-                                    width={100}
-                                    tick={{ fontSize: 9, fontWeight: 700, fill: '#64748b' }}
-                                    axisLine={false}
-                                    tickLine={false}
-                                />
-                                <Tooltip
-                                    cursor={{ fill: '#f8fafc' }}
-                                    formatter={(value: number, name: string, props: any) => [
-                                        `${value} movimentações`,
-                                        `Incidentes: ${props.payload.incidentes}`
-                                    ]}
-                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                                />
-                                <Bar dataKey="value" fill="#10b981" radius={[0, 4, 4, 0]} barSize={16} />
-                            </BarChart>
-                        </ResponsiveContainer>
+                    <div className="w-full h-[400px] relative">
+                        {isMounted && (
+                            <ResponsiveContainer width="99%" height={380}>
+                                <BarChart data={movementData} layout="vertical" margin={{ left: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
+                                    <XAxis type="number" hide />
+                                    <YAxis
+                                        dataKey="name"
+                                        type="category"
+                                        width={100}
+                                        tick={{ fontSize: 9, fontWeight: 700, fill: '#64748b' }}
+                                        axisLine={false}
+                                        tickLine={false}
+                                    />
+                                    <Tooltip
+                                        cursor={{ fill: '#f8fafc' }}
+                                        formatter={(value: number, name: string, props: any) => [
+                                            `${value} movimentações`,
+                                            `Incidentes: ${props.payload.incidentes}`
+                                        ]}
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                    />
+                                    <Bar dataKey="value" fill="#10b981" radius={[0, 4, 4, 0]} barSize={16} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        )}
                         <div className="absolute top-2 right-2 flex flex-col items-end pointer-events-none">
                             <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Processos Mais Movimentados</span>
                         </div>
@@ -230,7 +240,7 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data }) => {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

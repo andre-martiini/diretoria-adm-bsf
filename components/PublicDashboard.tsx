@@ -59,6 +59,7 @@ const PublicDashboard: React.FC = () => {
     const [selectedYear, setSelectedYear] = useState<string>(DEFAULT_YEAR);
     const [pcaLoading, setPcaLoading] = useState<boolean>(true);
     const [budgetLoading, setBudgetLoading] = useState<boolean>(true);
+    const [isMounted, setIsMounted] = useState(false);
 
     // PCA Data
     const [pcaData, setPcaData] = useState<ContractItem[]>([]);
@@ -86,6 +87,7 @@ const PublicDashboard: React.FC = () => {
             setSelectedYear(sysConfig.defaultYear);
         };
         initConfig();
+        setIsMounted(true);
     }, []);
 
     const loadPcaData = useCallback(async (year: string) => {
@@ -170,6 +172,7 @@ const PublicDashboard: React.FC = () => {
             services: { qtd: services.length, val: services.reduce((acc, i) => acc + i.valor, 0) },
             obras: { qtd: 0, val: 0 },
             totalExecutado: processedPcaData.reduce((acc, i) => acc + (i.valorExecutado || 0), 0),
+            totalDelayed: 0,
             monthlyPlan: months.map((m, idx) => ({
                 month: m,
                 value: processedPcaData.filter(i => new Date(i.inicio).getMonth() === idx).reduce((acc, i) => acc + i.valor, 0)
@@ -421,14 +424,16 @@ const PublicDashboard: React.FC = () => {
                                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                                         <h3 className="text-lg font-black text-slate-800 mb-6">Distribuição por Categoria</h3>
                                         <div className="h-72 w-full">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <PieChart>
-                                                    <Pie data={pcaChartData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value" stroke="none">
-                                                        {pcaChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
-                                                    </Pie>
-                                                    <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                                                </PieChart>
-                                            </ResponsiveContainer>
+                                            {isMounted && (
+                                                <ResponsiveContainer width="100%" height="100%" minWidth={100} debounce={50}>
+                                                    <PieChart>
+                                                        <Pie data={pcaChartData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value" stroke="none">
+                                                            {pcaChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
+                                                        </Pie>
+                                                        <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                                                    </PieChart>
+                                                </ResponsiveContainer>
+                                            )}
                                         </div>
                                         <div className="flex gap-4 justify-center mt-4">
                                             {pcaChartData.map(c => (
@@ -443,15 +448,17 @@ const PublicDashboard: React.FC = () => {
                                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
                                         <h3 className="text-lg font-black text-slate-800 mb-6 font-sans">Cronograma de Contratações</h3>
                                         <div className="h-72 w-full">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <BarChart data={pcaSummary.monthlyPlan}>
-                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} />
-                                                    <YAxis hide />
-                                                    <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                                                    <Bar dataKey="value" fill="#10b981" radius={[6, 6, 0, 0]} barSize={24} />
-                                                </BarChart>
-                                            </ResponsiveContainer>
+                                            {isMounted && (
+                                                <ResponsiveContainer width="100%" height="100%" minWidth={100} debounce={50}>
+                                                    <BarChart data={pcaSummary.monthlyPlan}>
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                                        <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} />
+                                                        <YAxis hide />
+                                                        <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                                                        <Bar dataKey="value" fill="#10b981" radius={[6, 6, 0, 0]} barSize={24} />
+                                                    </BarChart>
+                                                </ResponsiveContainer>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -543,17 +550,19 @@ const PublicDashboard: React.FC = () => {
                             <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm animate-in fade-in duration-500">
                                 <h3 className="text-xl font-black text-slate-800 mb-8">Cronograma Financeiro Mensal</h3>
                                 <div className="h-96 w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={budgetChartData} barGap={8}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} />
-                                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} tickFormatter={(v) => `R$${v / 1000}k`} />
-                                            <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                                            <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ paddingBottom: '20px', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }} />
-                                            <Bar dataKey="empenhado" name="Empenhado" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                                            <Bar dataKey="executado" name="Liquidado/Pago" fill="#10b981" radius={[4, 4, 0, 0]} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
+                                    {isMounted && (
+                                        <ResponsiveContainer width="100%" height="100%" minWidth={100} debounce={50}>
+                                            <BarChart data={budgetChartData} barGap={8}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} />
+                                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} tickFormatter={(v) => `R$${v / 1000}k`} />
+                                                <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                                                <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ paddingBottom: '20px', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }} />
+                                                <Bar dataKey="empenhado" name="Empenhado" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                                                <Bar dataKey="executado" name="Liquidado/Pago" fill="#10b981" radius={[4, 4, 0, 0]} />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    )}
                                 </div>
                             </div>
                         ) : (

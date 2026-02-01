@@ -1,11 +1,14 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import { SIPACProcess, ProcessFinancials, FinancialEvent } from '../../types';
-import { classifyDocument } from './documentClassifier';
-import { extractFinancialValue, extractDate } from './financialExtractor';
 import { API_SERVER_URL } from '../../constants';
 
-// Configure worker using local public file for maximum stability
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+// --- ALTERAÇÃO CRÍTICA ---
+// Não usamos mais importação do Vite (?url). 
+// Apontamos diretamente para o arquivo que você copiou para a pasta public.
+if (typeof window !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+}
+// -------------------------
 
 // Default fetcher using the proxy that can handle PDFs and HTML
 const fetchDocumentText = async (url: string): Promise<string> => {

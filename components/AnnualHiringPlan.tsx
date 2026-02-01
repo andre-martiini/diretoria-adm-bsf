@@ -136,7 +136,10 @@ const AnnualHiringPlan: React.FC = () => {
   const [despachosContent, setDespachosContent] = useState<{ tipo: string, data: string, texto: string, ordem: string }[]>([]);
   const [isLoadingDespachos, setIsLoadingDespachos] = useState<boolean>(false);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState<boolean>(false);
+  const [dashboardView, setDashboardView] = useState<'planning' | 'status'>('planning');
   const [viewingItem, setViewingItem] = useState<ContractItem | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+  const [chartsReady, setChartsReady] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     documentos: false,
     movimentacoes: false,
@@ -144,8 +147,24 @@ const AnnualHiringPlan: React.FC = () => {
     incidentes: false,
     resumoIA: true
   });
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (dashboardView === 'planning') {
+      setChartsReady(false);
+      const timer = setTimeout(() => {
+        setChartsReady(true);
+      }, 600);
+      return () => clearTimeout(timer);
+    } else {
+      setChartsReady(false);
+    }
+  }, [dashboardView]);
+
   const [syncProgress, setSyncProgress] = useState<number>(0);
-  const [dashboardView, setDashboardView] = useState<'planning' | 'status'>('planning');
   const [isItemsListModalOpen, setIsItemsListModalOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string, type: ToastType } | null>(null);
 
@@ -661,10 +680,10 @@ const AnnualHiringPlan: React.FC = () => {
                 <span className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Campus BSF</span>
               </div>
             </div>
-            <div className="border-l border-slate-100 pl-6 ml-6 hidden md:block">
+            <div className="border-l border-slate-100 pl-3 ml-3 md:pl-6 md:ml-6">
               <div className="flex bg-slate-100 p-1 rounded-xl">
-                <button onClick={() => setDashboardView('planning')} className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${dashboardView === 'planning' ? 'bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-100' : 'text-slate-400 hover:text-slate-600'}`}>Plano de Contratação (PCA)</button>
-                <button onClick={() => setDashboardView('status')} className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${dashboardView === 'status' ? 'bg-violet-50 text-violet-700 shadow-sm ring-1 ring-violet-100' : 'text-slate-400 hover:text-slate-600'}`}>Gestão de Processos</button>
+                <button onClick={() => setDashboardView('planning')} className={`px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-black transition-all ${dashboardView === 'planning' ? 'bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-100' : 'text-slate-400 hover:text-slate-600'}`}>PCA</button>
+                <button onClick={() => setDashboardView('status')} className={`px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-black transition-all ${dashboardView === 'status' ? 'bg-violet-50 text-violet-700 shadow-sm ring-1 ring-violet-100' : 'text-slate-400 hover:text-slate-600'}`}>Processos</button>
               </div>
             </div>
           </div>
@@ -683,14 +702,42 @@ const AnnualHiringPlan: React.FC = () => {
       <main className="w-full max-w-[1920px] px-6 mx-auto py-8 space-y-8">
         {dashboardView === 'planning' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 min-h-[400px]">
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-center relative overflow-hidden group hover:border-ifes-green/30 transition-all">
                 <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><DollarSign size={80} className="text-ifes-green" /></div>
                 <div className="relative z-10"><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Valor Total Planejado</p><h3 className="text-3xl font-black text-slate-900 mb-6">{formatCurrency(summary.totalValue)}</h3>
                   <div className="space-y-2"><div className="flex justify-between text-[9px] font-black text-slate-400 uppercase"><span>Itens Vinculados a Processos</span><span>{((summary.totalExecutado / (summary.totalItems || 1)) * 100).toFixed(0)}%</span></div><div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-ifes-green transition-all duration-500" style={{ width: `${(summary.totalExecutado / (summary.totalItems || 1)) * 100}%` }}></div></div></div></div>
               </div>
-              <div className="lg:col-span-1 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col"><h3 className="text-xs font-black text-slate-800 mb-4 flex items-center gap-2 uppercase tracking-wide"><Target size={14} className="text-ifes-green" /> Por Categoria</h3><div className="h-[200px] w-full relative"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={chartData} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={5} dataKey="value" stroke="none">{chartData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}</Pie><Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} /></PieChart></ResponsiveContainer></div></div>
-              <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col"><h3 className="text-xs font-black text-slate-800 mb-4 flex items-center gap-2 uppercase tracking-wide"><RefreshCw size={14} className="text-blue-500" /> Cronograma de Contratação (Inicio Vigência)</h3><div className="h-[200px] w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={summary.monthlyPlan}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" /><XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} /><Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} /><Bar dataKey="value" fill="#2f9e41" radius={[4, 4, 0, 0]} barSize={24} /></BarChart></ResponsiveContainer></div></div>
+              <div className="lg:col-span-1 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col min-w-0">
+                <h3 className="text-xs font-black text-slate-800 mb-4 flex items-center gap-2 uppercase tracking-wide"><Target size={14} className="text-ifes-green" /> Por Categoria</h3>
+                <div className="w-full h-[400px] relative">
+                  {chartsReady && (
+                    <ResponsiveContainer width="99%" height={380} debounce={50}>
+                      <PieChart>
+                        <Pie data={chartData} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={5} dataKey="value" stroke="none">
+                          {chartData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
+                        </Pie>
+                        <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              </div>
+              <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col min-w-0">
+                <h3 className="text-xs font-black text-slate-800 mb-4 flex items-center gap-2 uppercase tracking-wide"><RefreshCw size={14} className="text-blue-500" /> Cronograma de Contratação (Inicio Vigência)</h3>
+                <div className="w-full h-[400px] relative">
+                  {chartsReady && (
+                    <ResponsiveContainer width="99%" height={380} debounce={50}>
+                      <BarChart data={summary.monthlyPlan}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} />
+                        <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                        <Bar dataKey="value" fill="#2f9e41" radius={[4, 4, 0, 0]} barSize={24} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}
