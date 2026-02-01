@@ -93,13 +93,16 @@ import ProcessDashboard from './ProcessDashboard';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { calculateHealthScore, deriveInternalPhase, linkItemsToProcess } from '../services/acquisitionService';
+import { extractPlanningTeam } from '../utils/analysis/aiPersonnelScanner';
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import * as pdfjsLib from 'pdfjs-dist';
+// @ts-ignore
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { findPncpPurchaseByProcess, fetchPncpPurchaseItems, PNCPPurchase, PNCPItem } from '../services/pncpService';
 
-// Configuração do Worker do PDF.js via CDN para evitar problemas de bundler
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Configuração do Worker do PDF.js localmente
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 const AnnualHiringPlan: React.FC = () => {
   const navigate = useNavigate();
@@ -156,7 +159,7 @@ const AnnualHiringPlan: React.FC = () => {
     incidentes: false,
     resumoIA: true
   });
-  const [activeTab, setActiveTab] = useState<'planning' | 'documents' | 'history' | 'indicators' | 'pncp'>('planning');
+  const [activeTab, setActiveTab] = useState<'planning' | 'users' | 'documents' | 'history' | 'indicators' | 'pncp'>('planning');
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
   const [isDocLoading, setIsDocLoading] = useState(false);
   const [isChartsVisible, setIsChartsVisible] = useState<boolean>(true);
@@ -165,6 +168,104 @@ const AnnualHiringPlan: React.FC = () => {
   const [pncpMatch, setPncpMatch] = useState<PNCPPurchase | null>(null);
   const [pncpItems, setPncpItems] = useState<PNCPItem[]>([]);
   const [isLoadingPncp, setIsLoadingPncp] = useState(false);
+
+  // Text Extraction State
+  const [isTextModalOpen, setIsTextModalOpen] = useState(false);
+  const [extractedText, setExtractedText] = useState<string>('');
+  const [isExtracting, setIsExtracting] = useState(false);
+
+  // AI Team Identification State
+  const [planningTeam, setPlanningTeam] = useState<string[]>([]);
+  const [isIdentifyingTeam, setIsIdentifyingTeam] = useState(false);
+  const [teamIdentificationAttempted, setTeamIdentificationAttempted] = useState(false);
+
+  // Reset team state when item changes
+  useEffect(() => {
+    setPlanningTeam([]);
+    setTeamIdentificationAttempted(false);
+    setIsIdentifyingTeam(false);
+  }, [viewingItem]);
+
+  const handleIdentifyTeam = useCallback(async () => {
+    if (!viewingItem?.dadosSIPAC?.documentos) return;
+
+    // 1. Find the oldest "Portaria" - Optimized logic
+    const portarias = viewingItem.dadosSIPAC.documentos
+      .filter(d => d.tipo.toLowerCase().includes('portaria'))
+      .sort((a, b) => {
+        const numA = parseInt(a.ordem);
+        const numB = parseInt(b.ordem);
+        return numA - numB;
+      });
+
+    const oldestPortaria = portarias[0];
+
+    if (!oldestPortaria || !oldestPortaria.url) {
+      setTeamIdentificationAttempted(true);
+      return;
+    }
+
+    try {
+      setIsIdentifyingTeam(true);
+
+      const url = `${API_SERVER_URL}/api/proxy/pdf?url=${encodeURIComponent(oldestPortaria.url)}`;
+      const loadingTask = pdfjsLib.getDocument(url);
+      const pdf = await loadingTask.promise;
+
+      let fullText = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map((item: any) => item.str).join(' ');
+        fullText += pageText + '\n\n';
+      }
+
+      const team = await extractPlanningTeam(fullText);
+      setPlanningTeam(team);
+
+    } catch (error) {
+      console.error("Team identification error:", error);
+    } finally {
+      setIsIdentifyingTeam(false);
+      setTeamIdentificationAttempted(true);
+    }
+  }, [viewingItem]);
+
+  // Trigger when tab activates
+  useEffect(() => {
+    if (activeTab === 'users' && !teamIdentificationAttempted && !isIdentifyingTeam && planningTeam.length === 0) {
+      handleIdentifyTeam();
+    }
+  }, [activeTab, teamIdentificationAttempted, isIdentifyingTeam, planningTeam, handleIdentifyTeam]);
+
+  const extractPdfContent = async (docUrl: string) => {
+    try {
+      setIsExtracting(true);
+      setExtractedText('');
+
+      // Use the proxy to avoid CORS
+      const url = `${API_SERVER_URL}/api/proxy/pdf?url=${encodeURIComponent(docUrl)}`;
+
+      const loadingTask = pdfjsLib.getDocument(url);
+      const pdf = await loadingTask.promise;
+
+      let fullText = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map((item: any) => item.str).join(' ');
+        fullText += pageText + '\n\n';
+      }
+
+      setExtractedText(fullText);
+      setIsTextModalOpen(true);
+    } catch (error) {
+      console.error("PDF Extraction error:", error);
+      setToast({ message: "Erro ao extrair texto do PDF.", type: 'error' });
+    } finally {
+      setIsExtracting(false);
+    }
+  };
 
   useEffect(() => {
     setIsMounted(true);
@@ -1217,6 +1318,15 @@ const AnnualHiringPlan: React.FC = () => {
                   </button>
 
                   <button
+                    onClick={() => setActiveTab('users')}
+                    className={`flex items-center gap-2 py-4 border-b-2 text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap
+                       ${activeTab === 'users' ? 'border-violet-500 text-violet-600' : 'border-transparent text-slate-400 hover:text-slate-600'}
+                     `}
+                  >
+                    <Users size={14} /> Usuários Envolvidos
+                  </button>
+
+                  <button
                     onClick={() => setActiveTab('documents')}
                     className={`flex items-center gap-2 py-4 border-b-2 text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap
                        ${activeTab === 'documents' ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}
@@ -1365,6 +1475,131 @@ const AnnualHiringPlan: React.FC = () => {
                   </div>
                 )}
 
+                {activeTab === 'users' && (
+                  <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-5xl mx-auto space-y-8">
+
+                    {/* Top Row: Key Actors */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Autuador (Creator) */}
+                      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                        <div className="p-3 bg-blue-50 text-blue-600 rounded-full">
+                          <User size={24} />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Usuário Autuador</span>
+                          <p className="text-sm font-black text-slate-700 uppercase">
+                            {viewingItem.dadosSIPAC.usuarioAutuacion || '---'}
+                          </p>
+                          <p className="text-[10px] font-medium text-slate-400 mt-0.5">Criador do Processo</p>
+                        </div>
+                      </div>
+
+                      {/* Last Receiver */}
+                      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+                        <div className="p-3 bg-purple-50 text-purple-600 rounded-full">
+                          <User size={24} />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Último Recebimento</span>
+                          <p className="text-sm font-black text-slate-700 uppercase">
+                            {(() => {
+                              const movs = viewingItem.dadosSIPAC.movimentacoes || [];
+                              const lastMov = movs.length > 0 ? movs[0] : null; // Assuming index 0 is latest based on history view logic
+                              return lastMov?.usuarioRecebedor || '---';
+                            })()}
+                          </p>
+                          <p className="text-[10px] font-medium text-slate-400 mt-0.5">Responsável Atual/Recente</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Planning Team (AI) */}
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                      <header className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><Sparkles size={18} /></div>
+                          <h3 className="text-sm font-black text-slate-700 uppercase tracking-wide">Equipe de Planejamento (IA)</h3>
+                        </div>
+                        {isIdentifyingTeam && (
+                          <div className="flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-wide animate-pulse">
+                            <RefreshCw size={10} className="animate-spin" />
+                            Analisando Portaria...
+                          </div>
+                        )}
+                      </header>
+
+                      <div className="p-8">
+                        {isIdentifyingTeam ? (
+                          <div className="flex flex-col items-center justify-center py-8 opacity-50">
+                            <RefreshCw size={32} className="animate-spin text-indigo-400 mb-3" />
+                            <p className="text-xs font-medium text-slate-400">Lendo documento e extraindo nomes...</p>
+                          </div>
+                        ) : planningTeam.length > 0 ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {planningTeam.map((member, idx) => (
+                              <div key={idx} className="flex items-center gap-3 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100">
+                                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-black">
+                                  {member.charAt(0)}
+                                </div>
+                                <span className="text-xs font-bold text-slate-700 uppercase line-clamp-1" title={member}>{member}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8">
+                            <div className="inline-flex items-center justify-center p-4 bg-slate-50 rounded-full text-slate-300 mb-3">
+                              <Users size={32} />
+                            </div>
+                            <p className="text-xs font-medium text-slate-400 max-w-xs mx-auto mb-2">
+                              {teamIdentificationAttempted
+                                ? "Portaria de equipe de planejamento não identificada ou nomes não encontrados."
+                                : "Aguardando análise..."}
+                            </p>
+                            {teamIdentificationAttempted && (
+                              <span className="text-[10px] text-slate-300 block">
+                                O sistema buscou automaticamente na portaria mais antiga.
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+
+                    {/* Interested Parties List */}
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                      <header className="px-6 py-4 border-b border-slate-100 flex items-center gap-3 bg-slate-50/50">
+                        <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><Users size={18} /></div>
+                        <h3 className="text-sm font-black text-slate-700 uppercase tracking-wide">Interessados no Processo</h3>
+                      </header>
+                      <div className="p-0">
+                        <table className="w-full text-left">
+                          <thead className="bg-slate-50 border-b border-slate-100">
+                            <tr>
+                              <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome</th>
+                              <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Tipo</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {(viewingItem.dadosSIPAC.interessados || []).map((p, i) => (
+                              <tr key={i} className="hover:bg-slate-50/50">
+                                <td className="px-6 py-4 text-xs font-bold text-slate-700 uppercase">{p.nome}</td>
+                                <td className="px-6 py-4 text-xs font-medium text-slate-500 uppercase text-right">{p.tipo}</td>
+                              </tr>
+                            ))}
+                            {(!viewingItem.dadosSIPAC.interessados || viewingItem.dadosSIPAC.interessados.length === 0) && (
+                              <tr>
+                                <td colSpan={2} className="px-6 py-8 text-center text-xs font-medium text-slate-400 uppercase">Nenhum interessado registrado</td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                  </div>
+                )}
+
                 {activeTab === 'documents' && (
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full animate-in fade-in slide-in-from-bottom-2 duration-300">
                     {/* Left: Document List */}
@@ -1407,6 +1642,21 @@ const AnnualHiringPlan: React.FC = () => {
                                           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-black bg-purple-50 text-purple-600 uppercase tracking-tight">
                                             <Sparkles size={8} /> AI Ready
                                           </span>
+                                        </div>
+                                      )}
+                                      {doc.tipo.toLowerCase().includes('portaria') && doc.url && (
+                                        <div className="mt-1">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              extractPdfContent(doc.url);
+                                            }}
+                                            className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-200 transition-colors text-[9px] font-bold uppercase tracking-wide group/btn"
+                                          >
+                                            <FileText size={10} />
+                                            Ver Texto
+                                            {isExtracting && <RefreshCw size={8} className="animate-spin ml-1" />}
+                                          </button>
                                         </div>
                                       )}
                                     </div>
@@ -1913,6 +2163,33 @@ const AnnualHiringPlan: React.FC = () => {
         )
       }
 
+      {/* Modal de Texto Extraído */}
+      {isTextModalOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl border border-slate-200 overflow-hidden font-sans flex flex-col max-h-[80vh]">
+            <header className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-50 rounded-lg text-amber-600">
+                  <FileText size={20} />
+                </div>
+                <h3 className="text-lg font-black text-slate-800 tracking-tight">Texto da Portaria</h3>
+              </div>
+              <button
+                onClick={() => setIsTextModalOpen(false)}
+                className="p-2 hover:bg-red-50 hover:text-red-500 rounded-lg transition-all text-slate-400"
+              >
+                <X size={20} />
+              </button>
+            </header>
+            <div className="flex-1 overflow-auto p-6 bg-slate-50/50">
+              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm font-mono text-xs leading-relaxed text-slate-600 whitespace-pre-wrap">
+                {extractedText || "Nenhum texto extraído."}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de Itens do Agrupamento (PCA) */}
       {isItemsListModalOpen && viewingItem && viewingItem.childItems && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -2039,6 +2316,8 @@ const AnnualHiringPlan: React.FC = () => {
               </div>
             </header>
 
+
+
             <div className="flex-1 overflow-y-auto p-10 custom-scrollbar space-y-8">
               {/* Card de Identificação */}
               <section className="space-y-4">
@@ -2151,7 +2430,8 @@ const AnnualHiringPlan: React.FC = () => {
             </footer>
           </div>
         </div>
-      )}
+      )
+      }
     </div >
   );
 };
