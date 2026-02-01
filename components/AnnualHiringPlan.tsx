@@ -1329,6 +1329,7 @@ const AnnualHiringPlan: React.FC = () => {
                             <tr className="bg-slate-50 border-b border-slate-200">
                               <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">IFC</th>
                               <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Item</th>
+                              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Descrição</th>
                               <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Valor Estimado</th>
                             </tr>
                           </thead>
