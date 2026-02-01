@@ -793,9 +793,9 @@ const AnnualHiringPlan: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="w-full h-[300px] relative">
+                    <div className="w-full h-[300px] relative min-w-0">
                       {chartsReady && (
-                        <ResponsiveContainer width="99%" height="100%" debounce={50}>
+                        <ResponsiveContainer width="99%" height="100%" debounce={50} minWidth={0}>
                           <ComposedChart data={summary.monthlyPlan}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                             <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} />
@@ -821,9 +821,9 @@ const AnnualHiringPlan: React.FC = () => {
                       </h3>
                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{summary.totalItems} Itens</span>
                     </div>
-                    <div className="w-full flex-1 relative min-h-[300px]">
+                    <div className="w-full flex-1 relative min-h-[300px] min-w-0">
                       {chartsReady && (
-                        <ResponsiveContainer width="99%" height="100%" debounce={50}>
+                        <ResponsiveContainer width="99%" height="100%" debounce={50} minWidth={0}>
                           <PieChart>
                             <Pie data={chartData} cx="50%" cy="50%" innerRadius={70} outerRadius={95} paddingAngle={5} dataKey="value" stroke="none">
                               {chartData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}

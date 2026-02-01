@@ -86,12 +86,12 @@ export const fetchPcaData = async (
 
     // 1. In-memory Cache (Fastest)
     if (!forceSync && inMemoryCache[year]) {
-        console.log(`[PCA Service] Retornando cache em memória para ${year}`);
+        // console.log(`[PCA Service] Retornando cache em memória para ${year}`);
         report(100);
         return inMemoryCache[year];
     }
 
-    console.log(`[PCA Service] 🚀 Iniciando carregamento para ${year} (Force: ${forceSync})`);
+    // console.log(`[PCA Service] 🚀 Iniciando carregamento para ${year} (Force: ${forceSync})`);
     report(5);
 
     const yearNum = Number(year);
@@ -121,7 +121,7 @@ export const fetchPcaData = async (
     // 3. Tentar carregar Snapshot Local PRIMEIRO (para não travar a tela)
     report(10);
     rawOfficialItems = await tryLocalJson();
-    console.log(`[PCA Service] Snapshot local carregado: ${rawOfficialItems.length} itens.`);
+    // console.log(`[PCA Service] Snapshot local carregado: ${rawOfficialItems.length} itens.`);
 
     // 4. Buscar no Firestore
     try {
@@ -135,12 +135,12 @@ export const fetchPcaData = async (
             cacheMetadata = cacheSnap.data();
             if (cacheMetadata.items && (rawOfficialItems.length === 0 || forceSync)) {
                 rawOfficialItems = cacheMetadata.items;
-                console.log(`[PCA Service] Usando cache do Firestore (${rawOfficialItems.length} itens)`);
+                // console.log(`[PCA Service] Usando cache do Firestore (${rawOfficialItems.length} itens)`);
             }
         }
 
         if (suppSnap && !suppSnap.empty) {
-            console.log(`[PCA Service] Documentos encontrados: ${suppSnap.size}`);
+            // console.log(`[PCA Service] Documentos encontrados: ${suppSnap.size}`);
             suppSnap.forEach((doc) => {
                 const d = doc.data();
                 if (d.isManual) {
@@ -163,7 +163,7 @@ export const fetchPcaData = async (
                 }
             });
         } else {
-            console.log(`[PCA Service] Nenhum documento retornado na query para o ano ${year}`);
+            // console.log(`[PCA Service] Nenhum documento retornado na query para o ano ${year}`);
             // Backup: Tentar sem Filtro se for erro de índice/tipo (apenas para debug se necessário, mas vamos confiar na query por agora)
         }
     } catch (fsErr) {
@@ -174,7 +174,7 @@ export const fetchPcaData = async (
     const shouldSyncNow = forceSync || (rawOfficialItems.length === 0 && !skipSync);
     if (shouldSyncNow) {
         try {
-            console.log(`[PCA Service] 📡 Realizando Sincronização LIVE com PNCP...`);
+            // console.log(`[PCA Service] 📡 Realizando Sincronização LIVE com PNCP...`);
 
             const config = await fetchSystemConfig();
             const cnpj = config.unidadeGestora.cnpj || CNPJ_IFES_BSF;
@@ -292,7 +292,7 @@ export const fetchPcaData = async (
     };
 
     inMemoryCache[year] = result;
-    console.log(`[PCA Service] ✅ Finalizado. Total: ${finalData.length} itens.`);
+    // console.log(`[PCA Service] ✅ Finalizado. Total: ${finalData.length} itens.`);
     report(100);
     return result;
 };

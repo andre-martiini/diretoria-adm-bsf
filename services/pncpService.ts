@@ -63,7 +63,11 @@ export const findPncpPurchaseByProcess = async (year: string, internalProcess: s
         });
 
         return match || null;
-    } catch (error) {
+    } catch (error: any) {
+        if (error.response && error.response.status === 404) {
+            console.warn(`[PNCP] Nenhuma compra encontrada (404) para o ano ${year}.`);
+            return null;
+        }
         console.error('Erro ao consultar PNCP via Proxy:', error);
         return null; // Falha silenciosa
     }
@@ -81,7 +85,11 @@ export const fetchPncpPurchaseItems = async (year: number, purchaseNumber: strin
         const response = await axios.get(url);
 
         return response.data.data || [];
-    } catch (error) {
+    } catch (error: any) {
+        if (error.response && error.response.status === 404) {
+            console.warn(`[PNCP] Nenhum item encontrado (404) para a compra ${purchaseNumber}.`);
+            return [];
+        }
         console.error('Erro ao buscar itens no PNCP via Proxy:', error);
         return [];
     }
