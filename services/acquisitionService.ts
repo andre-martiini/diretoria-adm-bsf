@@ -54,8 +54,9 @@ export const deriveInternalPhase = (unidadeAtual: string): string => {
 
 /**
  * Vincula um ou mais itens do PCA a um processo SIPAC.
+ * @param year Opcional: Ano do PCA. Se não informado, tenta extrair do protocolo.
  */
-export const linkItemsToProcess = async (protocolo: string, itemIds: (string | number)[], sipacData: SIPACProcess) => {
+export const linkItemsToProcess = async (protocolo: string, itemIds: (string | number)[], sipacData: SIPACProcess, year?: string) => {
     const batch = writeBatch(db);
 
     // 1. Criar/Atualizar o ProcessoAquisicao (Pai)
@@ -84,21 +85,21 @@ export const linkItemsToProcess = async (protocolo: string, itemIds: (string | n
         // Para garantir que o ID do documento seja {ano}-{id} consistente com o fetchPcaData
         // Se o ID já contiver o ano (ex: manual), usamos ele.
         let docId = String(id);
+        let itemYear = year;
 
         // No fetchPcaData, os itens oficiais são salvos como "{ano}-{officialId}"
         // Vamos tentar identificar se o ID precisa do prefixo do ano
         if (!docId.includes('-')) {
             // Se não tem hífen, provavelmente é um ID puro do PNCP. 
-            // Como não temos o "ano" aqui direto no argumento, uma estratégia é 
-            // buscar o item ou assumir o padrão. 
-            // Mas para ser seguro e bater com AnnualHiringPlan (que usa selectedYear),
-            // o ideal seria passar o ano. No entanto, o AnnualHiringPlan passa IDs que
-            // ele extrai do 'data', onde 'id' é apenas o officialId.
-
-            // Vamos olhar se o protocolo tem o ano (geralmente tem /202X-)
-            const yearMatch = protocolo.match(/\/(\d{4})-/);
-            const yearPrefix = yearMatch ? yearMatch[1] : new Date().getFullYear().toString();
-            docId = `${yearPrefix}-${docId}`;
+            if (!itemYear) {
+                // Fallback: tentar extrair do protocolo (comportamento legado)
+                const yearMatch = protocolo.match(/\/(\d{4})-/);
+                itemYear = yearMatch ? yearMatch[1] : new Date().getFullYear().toString();
+            }
+            docId = `${itemYear}-${docId}`;
+        } else if (!itemYear) {
+             // Se já tem hífen (ex: 2024-1), extrair o ano dele
+             itemYear = docId.split('-')[0];
         }
 
         const safeDocId = docId.replace(/\//g, '-');
@@ -109,6 +110,7 @@ export const linkItemsToProcess = async (protocolo: string, itemIds: (string | n
             vinculo_processo_id: protocolo,
             status_item: 'Em Processo',
             protocoloSIPAC: protocolo,
+            ano: itemYear, // Garante que o campo ano exista para queries
             "dadosSIPAC.unidadeAtual": sipacData.unidadeAtual,
             "dadosSIPAC.fase_interna_status": processData.fase_interna_status,
             updatedAt: Timestamp.now()

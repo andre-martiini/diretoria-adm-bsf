@@ -100,6 +100,7 @@ export interface ContractItem {
   unidadeRequisitante?: string;
   grupoContratacao?: string;
   descricaoDetalhada?: string;
+  numeroDfd?: string;
 }
 
 export interface PCAMetadata {

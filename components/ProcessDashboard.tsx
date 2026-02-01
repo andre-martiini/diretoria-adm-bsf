@@ -23,6 +23,10 @@ import {
 } from 'recharts';
 import { ContractItem } from '../types';
 import { formatCurrency } from '../utils/formatters';
+import { groupItemsByDfd, DfdGroup } from '../utils/processLogic';
+import { FileText, Link as LinkIcon, X } from 'lucide-react';
+import { linkItemsToProcess } from '../services/acquisitionService';
+import { API_SERVER_URL } from '../constants';
 
 interface ProcessDashboardProps {
     data: ContractItem[];
@@ -31,10 +35,54 @@ interface ProcessDashboardProps {
 const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data }) => {
     const [isMounted, setIsMounted] = useState(false);
     const [isChartsVisible, setIsChartsVisible] = useState(true);
+    const [linkModalOpen, setLinkModalOpen] = useState(false);
+    const [selectedDfd, setSelectedDfd] = useState<DfdGroup | null>(null);
+    const [sipacProtocolInput, setSipacProtocolInput] = useState('');
+    const [isLinking, setIsLinking] = useState(false);
 
     useEffect(() => {
         setIsMounted(true);
     }, []);
+
+    const dfdGroups = useMemo(() => groupItemsByDfd(data), [data]);
+    const pendingDfds = useMemo(() => dfdGroups.filter(g => g.status === 'Pendente'), [dfdGroups]);
+
+    const handleLinkProcess = async (dfdNumber: string, protocol: string) => {
+        if (!selectedDfd) return;
+        setIsLinking(true);
+        try {
+            // 1. Fetch SIPAC Data
+            const response = await fetch(`${API_SERVER_URL}/api/sipac/processo?protocolo=${protocol}`);
+            if (!response.ok) throw new Error('Falha ao buscar dados no SIPAC');
+            const sipacData = await response.json();
+
+            if (sipacData.scraping_last_error) {
+                alert(`Erro no SIPAC: ${sipacData.scraping_last_error}`);
+                setIsLinking(false);
+                return;
+            }
+
+            // 2. Link Items
+            const itemIds = selectedDfd.items.map(i => i.id);
+            const year = selectedDfd.items[0]?.ano;
+            await linkItemsToProcess(protocol, itemIds, sipacData, year);
+
+            alert('Processo vinculado e dados atualizados com sucesso!');
+            setLinkModalOpen(false);
+            setSipacProtocolInput('');
+            // Note: The parent component or data fetcher needs to refresh to show changes.
+            // Since data comes from props, we can't force refresh here easily unless we reload or have a callback.
+            // For now, reload window is a crude but effective way given the architecture constraints,
+            // or we rely on live sync if implemented.
+            window.location.reload();
+
+        } catch (err) {
+            console.error(err);
+            alert('Erro ao vincular processo. Verifique o número e tente novamente.');
+        } finally {
+            setIsLinking(false);
+        }
+    };
 
     // Filtra apenas itens que possuem um processo SIPAC (ou seja, estão em execução)
     const processItems = useMemo(() =>
@@ -217,6 +265,99 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data }) => {
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Seção A: DFDs Pendentes de Autuação */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mt-6">
+                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-wide flex items-center gap-2">
+                        <FileText size={16} className="text-slate-400" /> DFDs Pendentes de Autuação
+                    </h3>
+                    <span className="text-[10px] font-bold text-slate-400 bg-white border border-slate-200 px-2 py-1 rounded-full">{pendingDfds.length} Pendentes</span>
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="bg-white border-b border-slate-100">
+                                <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nº DFD</th>
+                                <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidade Requisitante</th>
+                                <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Qtd. Itens</th>
+                                <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Valor Total</th>
+                                <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                            {pendingDfds.length === 0 ? (
+                                <tr><td colSpan={5} className="px-6 py-8 text-center text-xs text-slate-400 font-bold">Nenhum DFD pendente encontrado.</td></tr>
+                            ) : (
+                                pendingDfds.map((group) => (
+                                    <tr key={group.numeroDfd} className="hover:bg-slate-50 transition-colors">
+                                        <td className="px-6 py-3 text-xs font-black text-slate-700">{group.numeroDfd}</td>
+                                        <td className="px-6 py-3 text-xs font-medium text-slate-600 truncate max-w-[200px]" title={group.unidadeRequisitante}>{group.unidadeRequisitante}</td>
+                                        <td className="px-6 py-3 text-xs font-bold text-slate-600 text-center">{group.itemCount}</td>
+                                        <td className="px-6 py-3 text-xs font-bold text-slate-600 text-right">{formatCurrency(group.totalValue)}</td>
+                                        <td className="px-6 py-3 text-center">
+                                            <button
+                                                onClick={() => { setSelectedDfd(group); setLinkModalOpen(true); }}
+                                                className="px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg text-[10px] font-black hover:bg-blue-100 transition-all flex items-center gap-1 mx-auto"
+                                            >
+                                                <LinkIcon size={12} /> Vincular
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Modal de Vínculo */}
+            {linkModalOpen && selectedDfd && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-slate-200 overflow-hidden font-sans">
+                        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                            <h3 className="text-sm font-black text-slate-800">Vincular Processo SIPAC</h3>
+                            <button onClick={() => setLinkModalOpen(false)} className="text-slate-400 hover:text-red-500 transition-colors"><X size={18} /></button>
+                        </div>
+                        <div className="p-6">
+                            <p className="text-xs text-slate-500 mb-6">
+                                Digite o número do processo para o DFD <strong>{selectedDfd.numeroDfd}</strong>.
+                                Isso vinculará automaticamente os <strong className="text-slate-800">{selectedDfd.itemCount} itens</strong> deste grupo.
+                            </p>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Número do Processo</label>
+                                    <input
+                                        type="text"
+                                        autoFocus
+                                        placeholder="Ex: 23068.000000/2024-00"
+                                        className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                        value={sipacProtocolInput}
+                                        onChange={(e) => setSipacProtocolInput(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                            <button
+                                onClick={() => { setLinkModalOpen(false); setSipacProtocolInput(''); }}
+                                className="px-4 py-3 bg-white border border-slate-200 text-slate-500 rounded-xl text-xs font-black hover:bg-slate-100 transition-all"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={() => handleLinkProcess(selectedDfd.numeroDfd, sipacProtocolInput)}
+                                disabled={!sipacProtocolInput || isLinking}
+                                className="px-6 py-3 bg-blue-600 text-white rounded-xl text-xs font-black hover:bg-blue-700 disabled:opacity-50 transition-all shadow-lg shadow-blue-200"
+                            >
+                                {isLinking ? 'Vinculando...' : 'Confirmar Vínculo'}
+                            </button>
                         </div>
                     </div>
                 </div>
