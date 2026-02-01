@@ -16,8 +16,6 @@ export const getProcessStatus = (item: ContractItem): string => {
   }
 
   // 2. Se o status no SIPAC não for ATIVO, usamos o status oficial do sistema (Ex: ARQUIVADO, CANCELADO)
-  // A menos que seja "CADASTRADO" que as vezes é considerado inicio.
-  // Vamos assumir que se não contiver "ATIVO" nem "CADASTRADO", usamos o original.
   const rawStatus = (sipac.status || '').toUpperCase();
   if (!rawStatus.includes('ATIVO') && !rawStatus.includes('CADASTRADO') && !rawStatus.includes('TRAMITAÇÃO')) {
     return sipac.status;
@@ -25,8 +23,7 @@ export const getProcessStatus = (item: ContractItem): string => {
 
   // 3. Lógica baseada em Gatilhos (Documentos)
   const docs = sipac.documentos || [];
-  const docTypes = docs.map(d => d.tipo.toUpperCase());
-  const docTitles = docs.map(d => (d.tipo + " " + (d.natureza || "")).toUpperCase()); // Combine type + nature for better matching
+  const docTitles = docs.map(d => (d.tipo + " " + (d.natureza || "")).toUpperCase());
 
   // Helper para verificar existência de documentos por palavras-chave
   const hasDoc = (keywords: string[]) => {
@@ -40,36 +37,32 @@ export const getProcessStatus = (item: ContractItem): string => {
     return "Encerrado/Arquivado";
   }
 
-  // 6. Status: Contratado (Execução Financeira)
+  // 6. Status: Contratado
   if (hasDoc(['Nota de Empenho', 'Contrato Assinado', 'Ordem de Serviço'])) {
     return "Contratado";
   }
 
   // 5. Status: Adjudicado/Homologado
-  if (hasDoc(['Termo de Adjudicação', 'Termo de Homologação', 'Ata de Realização do Pregão'])) {
+  if (hasDoc(['Termo de Adjudicação', 'Termo de Homologação', 'Termo de Adjudicação/Homologação', 'Ata de Realização do Pregão'])) {
     return "Adjudicado/Homologado";
   }
 
-  // 4. Status: Fase Externa (Licitação em Curso)
-  if (hasDoc(['Edital', 'Aviso de Licitação', 'Publicação'])) {
-    // Sub-Status de Alerta
-    if (hasDoc(['Impugnação', 'Pedido de Esclarecimento'])) {
-      return "Licitação Suspensa/Sob Análise";
-    }
+  // 4. Status: Fase Externa
+  if (hasDoc(['Edital', 'Aviso de Licitação'])) {
     return "Fase Externa";
   }
 
-  // 3. Status: Análise de Legalidade (Jurídico)
-  if (hasDoc(['Minuta de Edital', 'Minuta de Contrato', 'Parecer Jurídico', 'Lista de Verificação', 'Check-list'])) {
+  // 3. Status: Análise de Legalidade
+  if (hasDoc(['Parecer Jurídico', 'Minuta de Edital'])) {
     return "Análise de Legalidade";
   }
 
   // 2. Status: Composição de Preços
-  if (hasDoc(['Pesquisa de Preços', 'Mapa Comparativo', 'Planilha de Composição de Custos', 'Orçamento'])) {
+  if (hasDoc(['Pesquisa de Preços', 'Mapa Comparativo'])) {
     return "Composição de Preços";
   }
 
-  // 1. Status: Planejamento da Contratação (Default se tem número)
+  // 1. Status: Planejamento (Default)
   return "Planejamento da Contratação";
 };
 

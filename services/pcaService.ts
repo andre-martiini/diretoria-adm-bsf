@@ -12,7 +12,8 @@ import {
 } from 'firebase/firestore';
 import {
     ContractItem,
-    Category
+    Category,
+    PCAMetadata
 } from '../types';
 import {
     CNPJ_IFES_BSF,
@@ -52,12 +53,20 @@ export const fetchLocalPcaSnapshot = async (year: string): Promise<ContractItem[
                     categoria: categoria,
                     valor: Number(item.valorTotal || (Number(item.valorUnitario || 0) * Number(item.quantidade || 0)) || 0),
                     valorExecutado: 0,
-                    inicio: item.dataDesejada || new Date().toISOString().split('T')[0],
-                    fim: item.dataFim || '',
+                    inicio: item.dataEstimadaInicioProcesso || item.dataDesejada || new Date().toISOString().split('T')[0],
+                    fim: item.dataDesejada || item.dataFim || '',
                     area: item.nomeUnidade || "IFES - BSF",
                     isManual: false,
                     ano: String(year),
-                    identificadorFuturaContratacao: item.grupoContratacaoCodigo || ''
+                    identificadorFuturaContratacao: item.grupoContratacaoCodigo || '',
+                    numeroItem: item.numeroItem || index + 1,
+                    codigoItem: item.codigoItemPca || item.codigoItemCatalogado || '',
+                    unidadeMedida: item.unidadeMedida || '',
+                    quantidade: Number(item.quantidade || 0),
+                    valorUnitario: Number(item.valorUnitario || 0),
+                    unidadeRequisitante: item.nomeUnidade || '',
+                    grupoContratacao: item.grupoContratacaoNome || '',
+                    descricaoDetalhada: item.descricao || "Item do Plano de Contratação"
                 };
             });
         }
@@ -225,8 +234,8 @@ export const fetchPcaData = async (
             categoria: categoria,
             valor: valor,
             valorExecutado: Number(extra.valorExecutado || 0),
-            inicio: item.dataDesejada || new Date().toISOString().split('T')[0],
-            fim: item.dataFim || '',
+            inicio: item.dataEstimadaInicioProcesso || item.dataDesejada || new Date().toISOString().split('T')[0],
+            fim: item.dataDesejada || item.dataFim || '',
             area: item.nomeUnidade || "IFES - BSF",
             protocoloSIPAC: extra.protocoloSIPAC || '',
             dadosSIPAC: extra.dadosSIPAC || null,
@@ -234,7 +243,15 @@ export const fetchPcaData = async (
             status_item: extra.status_item || (extra.protocoloSIPAC ? 'Em Processo' : 'Não iniciado'),
             identificadorFuturaContratacao: extra.identificadorFuturaContratacao || item.grupoContratacaoCodigo || '',
             isManual: false,
-            ano: String(year)
+            ano: String(year),
+            numeroItem: item.numeroItem || index + 1,
+            codigoItem: item.codigoItemPca || item.codigoItemCatalogado || '',
+            unidadeMedida: item.unidadeMedida || '',
+            quantidade: Number(item.quantidade || 0),
+            valorUnitario: Number(item.valorUnitario || 0),
+            unidadeRequisitante: item.nomeUnidade || '',
+            grupoContratacao: item.grupoContratacaoNome || '',
+            descricaoDetalhada: item.descricao || "Item do Plano de Contratação"
         };
     });
 
@@ -254,7 +271,17 @@ export const fetchPcaData = async (
 
         pcaMeta = {
             id: `${first.cnpj || cnpjFallback}-0-${String(first.sequencialPca || seqFallback).padStart(6, '0')}/${first.anoPca || year}`,
-            dataPublicacao: first.dataPublicacaoPncp || first.dataInclusao
+            dataPublicacao: first.dataPublicacaoPncp || first.dataInclusao,
+            sequencialPca: String(first.sequencialPca || seqFallback),
+            dataInclusao: first.dataInclusao || '',
+            dataAtualizacao: first.dataAtualizacao || first.dataInclusao || '',
+            valorTotalEstimado: rawOfficialItems.reduce((acc, item) => acc + Number(item.valorTotal || 0), 0),
+            situacao: first.situacaoPcaNome || 'Ativo',
+            poder: first.poderId === '1' ? 'Executivo' : first.poderId === '2' ? 'Legislativo' : first.poderId === '3' ? 'Judiciário' : 'Executivo',
+            esfera: first.esferaId === 'F' ? 'Federal' : first.esferaId === 'E' ? 'Estadual' : first.esferaId === 'M' ? 'Municipal' : 'Federal',
+            unidadeSubordinada: first.nomeUnidade || '',
+            uasg: first.uasg || '',
+            orgaoNome: first.orgaoSubordinadoNome || first.nomeOrgao || 'IFES'
         };
     }
 

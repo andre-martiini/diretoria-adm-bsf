@@ -91,6 +91,30 @@ export interface ContractItem {
   identificadorFuturaContratacao?: string;
   computedStatus?: string;
   computedSituation?: string;
+  // PNCP Detail Fields
+  numeroItem?: number;
+  codigoItem?: string;
+  unidadeMedida?: string;
+  quantidade?: number;
+  valorUnitario?: number;
+  unidadeRequisitante?: string;
+  grupoContratacao?: string;
+  descricaoDetalhada?: string;
+}
+
+export interface PCAMetadata {
+  id: string;
+  dataPublicacao?: string;
+  sequencialPca: string;
+  dataInclusao: string;
+  dataAtualizacao: string;
+  valorTotalEstimado: number;
+  situacao: string;
+  poder: string;
+  esfera: string;
+  unidadeSubordinada?: string;
+  uasg?: string;
+  orgaoNome?: string;
 }
 
 export interface SummaryData {
@@ -114,26 +138,6 @@ export interface AIStructuredAnalysis {
   parecer_risco: 'Alto' | 'Médio' | 'Baixo';
   proxima_etapa_sugerida: string;
   pendencias_detectadas: string[];
-}
-
-export type FinancialEventType = 'EMPENHO' | 'LIQUIDACAO' | 'PAGAMENTO' | 'ANULACAO';
-
-export interface FinancialEvent {
-  id: string; // Document ID/Order
-  date: string; // ISO date
-  type: FinancialEventType;
-  value: number;
-  documentTitle: string;
-  documentUrl?: string;
-  originalText?: string;
-}
-
-export interface ProcessFinancials {
-  totalEmpenhado: number;
-  totalLiquidado: number;
-  totalPago: number;
-  events: FinancialEvent[];
-  lastAnalysisDate: string;
 }
 
 export interface SIPACProcess {
@@ -177,7 +181,6 @@ export interface SIPACProcess {
   last_ai_hash?: string;
   scraping_last_error?: string;
   analise_ia_estruturada?: AIStructuredAnalysis;
-  analise_financeira?: ProcessFinancials;
 }
 
 export interface ProcessoAquisicao {

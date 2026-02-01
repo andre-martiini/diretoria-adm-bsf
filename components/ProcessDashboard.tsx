@@ -1,10 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
     Activity,
     BarChart3,
     Layers,
     Clock,
-    TrendingUp
+    TrendingUp,
+    ChevronDown,
+    ChevronUp
 } from 'lucide-react';
 import {
     ResponsiveContainer,
@@ -27,9 +29,10 @@ interface ProcessDashboardProps {
 }
 
 const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data }) => {
-    const [isMounted, setIsMounted] = React.useState(false);
+    const [isMounted, setIsMounted] = useState(false);
+    const [isChartsVisible, setIsChartsVisible] = useState(true);
 
-    React.useEffect(() => {
+    useEffect(() => {
         setIsMounted(true);
     }, []);
 
@@ -134,113 +137,91 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data }) => {
                 </div>
             </div>
 
-            {/* Linha 2: Gráficos */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Distribuição por Status */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col min-w-0">
-                    <h3 className="text-sm font-black text-slate-800 mb-6 flex items-center gap-2">
-                        <BarChart3 size={16} className="text-blue-500" />
-                        Volume por Fase do Processo
-                    </h3>
-                    <div className="w-full h-[400px] relative">
-                        {isMounted && (
-                            <ResponsiveContainer width="99%" height={380}>
-                                <PieChart>
-                                    <Pie
-                                        data={statusData}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={80}
-                                        paddingAngle={2}
-                                        dataKey="value"
-                                        stroke="none"
-                                    >
-                                        {statusData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name] || '#cbd5e1'} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip
-                                        formatter={(value: number, name: string) => [
-                                            `${value} processos`,
-                                            name
-                                        ]}
-                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                                    />
-                                    <Legend
-                                        layout="horizontal"
-                                        verticalAlign="bottom"
-                                        align="center"
-                                        iconType="circle"
-                                        iconSize={8}
-                                        wrapperStyle={{ fontSize: '10px', fontWeight: 700, color: '#64748b', paddingTop: '10px' }}
-                                    />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        )}
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none pb-6">
-                            <span className="text-3xl font-black text-slate-800 leading-none">{stats.totalCount}</span>
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-tight">Total</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Análise de Retrabalho e Complexidade */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col relative overflow-hidden min-w-0">
-                    <h3 className="text-sm font-black text-slate-800 mb-6 flex items-center gap-2">
-                        <Layers size={16} className="text-emerald-500" />
-                        Nível de Complexidade (Trâmites)
-                    </h3>
-                    <div className="w-full h-[400px] relative">
-                        {isMounted && (
-                            <ResponsiveContainer width="99%" height={380}>
-                                <BarChart data={movementData} layout="vertical" margin={{ left: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
-                                    <XAxis type="number" hide />
-                                    <YAxis
-                                        dataKey="name"
-                                        type="category"
-                                        width={100}
-                                        tick={{ fontSize: 9, fontWeight: 700, fill: '#64748b' }}
-                                        axisLine={false}
-                                        tickLine={false}
-                                    />
-                                    <Tooltip
-                                        cursor={{ fill: '#f8fafc' }}
-                                        formatter={(value: number, name: string, props: any) => [
-                                            `${value} movimentações`,
-                                            `Incidentes: ${props.payload.incidentes}`
-                                        ]}
-                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                                    />
-                                    <Bar dataKey="value" fill="#10b981" radius={[0, 4, 4, 0]} barSize={16} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        )}
-                        <div className="absolute top-2 right-2 flex flex-col items-end pointer-events-none">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Processos Mais Movimentados</span>
-                        </div>
-                    </div>
-
-                    <div className="mt-auto space-y-2">
-                        {movementData.map((item, idx) => (
-                            <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
-                                <div className="flex items-center gap-2">
-                                    <div className={`w-2 h-2 rounded-full ${item.health < 60 ? 'bg-red-500' : item.health < 80 ? 'bg-amber-500' : 'bg-emerald-500'}`} />
-                                    <span className="text-[10px] font-bold text-slate-600 truncate max-w-[150px]" title={item.fullTitle}>{item.name}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    {item.incidentes > 0 && (
-                                        <span className="text-[9px] font-black text-red-500 bg-red-50 px-1.5 rounded-full">{item.incidentes} !</span>
-                                    )}
-                                    <span className="text-[10px] font-black text-slate-400">{item.value} trâm.</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+            {/* Seção de Controle de Gráficos */}
+            <div className="flex items-center gap-3 py-2">
+                <div className="h-px flex-1 bg-slate-100" />
+                <button
+                    onClick={() => setIsChartsVisible(!isChartsVisible)}
+                    className="flex items-center gap-2 px-4 py-1.5 bg-white border border-slate-200 rounded-full shadow-sm hover:border-blue-500 hover:text-blue-600 transition-all group"
+                >
+                    <BarChart3 size={14} className="text-slate-400 group-hover:text-blue-500" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 group-hover:text-blue-700">
+                        {isChartsVisible ? "Ocultar Dashboards de Processos" : "Exibir Dashboards de Processos"}
+                    </span>
+                    {isChartsVisible ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                </button>
+                <div className="h-px flex-1 bg-slate-100" />
             </div>
-        </div >
+
+            {/* Linha 2: Gráficos */}
+            {isChartsVisible && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top-2 duration-300">
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col min-w-0">
+                        <h3 className="text-sm font-black text-slate-800 mb-6 flex items-center gap-2">
+                            <BarChart3 size={16} className="text-blue-500" /> Volume por Fase do Processo
+                        </h3>
+                        <div className="w-full h-[400px] relative">
+                            {isMounted && (
+                                <ResponsiveContainer width="99%" height={380}>
+                                    <PieChart>
+                                        <Pie data={statusData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={2} dataKey="value" stroke="none">
+                                            {statusData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name] || '#cbd5e1'} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip
+                                            formatter={(value: number, name: string) => [`${value} processos`, name]}
+                                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                        />
+                                        <Legend layout="horizontal" verticalAlign="bottom" align="center" iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '10px', fontWeight: 700, color: '#64748b', paddingTop: '10px' }} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            )}
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none pb-6">
+                                <span className="text-3xl font-black text-slate-800 leading-none">{stats.totalCount}</span>
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-tight">Total</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col relative overflow-hidden min-w-0">
+                        <h3 className="text-sm font-black text-slate-800 mb-6 flex items-center gap-2">
+                            <Layers size={16} className="text-emerald-500" /> Nível de Complexidade (Trâmites)
+                        </h3>
+                        <div className="w-full h-[400px] relative">
+                            {isMounted && (
+                                <ResponsiveContainer width="99%" height={380}>
+                                    <BarChart data={movementData} layout="vertical" margin={{ left: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
+                                        <XAxis type="number" hide />
+                                        <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 9, fontWeight: 700, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                                        <Tooltip cursor={{ fill: '#f8fafc' }} formatter={(value: number, name: string, props: any) => [`${value} movimentações`, `Incidentes: ${props.payload.incidentes}`]} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                                        <Bar dataKey="value" fill="#10b981" radius={[0, 4, 4, 0]} barSize={16} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            )}
+                            <div className="absolute top-2 right-2 flex flex-col items-end pointer-events-none">
+                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Processos Mais Movimentados</span>
+                            </div>
+                        </div>
+                        <div className="mt-auto space-y-2">
+                            {movementData.map((item, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-2 h-2 rounded-full ${item.health < 60 ? 'bg-red-500' : item.health < 80 ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                                        <span className="text-[10px] font-bold text-slate-600 truncate max-w-[150px]" title={item.fullTitle}>{item.name}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {item.incidentes > 0 && <span className="text-[9px] font-black text-red-500 bg-red-50 px-1.5 rounded-full">{item.incidentes} !</span>}
+                                        <span className="text-[10px] font-black text-slate-400">{item.value} trâm.</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 };
 

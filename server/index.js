@@ -116,7 +116,7 @@ app.get('/api/pncp/pca/:cnpj/:ano/meta', async (req, res) => {
   }
 });
 
-// Endpoint para itens PNCP
+// Endpoint para itens PNCP (PCA)
 app.get('/api/pncp/pca/:cnpj/:ano', async (req, res) => {
   const { cnpj, ano } = req.params;
   const { pagina = 1, tamanhoPagina = 100, sequencial = 12 } = req.query;
@@ -125,6 +125,77 @@ app.get('/api/pncp/pca/:cnpj/:ano', async (req, res) => {
     const response = await axios.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
     res.json(response.data);
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- NOVOS ENDPOINTS PROXY PARA CONSULTA PÚBLICA (Resolvendo CORS/User-Agent) ---
+
+// Proxy para listar compras (Contratações)
+app.get('/api/pncp/consulta/compras', async (req, res) => {
+  const { ano, pagina = 1, tamanhoPagina = 100 } = req.query;
+  const CNPJ = '10838653000106'; // IFES BSF
+
+  // Na API de Consulta, usamos 'contratacoes/publicacao'
+  // Data inicial e final cobrindo o ano inteiro
+  const dataInicial = `${ano}0101`;
+  const dataFinal = `${ano}1231`;
+
+  // https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao?cnpjOrgao=...&dataInicial=...&dataFinal=...
+  const url = `https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao?cnpjOrgao=${CNPJ}&dataInicial=${dataInicial}&dataFinal=${dataFinal}&pagina=${pagina}&tamanhoPagina=${tamanhoPagina}`;
+
+  console.log(`[PNCP PROXY] Buscando compras (Consulta Pub.): ${url}`);
+  try {
+    const response = await axios.get(url);
+    res.json(response.data);
+  } catch (error) {
+    console.error(`[PNCP PROXY ERROR]`, error.message);
+    if (error.response) {
+      console.error(`[PNCP PROXY STATUS]`, error.response.status);
+      console.error(`[PNCP PROXY DATA]`, error.response.data);
+      return res.status(error.response.status).json(error.response.data);
+    }
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Proxy para itens de uma compra específica
+app.get('/api/pncp/consulta/itens', async (req, res) => {
+  const { ano, sequencial, pagina = 1, tamanhoPagina = 100 } = req.query;
+  const CNPJ = '10838653000106'; // IFES BSF
+
+  if (!ano || !sequencial) return res.status(400).json({ error: 'Ano e Sequencial são obrigatórios' });
+
+  // Endpoint de itens na API de Consulta:
+  // https://pncp.gov.br/api/consulta/v1/orgaos/{cnpj}/compras/{ano}/{sequencial}/itens
+  // Se este endpoint também der 404, significa que a estrutura de itens também é diferente.
+  // Testaremos este primeiro, pois a documentação sugere paridade em sub-recursos ou uso de 'contratacoes/{id}/itens'.
+  // Mas como não temos o ID interno da contratação facilmente, tentaremos o caminho hierárquico se estiver disponível.
+  // SE FALHAR: Vamos tentar buscar pelo ID da contratação que virá na busca anterior.
+  // Por enquanto, mantemos a tentativa hierárquica na consulta, se existir. 
+  // Na verdade, a API de consulta geralmente usa IDs. Vamos assumir que a rota hierárquica padrão
+  // de orgaos/cnpj/compras/ano/seq/itens AINDA É VÁLIDA na consulta ou teremos que mudar a estratégia.
+  //
+  // CORREÇÃO: A URL pública de itens costuma ser:
+  // https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao/{ano}/{sequencial}/itens?cnpjOrgao=... (Hipótese)
+  // OU
+  // https://pncp.gov.br/api/consulta/v1/orgaos/{cnpj}/compras/{ano}/{sequencial}/itens (que deu 404 antes?)
+  // O erro 404 anterior foi em .../compras (lista). Talvez o item específico funcione?
+  // Vamos tentar a rota `contratacoes` que parece ser a principal da v1 consulta.
+  // Mas vamos manter a URL antiga neste step e observar o log, pois não tenho certeza absoluta da URL de itens.
+  // Porém, para garantir, vamos usar a URL que o Swagger geralmente aponta para GET /itens.
+
+  const url = `https://pncp.gov.br/api/consulta/v1/orgaos/${CNPJ}/compras/${ano}/${sequencial}/itens?pagina=${pagina}&tamanhoPagina=${tamanhoPagina}`;
+
+  console.log(`[PNCP PROXY] Buscando itens: ${url}`);
+  try {
+    const response = await axios.get(url);
+    res.json(response.data);
+  } catch (error) {
+    console.error(`[PNCP PROXY ERROR] Itens`, error.message);
+    if (error.response) {
+      return res.status(error.response.status).json(error.response.data);
+    }
     res.status(500).json({ error: error.message });
   }
 });
