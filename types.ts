@@ -6,7 +6,16 @@ export interface SIPACDocument {
   unidadeOrigem: string;
   natureza: string;
   statusVisualizacao: string;
-  url: string;
+  url?: string;
+}
+
+export type FinancialEventType = 'EMPENHO' | 'LIQUIDACAO' | 'PAGAMENTO' | 'ANULACAO';
+
+export interface FinancialEvent {
+  value: number;
+  date: string;
+  type: FinancialEventType;
+  documentTitle: string;
 }
 
 export interface SIPACMovement {
@@ -14,7 +23,7 @@ export interface SIPACMovement {
   horario?: string;
   unidadeOrigem: string;
   unidadeDestino: string;
-  usuario: string;
+  usuario?: string;
   urgente?: string;
   usuarioRemetente?: string;
   usuarioRecebedor?: string;
@@ -39,7 +48,8 @@ export interface SIPACIncident {
 export enum Category {
   Bens = 'Bens',
   Servicos = 'Serviços',
-  TIC = 'TIC'
+  TIC = 'TIC',
+  Obras = 'Obras'
 }
 
 export enum BudgetType {
@@ -106,6 +116,8 @@ export interface ContractItem {
   classificacaoSuperiorCodigo?: string;
   classificacaoSuperiorNome?: string;
   dataDesejada?: string;
+  equipePlanejamento?: string[];
+  equipeIdentificada?: boolean;
 }
 
 export interface PCAMetadata {
@@ -187,6 +199,8 @@ export interface SIPACProcess {
   last_ai_hash?: string;
   scraping_last_error?: string;
   analise_ia_estruturada?: AIStructuredAnalysis;
+  equipePlanejamento?: string[];
+  equipeIdentificada?: boolean;
 }
 
 export interface ProcessoAquisicao {

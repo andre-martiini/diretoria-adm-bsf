@@ -97,9 +97,9 @@ import { extractPlanningTeam } from '../utils/analysis/aiPersonnelScanner';
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import * as pdfjsLib from 'pdfjs-dist';
-// @ts-ignore
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-import { findPncpPurchaseByProcess, fetchPncpPurchaseItems, PNCPPurchase, PNCPItem } from '../services/pncpService';
+import { findPncpPurchaseByProcess, findPncpPurchaseByProcessCached, fetchPncpPurchaseItems, PNCPPurchase, PNCPItem } from '../services/pncpService';
+import { getFinancialStatusByProcess, ProcurementHistory } from '../services/procurementService';
 
 // Configuração do Worker do PDF.js localmente
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
@@ -159,7 +159,7 @@ const AnnualHiringPlan: React.FC = () => {
     incidentes: false,
     resumoIA: true
   });
-  const [activeTab, setActiveTab] = useState<'planning' | 'users' | 'documents' | 'history' | 'indicators' | 'pncp'>('planning');
+  const [activeTab, setActiveTab] = useState<'planning' | 'users' | 'documents' | 'history' | 'indicators' | 'pncp' | 'financial'>('planning');
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
   const [isDocLoading, setIsDocLoading] = useState(false);
   const [isChartsVisible, setIsChartsVisible] = useState<boolean>(true);
@@ -179,10 +179,19 @@ const AnnualHiringPlan: React.FC = () => {
   const [isIdentifyingTeam, setIsIdentifyingTeam] = useState(false);
   const [teamIdentificationAttempted, setTeamIdentificationAttempted] = useState(false);
 
-  // Reset team state when item changes
+  // Procurement History States
+  const [procurementHistory, setProcurementHistory] = useState<ProcurementHistory | null>(null);
+  const [isLoadingProcurement, setIsLoadingProcurement] = useState(false);
+
+  // Initialize team state when item changes
   useEffect(() => {
-    setPlanningTeam([]);
-    setTeamIdentificationAttempted(false);
+    if (viewingItem) {
+      setPlanningTeam(viewingItem.equipePlanejamento || viewingItem.dadosSIPAC?.equipePlanejamento || []);
+      setTeamIdentificationAttempted(viewingItem.equipeIdentificada || viewingItem.dadosSIPAC?.equipeIdentificada || false);
+    } else {
+      setPlanningTeam([]);
+      setTeamIdentificationAttempted(false);
+    }
     setIsIdentifyingTeam(false);
   }, [viewingItem]);
 
@@ -223,6 +232,33 @@ const AnnualHiringPlan: React.FC = () => {
       const team = await extractPlanningTeam(fullText);
       setPlanningTeam(team);
 
+      // 4. Salvar permanentemente no Firestore e Cache Local
+      if (viewingItem?.id && viewingItem?.ano) {
+        const docId = `${viewingItem.ano}-${viewingItem.id}`.replace(/\//g, '-');
+        const itemRef = doc(db, 'pca_data', docId);
+
+        try {
+          await setDoc(itemRef, {
+            officialId: String(viewingItem.id),
+            equipePlanejamento: team,
+            equipeIdentificada: true,
+            "dadosSIPAC.equipePlanejamento": team,
+            "dadosSIPAC.equipeIdentificada": true,
+            updatedAt: Timestamp.now()
+          }, { merge: true });
+
+          // Atualiza cache em memória para evitar re-análise nesta sessão
+          updatePcaCache(viewingItem.ano, viewingItem.id, {
+            equipePlanejamento: team,
+            equipeIdentificada: true
+          });
+
+          console.log(`[Team Analysis] ✅ Equipe salva para o item ${viewingItem.id}`);
+        } catch (saveErr) {
+          console.error("Erro ao salvar equipe no Firestore:", saveErr);
+        }
+      }
+
     } catch (error) {
       console.error("Team identification error:", error);
     } finally {
@@ -233,10 +269,13 @@ const AnnualHiringPlan: React.FC = () => {
 
   // Trigger when tab activates
   useEffect(() => {
-    if (activeTab === 'users' && !teamIdentificationAttempted && !isIdentifyingTeam && planningTeam.length === 0) {
+    const hasTeam = planningTeam.length > 0;
+    const alreadyIdentified = teamIdentificationAttempted || viewingItem?.equipeIdentificada || viewingItem?.dadosSIPAC?.equipeIdentificada;
+
+    if (activeTab === 'users' && !alreadyIdentified && !isIdentifyingTeam && !hasTeam) {
       handleIdentifyTeam();
     }
-  }, [activeTab, teamIdentificationAttempted, isIdentifyingTeam, planningTeam, handleIdentifyTeam]);
+  }, [activeTab, teamIdentificationAttempted, isIdentifyingTeam, planningTeam, handleIdentifyTeam, viewingItem]);
 
   const extractPdfContent = async (docUrl: string) => {
     try {
@@ -405,11 +444,18 @@ const AnnualHiringPlan: React.FC = () => {
         setPncpItems([]);
 
         try {
-          const match = await findPncpPurchaseByProcess(selectedYear, viewingItem.protocoloSIPAC!);
+          // Usa a versão em cache que é MUITO mais rápida
+          const match = await findPncpPurchaseByProcessCached(viewingItem.protocoloSIPAC!);
           if (match) {
             setPncpMatch(match);
-            const items = await fetchPncpPurchaseItems(match.anoCompra, match.numeroCompra);
-            setPncpItems(items);
+            // Se a compra já tem itens no cache, usa eles
+            if (match.itens && match.itens.length > 0) {
+              setPncpItems(match.itens);
+            } else {
+              // Fallback: busca itens via API se não estiverem no cache
+              const items = await fetchPncpPurchaseItems(match.anoCompra, match.numeroCompra);
+              setPncpItems(items);
+            }
           }
         } catch (err) {
           console.error("Erro ao buscar dados PNCP:", err);
@@ -654,28 +700,29 @@ const AnnualHiringPlan: React.FC = () => {
         return;
       }
 
+      const metrics = calculateHealthScore(updatedItem.dadosSIPAC!.movimentacoes?.[0]?.data || updatedItem.dadosSIPAC!.dataAutuacion);
+      const enhancedSipacData = {
+        ...updatedItem.dadosSIPAC!,
+        fase_interna_status: deriveInternalPhase(updatedItem.dadosSIPAC!.unidadeAtual || ''),
+        health_score: metrics.score,
+        dias_sem_movimentacao: metrics.daysIdle
+      };
+
+      const finalItem = { ...updatedItem, dadosSIPAC: enhancedSipacData };
+
       if (isFromDetails) {
-        setViewingItem(updatedItem);
+        setViewingItem(finalItem);
         const targetIds = item.isGroup && item.childItems ? item.childItems.map(c => String(c.id)) : [String(item.id)];
-        await linkItemsToProcess(item.protocoloSIPAC, targetIds, updatedItem.dadosSIPAC!, item.ano || selectedYear);
-
-        const metrics = calculateHealthScore(updatedItem.dadosSIPAC!.movimentacoes?.[0]?.data || updatedItem.dadosSIPAC!.dataAutuacion);
-        const enhancedSipacData = {
-          ...updatedItem.dadosSIPAC!,
-          fase_interna_status: deriveInternalPhase(updatedItem.dadosSIPAC!.unidadeAtual || ''),
-          health_score: metrics.score,
-          dias_sem_movimentacao: metrics.daysIdle
-        };
-
-        setData(prev => prev.map(i => String(i.id) === String(item.id) ? { ...updatedItem, dadosSIPAC: enhancedSipacData } : i));
-        targetIds.forEach(id => updatePcaCache(selectedYear, id, { dadosSIPAC: updatedItem.dadosSIPAC }));
-        setToast({ message: "Dados atualizados!", type: "success" });
+        await linkItemsToProcess(item.protocoloSIPAC, targetIds, finalItem.dadosSIPAC!, item.ano || selectedYear);
       } else {
-        setEditingItem(updatedItem);
+        setEditingItem(finalItem);
       }
+
+      setData(prev => prev.map(i => String(i.id) === String(item.id) ? finalItem : i));
+      setToast({ message: "Dados SIPAC sincronizados!", type: "success" });
     } catch (err) {
       console.error("Erro SIPAC:", err);
-      alert("Erro ao buscar protocolo.");
+      setToast({ message: "Erro ao buscar dados no SIPAC.", type: "error" });
     } finally {
       setIsFetchingSIPAC(false);
     }
@@ -1271,216 +1318,195 @@ const AnnualHiringPlan: React.FC = () => {
           <div className="fixed inset-0 z-50 bg-white animate-in fade-in duration-200">
             <div className="w-full h-full overflow-hidden font-sans flex flex-col">
 
-              {/* HERO HEADER */}
+              {/* HERO HEADER - COMPACT VERSION */}
               <header className="shrink-0 bg-white border-b border-slate-200 z-20 relative">
-                {/* Top Info Block */}
-                <div className="px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-8 bg-slate-50/30">
-
-                  {/* Bloco 1: Identidade do Processo (Esquerda) - col-span-4 */}
-                  <div className="lg:col-span-4 flex flex-col justify-center">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h2 className="text-2xl font-black text-slate-800 tracking-tight leading-none">
-                        {viewingItem.dadosSIPAC.numeroProcesso}
+                <div className="px-8 py-3 bg-slate-50/30">
+                  <div className="flex flex-col gap-2.5">
+                    {/* Primary Title & Actions */}
+                    <div className="flex justify-between items-start gap-4">
+                      <h2 className="text-base font-black text-slate-800 tracking-tight leading-tight uppercase" title={viewingItem.dadosSIPAC.assuntoDetalhado || viewingItem.dadosSIPAC.assuntoDescricao}>
+                        {viewingItem.dadosSIPAC.assuntoDetalhado || viewingItem.dadosSIPAC.assuntoDescricao}
                       </h2>
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        {(viewingItem.dadosSIPAC as any).id && (
+                          <a
+                            href={`https://sipac.ifes.edu.br/public/jsp/processos/processo_detalhado.jsf?id=${(viewingItem.dadosSIPAC as any).id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                            title="Abrir no SIPAC"
+                          >
+                            <ExternalLink size={14} />
+                          </a>
+                        )}
+                        <button
+                          onClick={() => { setIsDetailsModalOpen(false); setEditingItem(viewingItem); setIsEditModalOpen(true); }}
+                          className="p-1 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
+                          title="Editar Vínculo"
+                        >
+                          <Link size={14} />
+                        </button>
+                        <button
+                          onClick={() => setIsDetailsModalOpen(false)}
+                          className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                          title="Fechar"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Protocol, Status & Nature Row - Very Compact */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-[10px] font-black text-blue-600 font-mono bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
+                        {viewingItem.dadosSIPAC.numeroProcesso}
+                      </span>
+                      <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest shadow-sm
                          ${getStatusColor(getProcessStatus(viewingItem)).replace('text-', 'bg-').replace('700', '100').replace('600', '100')}
                          ${getStatusColor(getProcessStatus(viewingItem)).replace('text-', 'text-').replace('700', '700').replace('600', '700')}
                        `}>
                         {getProcessStatus(viewingItem)}
                       </span>
-                    </div>
-                    <div className="group relative">
-                      <p className="text-xs font-bold text-slate-500 line-clamp-2 uppercase leading-relaxed cursor-help">
+                      <div className="h-3 w-px bg-slate-200 mx-0.5"></div>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate max-w-xl">
                         {viewingItem.dadosSIPAC.assuntoDescricao}
                       </p>
-                      <div className="hidden group-hover:block absolute top-full left-0 z-50 bg-slate-800 text-white p-2 rounded-lg text-xs w-64 mt-2 shadow-xl">
-                        {viewingItem.dadosSIPAC.assuntoDescricao}
+                    </div>
+
+                    {/* Metadata Grid - Compact Row */}
+                    <div className="flex items-center gap-5 pt-1.5 border-t border-slate-100">
+                      <div className="flex flex-col">
+                        <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                          <Building2 size={8} /> Unidade Atual
+                        </span>
+                        <p className="text-[9px] font-bold text-slate-700 uppercase" title={viewingItem.dadosSIPAC.movimentacoes && viewingItem.dadosSIPAC.movimentacoes.length > 0 ? viewingItem.dadosSIPAC.movimentacoes[0].unidadeDestino : viewingItem.dadosSIPAC.unidadeOrigem}>
+                          {(() => {
+                            const name = viewingItem.dadosSIPAC.movimentacoes && viewingItem.dadosSIPAC.movimentacoes.length > 0
+                              ? viewingItem.dadosSIPAC.movimentacoes[0].unidadeDestino
+                              : viewingItem.dadosSIPAC.unidadeOrigem;
+                            return name?.length > 35 ? name.substring(0, 35) + '...' : name;
+                          })()}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col">
+                        <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                          <Clock size={8} /> Movimentação
+                        </span>
+                        <p className="text-[9px] font-bold text-slate-700">
+                          {viewingItem.dadosSIPAC.movimentacoes && viewingItem.dadosSIPAC.movimentacoes.length > 0
+                            ? [...viewingItem.dadosSIPAC.movimentacoes].sort((a, b) => new Date(b.data.split('/').reverse().join('-')).getTime() - new Date(a.data.split('/').reverse().join('-')).getTime())[0].data
+                            : 'Recente'}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col">
+                        <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                          <Tag size={8} /> Natureza
+                        </span>
+                        <p className="text-[9px] font-bold text-slate-700 uppercase">
+                          {viewingItem.dadosSIPAC.natureza || 'OSTENSIVO'}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col">
+                        <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                          <User size={8} /> Autuador
+                        </span>
+                        <p className="text-[9px] font-bold text-slate-700 uppercase">
+                          {viewingItem.dadosSIPAC.usuarioAutuacion?.split(' ')[0]} {viewingItem.dadosSIPAC.usuarioAutuacion?.split(' ').length > 1 ? viewingItem.dadosSIPAC.usuarioAutuacion?.split(' ').slice(-1) : ''}
+                        </p>
                       </div>
                     </div>
                   </div>
-
-                  {/* Bloco 2: Metadados Chave (Centro) - col-span-5 */}
-                  <div className="lg:col-span-5 grid grid-cols-2 gap-4 border-l border-slate-200 pl-8">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                        <Building2 size={10} /> Unidade Atual
-                      </span>
-                      <p className="text-xs font-bold text-slate-700 truncate" title={viewingItem.dadosSIPAC.movimentacoes && viewingItem.dadosSIPAC.movimentacoes.length > 0 ? viewingItem.dadosSIPAC.movimentacoes[0].unidadeDestino : viewingItem.dadosSIPAC.unidadeOrigem}>
-                        {viewingItem.dadosSIPAC.movimentacoes && viewingItem.dadosSIPAC.movimentacoes.length > 0
-                          ? viewingItem.dadosSIPAC.movimentacoes[0].unidadeDestino
-                          : viewingItem.dadosSIPAC.unidadeOrigem}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                        <Clock size={10} /> Última Movimentação
-                      </span>
-                      <p className="text-xs font-bold text-slate-700">
-                        {viewingItem.dadosSIPAC.movimentacoes && viewingItem.dadosSIPAC.movimentacoes.length > 0
-                          ? [...viewingItem.dadosSIPAC.movimentacoes].sort((a, b) => new Date(b.data.split('/').reverse().join('-')).getTime() - new Date(a.data.split('/').reverse().join('-')).getTime())[0].data
-                          : 'Recente'}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                        <Tag size={10} /> Natureza
-                      </span>
-                      <p className="text-xs font-bold text-slate-700 truncate">
-                        {viewingItem.dadosSIPAC.natureza || 'OSTENSIVO'}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                        <User size={10} /> Autuado por
-                      </span>
-                      <p className="text-xs font-bold text-slate-700 truncate uppercase" title={viewingItem.dadosSIPAC.usuarioAutuacion}>
-                        {viewingItem.dadosSIPAC.usuarioAutuacion?.split(' ')[0]}...
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Bloco 3: Interessados e Ações (Direita) - col-span-3 */}
-                  <div className="lg:col-span-3 flex flex-col items-end gap-3 border-l border-slate-200 pl-8">
-
-                    {/* Actions Toolbar */}
-                    <div className="flex items-center gap-1">
-                      {(viewingItem.dadosSIPAC as any).id && (
-                        <a
-                          href={`https://sipac.ifes.edu.br/public/jsp/processos/processo_detalhado.jsf?id=${(viewingItem.dadosSIPAC as any).id}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                          title="Abrir no SIPAC (Link Direto)"
-                        >
-                          <ExternalLink size={18} />
-                        </a>
-                      )}
-                      <button
-                        onClick={() => { setIsDetailsModalOpen(false); setEditingItem(viewingItem); setIsEditModalOpen(true); }}
-                        className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
-                        title="Editar Vínculo"
-                      >
-                        <Link size={18} />
-                      </button>
-                      <button
-                        onClick={() => setIsDetailsModalOpen(false)}
-                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                        title="Fechar"
-                      >
-                        <X size={18} />
-                      </button>
-                    </div>
-
-                    {/* Stakeholders Stack */}
-                    <div className="flex flex-col items-end group relative cursor-help">
-                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Interessados</span>
-                      <div className="flex -space-x-2">
-                        {(viewingItem.dadosSIPAC.interessados || []).slice(0, 3).map((person, idx) => (
-                          <div key={idx} className="w-8 h-8 rounded-full bg-indigo-100 border-2 border-white flex items-center justify-center text-[10px] font-black text-indigo-700 uppercase" title={person.nome}>
-                            {person.nome.substring(0, 2)}
-                          </div>
-                        ))}
-                        {(viewingItem.dadosSIPAC.interessados || []).length > 3 && (
-                          <div className="w-8 h-8 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-[9px] font-bold text-slate-500">
-                            +{viewingItem.dadosSIPAC.interessados.length - 3}
-                          </div>
-                        )}
-                      </div>
-                      {/* Tooltip for Stakeholders */}
-                      <div className="hidden group-hover:block absolute top-full right-0 z-50 bg-white border border-slate-200 p-4 rounded-xl shadow-xl w-72 mt-2">
-                        <h4 className="text-xs font-black text-slate-800 uppercase mb-3 border-b border-slate-100 pb-2">Lista de Interessados</h4>
-                        <div className="space-y-2 max-h-40 overflow-y-auto">
-                          {(viewingItem.dadosSIPAC.interessados || []).map((p, i) => (
-                            <div key={i} className="flex flex-col">
-                              <span className="text-[10px] font-bold text-slate-700">{p.nome}</span>
-                              <span className="text-[8px] font-medium text-slate-400 uppercase">{p.tipo}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
                 </div>
-
-                {/* TAB NAVIGATION */}
-                <nav className="flex items-center px-8 gap-8 border-t border-slate-100 bg-white overflow-x-auto scroller-hide">
-                  <button
-                    onClick={() => setActiveTab('planning')}
-                    className={`flex items-center gap-2 py-4 border-b-2 text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap
-                       ${activeTab === 'planning' ? 'border-ifes-green text-ifes-green' : 'border-transparent text-slate-400 hover:text-slate-600'}
-                     `}
-                  >
-                    <LayoutDashboard size={14} /> Dados PCA
-                  </button>
-
-                  <button
-                    onClick={() => setActiveTab('users')}
-                    className={`flex items-center gap-2 py-4 border-b-2 text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap
-                       ${activeTab === 'users' ? 'border-violet-500 text-violet-600' : 'border-transparent text-slate-400 hover:text-slate-600'}
-                     `}
-                  >
-                    <Users size={14} /> Usuários Envolvidos
-                  </button>
-
-                  <button
-                    onClick={() => setActiveTab('documents')}
-                    className={`flex items-center gap-2 py-4 border-b-2 text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap
-                       ${activeTab === 'documents' ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}
-                     `}
-                  >
-                    <FileText size={14} /> Documentos & Atas
-                    <span className={`px-1.5 py-0.5 rounded-md text-[9px] ${activeTab === 'documents' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>
-                      {(viewingItem.dadosSIPAC.documentos || []).length}
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={() => setActiveTab('history')}
-                    className={`flex items-center gap-2 py-4 border-b-2 text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap
-                       ${activeTab === 'history' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'}
-                     `}
-                  >
-                    <History size={14} /> Histórico de Tramitação
-                    <span className={`px-1.5 py-0.5 rounded-md text-[9px] ${activeTab === 'history' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'}`}>
-                      {(viewingItem.dadosSIPAC.movimentacoes || []).length}
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={() => setActiveTab('indicators')}
-                    className={`flex items-center gap-2 py-4 border-b-2 text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap
-                       ${activeTab === 'indicators' ? 'border-orange-500 text-orange-600' : 'border-transparent text-slate-400 hover:text-slate-600'}
-                     `}
-                  >
-                    <BarChart3 size={14} /> Indicadores
-                  </button>
-
-                  {!isLoadingPncp && pncpMatch && (
-                    <button
-                      onClick={() => setActiveTab('pncp')}
-                      className={`flex items-center gap-2 py-4 border-b-2 text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap
-                        ${activeTab === 'pncp' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-400 hover:text-slate-600'}
-                      `}
-                    >
-                      <TrendingUp size={14} /> Licitação & Edital
-                      <span className="px-1.5 py-0.5 rounded-md text-[9px] bg-emerald-100 text-emerald-700 animate-pulse">
-                        LIVE
-                      </span>
-                    </button>
-                  )}
-
-                  {isLoadingPncp && (
-                    <div className="flex items-center gap-2 py-4 text-xs font-black text-slate-300 uppercase tracking-wide">
-                      <RefreshCw size={14} className="animate-spin" /> Consultando PNCP...
-                    </div>
-                  )}
-                </nav>
               </header>
 
+              {/* TAB NAVIGATION */}
+              <nav className="flex items-center px-8 gap-8 border-t border-slate-100 bg-white overflow-x-auto scroller-hide">
+                <button
+                  onClick={() => setActiveTab('planning')}
+                  className={`flex items-center gap-2 py-4 border-b-2 text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap
+                        ${activeTab === 'planning' ? 'border-ifes-green text-ifes-green' : 'border-transparent text-slate-400 hover:text-slate-600'}
+                      `}
+                >
+                  <LayoutDashboard size={14} /> Dados PCA
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('users')}
+                  className={`flex items-center gap-2 py-4 border-b-2 text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap
+                        ${activeTab === 'users' ? 'border-violet-500 text-violet-600' : 'border-transparent text-slate-400 hover:text-slate-600'}
+                      `}
+                >
+                  <Users size={14} /> Usuários Envolvidos
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('documents')}
+                  className={`flex items-center gap-2 py-4 border-b-2 text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap
+                        ${activeTab === 'documents' ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}
+                      `}
+                >
+                  <FileText size={14} /> Documentos & Atas
+                  <span className={`px-1.5 py-0.5 rounded-md text-[9px] ${activeTab === 'documents' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>
+                    {(viewingItem.dadosSIPAC.documentos || []).length}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('history')}
+                  className={`flex items-center gap-2 py-4 border-b-2 text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap
+                        ${activeTab === 'history' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'}
+                      `}
+                >
+                  <History size={14} /> Histórico de Tramitação
+                  <span className={`px-1.5 py-0.5 rounded-md text-[9px] ${activeTab === 'history' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'}`}>
+                    {(viewingItem.dadosSIPAC.movimentacoes || []).length}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('indicators')}
+                  className={`flex items-center gap-2 py-4 border-b-2 text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap
+                        ${activeTab === 'indicators' ? 'border-orange-500 text-orange-600' : 'border-transparent text-slate-400 hover:text-slate-600'}
+                      `}
+                >
+                  <BarChart3 size={14} /> Indicadores
+                </button>
+
+                {!isLoadingPncp && pncpMatch && (
+                  <button
+                    onClick={() => setActiveTab('pncp')}
+                    className={`flex items-center gap-2 py-4 border-b-2 text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap
+                         ${activeTab === 'pncp' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-400 hover:text-slate-600'}
+                       `}
+                  >
+                    <TrendingUp size={14} /> Licitação & Edital
+                    <span className="px-1.5 py-0.5 rounded-md text-[9px] bg-emerald-100 text-emerald-700 animate-pulse">
+                      LIVE
+                    </span>
+                  </button>
+                )}
+
+                {isLoadingPncp && (
+                  <div className="flex items-center gap-2 py-4 text-xs font-black text-slate-300 uppercase tracking-wide">
+                    <RefreshCw size={14} className="animate-spin" /> Consultando PNCP...
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setActiveTab('financial')}
+                  className={`flex items-center gap-2 py-4 border-b-2 text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap
+                         ${activeTab === 'financial' ? 'border-amber-500 text-amber-600' : 'border-transparent text-slate-400 hover:text-slate-600'}
+                       `}
+                >
+                  <DollarSign size={14} /> Acompanhamento Financeiro
+                  <span className="px-1.5 py-0.5 rounded-md text-[9px] bg-amber-100 text-amber-700">
+                    OFICIAL
+                  </span>
+                </button>
+              </nav>
 
               <main className="flex-1 overflow-y-auto bg-slate-50/50 p-8 scroll-smooth">
                 {activeTab === 'planning' && (
@@ -1538,7 +1564,6 @@ const AnnualHiringPlan: React.FC = () => {
                           <thead>
                             <tr className="bg-slate-50 border-b border-slate-200">
                               <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">IFC</th>
-                              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">DFD</th>
                               <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">#</th>
                               <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Objeto</th>
                               <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Valor Estimado</th>
@@ -1554,11 +1579,6 @@ const AnnualHiringPlan: React.FC = () => {
                                 <td className="px-6 py-4">
                                   <span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded-md group-hover:bg-white group-hover:text-blue-600 border border-slate-200 group-hover:border-blue-200 transition-colors inline-block min-w-[60px] text-center">
                                     {item.identificadorFuturaContratacao || '---'}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4">
-                                  <span className="text-[10px] font-black text-slate-500 bg-orange-50 px-2 py-1 rounded-md border border-orange-100 inline-block min-w-[60px] text-center" title="Documento de Formalização da Demanda">
-                                    {item.numeroDfd || '---'}
                                   </span>
                                 </td>
                                 <td className="px-6 py-4 text-xs font-bold text-slate-400 group-hover:text-blue-500 transition-colors">
@@ -2190,35 +2210,30 @@ const AnnualHiringPlan: React.FC = () => {
                               pncpItems.map((item, idx) => (
                                 <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                                   <td className="px-8 py-5">
-                                    <span className="text-xs font-black text-slate-400">{item.numeroItem}</span>
+                                    <span className="text-[10px] font-black text-slate-400">#{idx + 1}</span>
                                   </td>
                                   <td className="px-8 py-5">
-                                    <div className="flex flex-col gap-1">
-                                      <p className="text-xs font-bold text-slate-700 leading-relaxed uppercase">{item.descricao}</p>
-                                      <span className="text-[9px] font-medium text-slate-400 uppercase italic">
-                                        Critério: {item.criterioJulgamentoNome || 'Menor Preço'}
-                                      </span>
-                                    </div>
+                                    <span className="text-xs font-bold text-slate-700 uppercase leading-snug break-words max-w-sm block">
+                                      {item.descricao}
+                                    </span>
                                   </td>
                                   <td className="px-8 py-5 text-center">
-                                    <span className="text-sm font-black text-slate-600">{item.quantidade}</span>
+                                    <span className="text-xs font-black text-slate-600">{item.quantidade}</span>
                                   </td>
                                   <td className="px-8 py-5 text-right">
                                     <span className="text-xs font-bold text-slate-500">{formatCurrency(item.valorUnitarioEstimado)}</span>
                                   </td>
                                   <td className="px-8 py-5 text-right">
-                                    <span className="text-sm font-black text-slate-900">
-                                      {formatCurrency(item.quantidade * item.valorUnitarioEstimado)}
-                                    </span>
+                                    <span className="text-xs font-black text-emerald-600">{formatCurrency(item.valorUnitarioEstimado * item.quantidade)}</span>
                                   </td>
                                 </tr>
                               ))
                             ) : (
                               <tr>
-                                <td colSpan={5} className="px-8 py-12 text-center">
-                                  <div className="flex flex-col items-center gap-3 text-slate-300">
-                                    <RefreshCw size={40} className="animate-spin" />
-                                    <span className="text-xs font-black uppercase tracking-[0.2em]">Buscando detalhes dos itens...</span>
+                                <td colSpan={5} className="px-8 py-20 text-center">
+                                  <div className="flex flex-col items-center gap-3 opacity-30">
+                                    <Target size={40} />
+                                    <p className="text-xs font-black uppercase tracking-widest">Nenhum item detalhado encontrado</p>
                                   </div>
                                 </td>
                               </tr>
@@ -2229,10 +2244,187 @@ const AnnualHiringPlan: React.FC = () => {
                     </div>
                   </div>
                 )}
+
+                {activeTab === 'financial' && (
+                  <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-5xl mx-auto space-y-8">
+                    {isLoadingProcurement ? (
+                      <div className="flex flex-col items-center justify-center py-24 gap-4">
+                        <RefreshCw size={48} className="animate-spin text-amber-500 opacity-20" />
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest animate-pulse">Consultando Integração Oficial...</span>
+                      </div>
+                    ) : (
+                      <>
+                        {/* KPIs Financeiros */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          {/* Previsto */}
+                          <div className="bg-white p-7 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden group">
+                            <div className="absolute -right-4 -top-4 p-8 opacity-[0.03] group-hover:scale-110 transition-transform">
+                              <DollarSign size={80} />
+                            </div>
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Valor Previsto (PCA)</span>
+                            <h3 className="text-2xl font-black text-slate-900 tracking-tighter">
+                              {formatCurrency(viewingItem.valor)}
+                            </h3>
+                            <div className="mt-4 flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Referência de Planejamento</span>
+                            </div>
+                          </div>
+
+                          {/* Homologado */}
+                          <div className={`bg-white p-7 rounded-3xl border ${procurementHistory?.valorTotalHomologado ? 'border-emerald-100' : 'border-slate-100'} shadow-sm relative overflow-hidden group`}>
+                            <div className="absolute -right-4 -top-4 p-8 opacity-[0.03] text-emerald-500 group-hover:scale-110 transition-transform">
+                              <Check size={80} />
+                            </div>
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Valor Homologado (PNCP)</span>
+                            <h3 className={`text-2xl font-black ${procurementHistory?.valorTotalHomologado ? 'text-emerald-600' : 'text-slate-300'} tracking-tighter`}>
+                              {procurementHistory ? formatCurrency(procurementHistory.valorTotalHomologado) : '---'}
+                            </h3>
+                            <div className="mt-4 flex items-center gap-2">
+                              <div className={`w-1.5 h-1.5 rounded-full ${procurementHistory?.valorTotalHomologado ? 'bg-emerald-500' : 'bg-slate-200'}`} />
+                              <span className={`text-[9px] font-black ${procurementHistory?.valorTotalHomologado ? 'text-emerald-500' : 'text-slate-300'} uppercase tracking-widest`}>
+                                {procurementHistory ? 'Resultado da Licitação' : 'Aguardando Homologação'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Empenhado / Economia */}
+                          <div className="bg-slate-900 p-7 rounded-3xl text-white shadow-xl relative overflow-hidden group">
+                            <div className="absolute -right-4 -top-4 p-8 opacity-10 group-hover:scale-110 transition-transform">
+                              <TrendingUp size={80} />
+                            </div>
+                            <span className="text-[9px] font-black text-white/40 uppercase tracking-widest block mb-1">Variação / Economia</span>
+                            <h3 className="text-2xl font-black text-emerald-400 tracking-tighter">
+                              {procurementHistory && procurementHistory.valorTotalHomologado > 0
+                                ? formatCurrency(viewingItem.valor - procurementHistory.valorTotalHomologado)
+                                : '---'}
+                            </h3>
+                            <div className="mt-4 flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                              <span className="text-[9px] font-black text-emerald-400/70 uppercase tracking-widest">
+                                {procurementHistory && procurementHistory.valorTotalHomologado > 0
+                                  ? `${Math.round((1 - procurementHistory.valorTotalHomologado / viewingItem.valor) * 100)}% de economia`
+                                  : 'Pendente de contratação'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Timeline Visual */}
+                        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-8">Fluxo Financeiro do Processo</h4>
+                          <div className="flex items-center justify-between relative px-12">
+                            <div className="absolute h-0.5 bg-slate-100 left-24 right-24 top-1/2 -translate-y-1/2 z-0" />
+
+                            {/* Passo 1: Planejado */}
+                            <div className="flex flex-col items-center gap-3 relative z-10">
+                              <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-100">
+                                <Calendar size={18} />
+                              </div>
+                              <div className="text-center">
+                                <span className="text-[9px] font-black text-slate-800 uppercase block">Planejado</span>
+                                <span className="text-[8px] font-bold text-slate-400 uppercase">{formatDate(viewingItem.inicio)}</span>
+                              </div>
+                            </div>
+
+                            {/* Passo 2: Publicado */}
+                            <div className="flex flex-col items-center gap-3 relative z-10">
+                              <div className={`w-10 h-10 rounded-full ${procurementHistory ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'bg-slate-100 text-slate-400'} flex items-center justify-center`}>
+                                <TrendingUp size={18} />
+                              </div>
+                              <div className="text-center">
+                                <span className={`text-[9px] font-black uppercase block ${procurementHistory ? 'text-slate-800' : 'text-slate-300'}`}>Publicado</span>
+                                <span className="text-[8px] font-bold text-slate-400 uppercase">
+                                  {procurementHistory?.dataPublicacaoPncp ? formatDate(procurementHistory.dataPublicacaoPncp) : 'Pendente'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Passo 3: Homologado */}
+                            <div className="flex flex-col items-center gap-3 relative z-10">
+                              <div className={`w-10 h-10 rounded-full ${procurementHistory?.valorTotalHomologado ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-100' : 'bg-slate-100 text-slate-400'} flex items-center justify-center`}>
+                                <Check size={18} />
+                              </div>
+                              <div className="text-center">
+                                <span className={`text-[9px] font-black uppercase block ${procurementHistory?.valorTotalHomologado ? 'text-slate-800' : 'text-slate-300'}`}>Homologado</span>
+                                <span className="text-[8px] font-bold text-slate-400 uppercase">
+                                  {procurementHistory?.valorTotalHomologado ? 'Finalizado' : 'Pendente'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Passo 4: Empenhado */}
+                            <div className="flex flex-col items-center gap-3 relative z-10">
+                              <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-300 flex items-center justify-center">
+                                <DollarSign size={18} />
+                              </div>
+                              <div className="text-center">
+                                <span className="text-[9px] font-black text-slate-300 uppercase block">Empenhado</span>
+                                <span className="text-[8px] font-bold text-slate-400 uppercase">Pendente</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Tabela de Itens (se houver) */}
+                        {procurementHistory && procurementHistory.itens.length > 0 && (
+                          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                            <header className="px-8 py-5 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
+                              <div className="p-2 bg-white rounded-xl text-slate-400 border border-slate-200"><List size={16} /></div>
+                              <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Itens da Contratação Oficial</h4>
+                            </header>
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-left">
+                                <thead>
+                                  <tr className="bg-white border-b border-slate-50">
+                                    <th className="px-8 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Item</th>
+                                    <th className="px-8 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Descrição</th>
+                                    <th className="px-8 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Qtd.</th>
+                                    <th className="px-8 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Valor Unit.</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                  {procurementHistory.itens.map((item, idx) => (
+                                    <tr key={idx} className="hover:bg-slate-50/30 transition-colors">
+                                      <td className="px-8 py-4 text-xs font-black text-slate-400">#{item.numero_item}</td>
+                                      <td className="px-8 py-4 text-[11px] font-bold text-slate-700 uppercase leading-snug">{item.descricao}</td>
+                                      <td className="px-8 py-4 text-center text-xs font-black text-slate-600">{item.quantidade}</td>
+                                      <td className="px-8 py-4 text-right text-xs font-bold text-slate-500">{formatCurrency(item.valor_unitario)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+
+                        {!procurementHistory && (
+                          <div className="bg-amber-50 border border-amber-100 p-10 rounded-[40px] flex flex-col items-center text-center gap-4">
+                            <div className="p-4 bg-white rounded-3xl text-amber-500 shadow-sm border border-amber-100">
+                              <Info size={32} />
+                            </div>
+                            <div className="max-w-md">
+                              <h4 className="text-sm font-black text-amber-900 uppercase tracking-tight">Vínculo Oficial não Localizado</h4>
+                              <p className="text-xs font-medium text-amber-800/70 mt-2 leading-relaxed">
+                                O protocolo informado no SIPAC ainda não possui correspondência direta nos arquivos de integração do Compras.gov/PNCP.
+                                Isso geralmente ocorre se a licitação ainda não foi publicada no portal nacional.
+                              </p>
+                            </div>
+                            <div className="mt-4 flex flex-col items-center gap-2">
+                              <span className="text-[10px] font-black text-amber-900/40 uppercase tracking-widest">Referência Planejada</span>
+                              <span className="text-xl font-black text-amber-900">{formatCurrency(viewingItem.valor)}</span>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
               </main>
-            </div>
-          </div>
-        )}
+            </div >
+          </div >
+        )
+      }
 
 
       {
@@ -2271,248 +2463,256 @@ const AnnualHiringPlan: React.FC = () => {
       }
 
       {/* Modal de Texto Extraído */}
-      {isTextModalOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl border border-slate-200 overflow-hidden font-sans flex flex-col max-h-[80vh]">
-            <header className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-50 rounded-lg text-amber-600">
-                  <FileText size={20} />
+      {
+        isTextModalOpen && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl border border-slate-200 overflow-hidden font-sans flex flex-col max-h-[80vh]">
+              <header className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-amber-50 rounded-lg text-amber-600">
+                    <FileText size={20} />
+                  </div>
+                  <h3 className="text-lg font-black text-slate-800 tracking-tight">Texto da Portaria</h3>
                 </div>
-                <h3 className="text-lg font-black text-slate-800 tracking-tight">Texto da Portaria</h3>
-              </div>
-              <button
-                onClick={() => setIsTextModalOpen(false)}
-                className="p-2 hover:bg-red-50 hover:text-red-500 rounded-lg transition-all text-slate-400"
-              >
-                <X size={20} />
-              </button>
-            </header>
-            <div className="flex-1 overflow-auto p-6 bg-slate-50/50">
-              <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm font-mono text-xs leading-relaxed text-slate-600 whitespace-pre-wrap">
-                {extractedText || "Nenhum texto extraído."}
+                <button
+                  onClick={() => setIsTextModalOpen(false)}
+                  className="p-2 hover:bg-red-50 hover:text-red-500 rounded-lg transition-all text-slate-400"
+                >
+                  <X size={20} />
+                </button>
+              </header>
+              <div className="flex-1 overflow-auto p-6 bg-slate-50/50">
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm font-mono text-xs leading-relaxed text-slate-600 whitespace-pre-wrap">
+                  {extractedText || "Nenhum texto extraído."}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Modal de Itens do Agrupamento (PCA) */}
-      {isItemsListModalOpen && viewingItem && viewingItem.childItems && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-[32px] w-full max-w-5xl shadow-2xl border border-slate-200 overflow-hidden font-sans flex flex-col max-h-[90vh]">
-            <header className="px-10 py-8 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
-              <div className="flex items-center gap-5">
-                <div className="p-2 bg-blue-50 rounded-xl text-blue-600">
-                  <List size={24} strokeWidth={2.5} />
+      {
+        isItemsListModalOpen && viewingItem && viewingItem.childItems && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-[32px] w-full max-w-5xl shadow-2xl border border-slate-200 overflow-hidden font-sans flex flex-col max-h-[90vh]">
+              <header className="px-10 py-8 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+                <div className="flex items-center gap-5">
+                  <div className="p-2 bg-blue-50 rounded-xl text-blue-600">
+                    <List size={24} strokeWidth={2.5} />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">Itens Relacionados no PCA</h2>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Detalhamento das demandas vinculadas a este processo</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">Itens Relacionados no PCA</h2>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Detalhamento das demandas vinculadas a este processo</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsItemsListModalOpen(false)}
-                className="p-3 hover:bg-red-50 hover:text-red-500 rounded-2xl transition-all text-slate-400"
-              >
-                <X size={28} />
-              </button>
-            </header>
+                <button
+                  onClick={() => setIsItemsListModalOpen(false)}
+                  className="p-3 hover:bg-red-50 hover:text-red-500 rounded-2xl transition-all text-slate-400"
+                >
+                  <X size={28} />
+                </button>
+              </header>
 
-            <div className="flex-1 overflow-auto p-10 custom-scrollbar">
-              <div className="overflow-hidden border border-slate-100 rounded-2xl bg-slate-50/30">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-white border-b border-slate-100">
-                      <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cód. Item (IFC)</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Descrição / Título</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Categoria</th>
-                      <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Valor Estimado</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
-                    {viewingItem.childItems.map((item, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50 transition-colors group">
-                        <td className="px-6 py-4">
-                          <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-md">
-                            {item.identificadorFuturaContratacao || 'N/A'}
+              <div className="flex-1 overflow-auto p-10 custom-scrollbar">
+                <div className="overflow-hidden border border-slate-100 rounded-2xl bg-slate-50/30">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-white border-b border-slate-100">
+                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cód. Item (IFC)</th>
+                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Descrição / Título</th>
+                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Categoria</th>
+                        <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Valor Estimado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {viewingItem.childItems.map((item, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50 transition-colors group">
+                          <td className="px-6 py-4">
+                            <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-md">
+                              {item.identificadorFuturaContratacao || 'N/A'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col">
+                              <span className="text-xs font-bold text-slate-700 group-hover:text-ifes-blue transition-colors">{item.titulo}</span>
+                              <span className="text-[9px] font-medium text-slate-400 mt-0.5">{item.area}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="text-[10px] font-black text-slate-500 uppercase">{item.categoria}</span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <span className="text-xs font-black text-slate-700">{formatCurrency(item.valor)}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-slate-50/80">
+                      <tr>
+                        <td colSpan={3} className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase text-right">Total Consolidado:</td>
+                        <td className="px-6 py-5 text-right">
+                          <span className="text-sm font-black text-ifes-blue">
+                            {formatCurrency(viewingItem.childItems.reduce((acc, i) => acc + i.valor, 0))}
                           </span>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col">
-                            <span className="text-xs font-bold text-slate-700 group-hover:text-ifes-blue transition-colors">{item.titulo}</span>
-                            <span className="text-[9px] font-medium text-slate-400 mt-0.5">{item.area}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-[10px] font-black text-slate-500 uppercase">{item.categoria}</span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <span className="text-xs font-black text-slate-700">{formatCurrency(item.valor)}</span>
-                        </td>
                       </tr>
-                    ))}
-                  </tbody>
-                  <tfoot className="bg-slate-50/80">
-                    <tr>
-                      <td colSpan={3} className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase text-right">Total Consolidado:</td>
-                      <td className="px-6 py-5 text-right">
-                        <span className="text-sm font-black text-ifes-blue">
-                          {formatCurrency(viewingItem.childItems.reduce((acc, i) => acc + i.valor, 0))}
-                        </span>
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-
-              <div className="mt-8 p-6 bg-blue-50 rounded-2xl border border-blue-100 flex gap-4 items-center">
-                <div className="p-2 bg-blue-100 rounded-xl text-blue-600">
-                  <Info size={20} />
+                    </tfoot>
+                  </table>
                 </div>
-                <p className="text-[10px] font-black text-blue-800 leading-relaxed uppercase tracking-tight">
-                  Estes itens compõem o planejamento deste processo no Plano de Contratação Anual (PCA). O valor total acima reflete a soma de todos os itens agrupados.
-                </p>
-              </div>
-            </div>
 
-            <footer className="p-8 bg-slate-50 border-t border-slate-100 flex justify-end">
-              <button
-                onClick={() => setIsItemsListModalOpen(false)}
-                className="px-8 py-4 bg-white border border-slate-200 text-slate-500 rounded-xl text-xs font-black hover:bg-slate-100 hover:text-slate-800 transition-all uppercase tracking-widest shadow-sm"
-              >
-                Fechar Visualização
-              </button>
-            </footer>
-          </div>
-        </div>
-      )}
-      {/* Modal de Detalhes do Planejamento PCA - Standardized Design */}
-      {isPcaModalOpen && viewingItem && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl border border-slate-200 overflow-hidden font-sans max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 sticky top-0 z-10">
-              <div>
-                <h3 className="text-sm font-black text-slate-800">Detalhes do Item do PCA</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                  Item #{viewingItem.sequencialItemPca || viewingItem.numeroItem} • IFC {viewingItem.ifc || viewingItem.identificadorFuturaContratacao}
-                </p>
+                <div className="mt-8 p-6 bg-blue-50 rounded-2xl border border-blue-100 flex gap-4 items-center">
+                  <div className="p-2 bg-blue-100 rounded-xl text-blue-600">
+                    <Info size={20} />
+                  </div>
+                  <p className="text-[10px] font-black text-blue-800 leading-relaxed uppercase tracking-tight">
+                    Estes itens compõem o planejamento deste processo no Plano de Contratação Anual (PCA). O valor total acima reflete a soma de todos os itens agrupados.
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                {!viewingItem.protocoloSIPAC && (
-                  <button
-                    onClick={() => {
-                      setIsPcaModalOpen(false);
-                      setEditingItem(viewingItem);
-                      setIsEditModalOpen(true);
-                    }}
-                    className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-black hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-200"
-                  >
-                    <Link size={12} /> Vincular
+
+              <footer className="p-8 bg-slate-50 border-t border-slate-100 flex justify-end">
+                <button
+                  onClick={() => setIsItemsListModalOpen(false)}
+                  className="px-8 py-4 bg-white border border-slate-200 text-slate-500 rounded-xl text-xs font-black hover:bg-slate-100 hover:text-slate-800 transition-all uppercase tracking-widest shadow-sm"
+                >
+                  Fechar Visualização
+                </button>
+              </footer>
+            </div>
+          </div>
+        )
+      }
+      {/* Modal de Detalhes do Planejamento PCA - Standardized Design */}
+      {
+        isPcaModalOpen && viewingItem && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl border border-slate-200 overflow-hidden font-sans max-h-[90vh] overflow-y-auto">
+              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 sticky top-0 z-10">
+                <div>
+                  <h3 className="text-sm font-black text-slate-800">Detalhes do Item do PCA</h3>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                    Item #{viewingItem.sequencialItemPca || viewingItem.numeroItem} • IFC {viewingItem.ifc || viewingItem.identificadorFuturaContratacao}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {!viewingItem.protocoloSIPAC && (
+                    <button
+                      onClick={() => {
+                        setIsPcaModalOpen(false);
+                        setEditingItem(viewingItem);
+                        setIsEditModalOpen(true);
+                      }}
+                      className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-black hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-200"
+                    >
+                      <Link size={12} /> Vincular
+                    </button>
+                  )}
+                  <button onClick={() => setIsPcaModalOpen(false)} className="text-slate-400 hover:text-red-500 transition-colors">
+                    <X size={18} />
                   </button>
+                </div>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-left">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">IFC (Item)</label>
+                    <p className="text-sm font-bold text-slate-700">{viewingItem.ifc || viewingItem.identificadorFuturaContratacao || '-'}</p>
+                  </div>
+                  <div className="text-left">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Categoria</label>
+                    <p className="text-sm font-bold text-slate-700">{viewingItem.categoria}</p>
+                  </div>
+                </div>
+
+                <div className="text-left">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Descrição</label>
+                  <p className="text-sm font-medium text-slate-600 leading-relaxed">{viewingItem.titulo || viewingItem.descricaoDetalhada}</p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-left">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Quantidade</label>
+                    <p className="text-sm font-bold text-slate-700">{viewingItem.quantidade || '-'}</p>
+                  </div>
+                  <div className="text-left">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Valor Unit.</label>
+                    <p className="text-sm font-bold text-slate-700">{formatCurrency(viewingItem.valorUnitario || 0)}</p>
+                  </div>
+                  <div className="text-left">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Valor Total</label>
+                    <p className="text-sm font-bold text-blue-600">{formatCurrency(viewingItem.valor)}</p>
+                  </div>
+                </div>
+
+                <div className="text-left">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Data Desejada</label>
+                  <p className="text-sm font-medium text-slate-600">
+                    {viewingItem.dataDesejada ? new Date(viewingItem.dataDesejada).toLocaleDateString('pt-BR') : (viewingItem.inicio ? new Date(viewingItem.inicio).toLocaleDateString('pt-BR') : '-')}
+                  </p>
+                </div>
+
+                {viewingItem.unidadeRequisitante && (
+                  <div className="text-left">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Unidade Requisitante</label>
+                    <p className="text-sm font-medium text-slate-600">{viewingItem.unidadeRequisitante}</p>
+                  </div>
                 )}
-                <button onClick={() => setIsPcaModalOpen(false)} className="text-slate-400 hover:text-red-500 transition-colors">
-                  <X size={18} />
+
+                {viewingItem.grupoContratacao && (
+                  <div className="text-left">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Grupo de Contratação</label>
+                    <p className="text-sm font-medium text-slate-600">{viewingItem.grupoContratacao}</p>
+                  </div>
+                )}
+              </div>
+              <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+                <button
+                  onClick={() => setIsPcaModalOpen(false)}
+                  className="px-6 py-3 bg-slate-900 text-white rounded-xl text-xs font-black hover:bg-slate-700 transition-all font-sans"
+                >
+                  Fechar
                 </button>
               </div>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-left">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">IFC (Item)</label>
-                  <p className="text-sm font-bold text-slate-700">{viewingItem.ifc || viewingItem.identificadorFuturaContratacao || '-'}</p>
+          </div>
+        )
+      }
+      {/* Modal de Confirmação de Desvínculo */}
+      {
+        isUnlinkModalOpen && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl border border-slate-200 overflow-hidden font-sans">
+              <div className="p-8 text-center">
+                <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <AlertTriangle size={32} />
                 </div>
-                <div className="text-left">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Categoria</label>
-                  <p className="text-sm font-bold text-slate-700">{viewingItem.categoria}</p>
-                </div>
-              </div>
-
-              <div className="text-left">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Descrição</label>
-                <p className="text-sm font-medium text-slate-600 leading-relaxed">{viewingItem.titulo || viewingItem.descricaoDetalhada}</p>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-left">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Quantidade</label>
-                  <p className="text-sm font-bold text-slate-700">{viewingItem.quantidade || '-'}</p>
-                </div>
-                <div className="text-left">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Valor Unit.</label>
-                  <p className="text-sm font-bold text-slate-700">{formatCurrency(viewingItem.valorUnitario || 0)}</p>
-                </div>
-                <div className="text-left">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Valor Total</label>
-                  <p className="text-sm font-bold text-blue-600">{formatCurrency(viewingItem.valor)}</p>
-                </div>
-              </div>
-
-              <div className="text-left">
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Data Desejada</label>
-                <p className="text-sm font-medium text-slate-600">
-                  {viewingItem.dataDesejada ? new Date(viewingItem.dataDesejada).toLocaleDateString('pt-BR') : (viewingItem.inicio ? new Date(viewingItem.inicio).toLocaleDateString('pt-BR') : '-')}
+                <h3 className="text-xl font-black text-slate-900 mb-2">Confirmar Remoção</h3>
+                <p className="text-sm font-bold text-slate-500 leading-relaxed">
+                  Você está prestes a remover o vínculo deste processo.
+                  {itemToUnlink?.isGroup ? ` Isso afetará ${itemToUnlink.childItems?.length} itens vinculados.` : " Esta ação não pode ser desfeita."}
                 </p>
               </div>
-
-              {viewingItem.unidadeRequisitante && (
-                <div className="text-left">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Unidade Requisitante</label>
-                  <p className="text-sm font-medium text-slate-600">{viewingItem.unidadeRequisitante}</p>
-                </div>
-              )}
-
-              {viewingItem.grupoContratacao && (
-                <div className="text-left">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Grupo de Contratação</label>
-                  <p className="text-sm font-medium text-slate-600">{viewingItem.grupoContratacao}</p>
-                </div>
-              )}
-            </div>
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
-              <button
-                onClick={() => setIsPcaModalOpen(false)}
-                className="px-6 py-3 bg-slate-900 text-white rounded-xl text-xs font-black hover:bg-slate-700 transition-all font-sans"
-              >
-                Fechar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Modal de Confirmação de Desvínculo */}
-      {isUnlinkModalOpen && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-[32px] w-full max-w-md shadow-2xl border border-slate-200 overflow-hidden font-sans">
-            <div className="p-8 text-center">
-              <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                <AlertTriangle size={32} />
+              <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
+                <button
+                  onClick={() => { setIsUnlinkModalOpen(false); setItemToUnlink(null); }}
+                  className="flex-1 px-6 py-4 bg-white border border-slate-200 text-slate-500 rounded-xl text-xs font-black hover:bg-slate-100 transition-all uppercase tracking-widest shadow-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmUnlinkProcess}
+                  disabled={saving}
+                  className="flex-1 px-6 py-4 bg-red-600 text-white rounded-xl text-xs font-black hover:bg-red-700 transition-all uppercase tracking-widest shadow-lg shadow-red-100 flex items-center justify-center gap-2"
+                >
+                  {saving ? <RefreshCw size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                  Remover Vínculo
+                </button>
               </div>
-              <h3 className="text-xl font-black text-slate-900 mb-2">Confirmar Remoção</h3>
-              <p className="text-sm font-bold text-slate-500 leading-relaxed">
-                Você está prestes a remover o vínculo deste processo.
-                {itemToUnlink?.isGroup ? ` Isso afetará ${itemToUnlink.childItems?.length} itens vinculados.` : " Esta ação não pode ser desfeita."}
-              </p>
-            </div>
-            <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
-              <button
-                onClick={() => { setIsUnlinkModalOpen(false); setItemToUnlink(null); }}
-                className="flex-1 px-6 py-4 bg-white border border-slate-200 text-slate-500 rounded-xl text-xs font-black hover:bg-slate-100 transition-all uppercase tracking-widest shadow-sm"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={confirmUnlinkProcess}
-                disabled={saving}
-                className="flex-1 px-6 py-4 bg-red-600 text-white rounded-xl text-xs font-black hover:bg-red-700 transition-all uppercase tracking-widest shadow-lg shadow-red-100 flex items-center justify-center gap-2"
-              >
-                {saving ? <RefreshCw size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                Remover Vínculo
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
     </div >
   );
 };

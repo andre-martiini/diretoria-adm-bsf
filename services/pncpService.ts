@@ -19,6 +19,7 @@ export interface PNCPPurchase {
         cnpj: string;
         razaoSocial: string;
     };
+    itens?: PNCPItem[]; // Opcional: incluído nos dados sincronizados
 }
 
 export interface PNCPItem {
@@ -86,3 +87,98 @@ export const fetchPncpPurchaseItems = async (year: number, purchaseNumber: strin
         return [];
     }
 };
+
+/**
+ * Busca dados de contratações de um ano específico dos arquivos sincronizados.
+ * Muito mais rápido que fazer chamadas à API.
+ */
+export const getProcurementDataByYear = async (year: string) => {
+    try {
+        const url = `${API_SERVER_URL}/api/procurement/year/${year}`;
+        console.log(`[PNCP Service - Local] Fetching cached procurement data for ${year}`);
+
+        const response = await axios.get(url);
+        return response.data;
+    } catch (error) {
+        console.error(`Erro ao buscar dados sincronizados de ${year}:`, error);
+        return null;
+    }
+};
+
+/**
+ * Busca todos os dados de contratações (2022-2026) dos arquivos sincronizados.
+ */
+export const getAllProcurementData = async () => {
+    try {
+        const url = `${API_SERVER_URL}/api/procurement/all`;
+        console.log(`[PNCP Service - Local] Fetching all cached procurement data`);
+
+        const response = await axios.get(url);
+        return response.data;
+    } catch (error) {
+        console.error('Erro ao buscar todos os dados sincronizados:', error);
+        return null;
+    }
+};
+
+/**
+ * Busca uma compra pelo número do processo usando os dados sincronizados localmente.
+ * MUITO mais rápido que a busca via API.
+ */
+export const findPncpPurchaseByProcessCached = async (internalProcess: string): Promise<PNCPPurchase | null> => {
+    try {
+        const normalizedInternal = normalizeProcessNumber(internalProcess);
+        if (!normalizedInternal) return null;
+
+        console.log(`[PNCP Service - Cached] Searching for process: ${internalProcess}`);
+
+        // Busca em todos os dados sincronizados
+        const allData = await getAllProcurementData();
+        if (!allData || !allData.data) {
+            console.warn('[PNCP Service - Cached] No cached data available, falling back to API');
+            // Fallback para a busca via API se não houver dados em cache
+            const currentYear = new Date().getFullYear().toString();
+            return findPncpPurchaseByProcess(currentYear, internalProcess);
+        }
+
+        // Procura pelo processo normalizado
+        const match = allData.data.find((p: any) => {
+            const normalizedPncp = normalizeProcessNumber(p.processo || '');
+            return normalizedPncp === normalizedInternal;
+        });
+
+        return match || null;
+    } catch (error) {
+        console.error('Erro ao buscar processo nos dados sincronizados:', error);
+        return null;
+    }
+};
+
+/**
+ * Verifica o status da sincronização de dados.
+ */
+export const getProcurementSyncStatus = async () => {
+    try {
+        const url = `${API_SERVER_URL}/api/procurement/status`;
+        const response = await axios.get(url);
+        return response.data;
+    } catch (error) {
+        console.error('Erro ao verificar status de sincronização:', error);
+        return null;
+    }
+};
+
+/**
+ * Força uma sincronização manual dos dados de contratações.
+ */
+export const triggerProcurementSync = async () => {
+    try {
+        const url = `${API_SERVER_URL}/api/procurement/sync`;
+        const response = await axios.post(url);
+        return response.data;
+    } catch (error) {
+        console.error('Erro ao forçar sincronização:', error);
+        return null;
+    }
+};
+

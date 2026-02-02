@@ -315,7 +315,9 @@ export const fetchPcaData = async (
             sequencialItemPca: item.numeroItem || index + 1,
             classificacaoSuperiorCodigo: item.classificacaoSuperiorCodigo || '',
             classificacaoSuperiorNome: item.classificacaoSuperiorNome || '',
-            dataDesejada: item.dataDesejada || ''
+            dataDesejada: item.dataDesejada || '',
+            equipePlanejamento: extra.equipePlanejamento || [],
+            equipeIdentificada: extra.equipeIdentificada || false
         };
     });
 

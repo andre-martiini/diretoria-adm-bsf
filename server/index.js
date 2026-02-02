@@ -172,7 +172,7 @@ app.get('/api/pncp/pca/:cnpj/:ano', async (req, res) => {
 
 // Proxy para listar compras (Contratações)
 app.get('/api/pncp/consulta/compras', async (req, res) => {
-  const { ano, pagina = 1, tamanhoPagina = 100 } = req.query;
+  const { ano, pagina = 1, tamanhoPagina = 100, codigoModalidadeContratacao } = req.query;
   const CNPJ = '10838653000106'; // IFES BSF
 
   // Na API de Consulta, usamos 'contratacoes/publicacao'
@@ -180,12 +180,22 @@ app.get('/api/pncp/consulta/compras', async (req, res) => {
   const dataInicial = `${ano}0101`;
   const dataFinal = `${ano}1231`;
 
-  // https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao?cnpjOrgao=...&dataInicial=...&dataFinal=...
-  const url = `https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao?cnpjOrgao=${CNPJ}&dataInicial=${dataInicial}&dataFinal=${dataFinal}&pagina=${pagina}&tamanhoPagina=${tamanhoPagina}`;
+  // Se não foi fornecido um código de modalidade específico, buscar todas as modalidades
+  // Códigos comuns: 1=Pregão Eletrônico, 2=Concorrência, 3=Dispensa, 4=Inexigibilidade, etc.
+  // Para buscar todas, podemos fazer múltiplas requisições ou usar a API de orgãos
 
-  console.log(`[PNCP PROXY] Buscando compras (Consulta Pub.): ${url}`);
+  // Tentativa 1: Usar endpoint alternativo que não requer modalidade
+  // https://pncp.gov.br/api/consulta/v1/orgaos/{cnpj}/compras?ano=...
+  const urlOrgao = `https://pncp.gov.br/api/consulta/v1/orgaos/${CNPJ}/compras?ano=${ano}&pagina=${pagina}&tamanhoPagina=${tamanhoPagina}`;
+
+  console.log(`[PNCP PROXY] Buscando compras via endpoint de órgão: ${urlOrgao}`);
   try {
-    const response = await axios.get(url);
+    const response = await axios.get(urlOrgao, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json'
+      }
+    });
     res.json(response.data);
   } catch (error) {
     console.error(`[PNCP PROXY ERROR]`, error.message);
@@ -308,12 +318,136 @@ app.get('/api/sipac/documento/conteudo', async (req, res) => {
 
 const CNPJ_IFES_BSF = '10838653000106';
 const PUBLIC_DATA_DIR = path.join(__dirname, '..', 'public', 'data');
+const PROCUREMENT_DATA_DIR = path.join(__dirname, '..', 'dados_abertos_compras');
+
+/**
+ * Sincroniza dados de contratações (compras) do PNCP para os anos especificados
+ * Salva em arquivos JSON no diretório dados_abertos_compras
+ */
+async function syncProcurementData() {
+  const YEARS = ['2022', '2023', '2024', '2025', '2026'];
+  console.log(`[${new Date().toISOString()}] 🛒 Iniciando Sincronização de Contratações PNCP...`);
+
+  // Garante que o diretório existe
+  if (!fs.existsSync(PROCUREMENT_DATA_DIR)) {
+    fs.mkdirSync(PROCUREMENT_DATA_DIR, { recursive: true });
+  }
+
+  for (const year of YEARS) {
+    try {
+      console.log(`[PROCUREMENT SYNC] Buscando contratações de ${year}...`);
+
+      let purchases = [];
+      let fetchSuccess = false;
+
+      // Tenta múltiplos endpoints
+      const endpoints = [
+        `https://pncp.gov.br/api/consulta/v1/orgaos/${CNPJ_IFES_BSF}/compras?ano=${year}&pagina=1&tamanhoPagina=500`,
+        `https://pncp.gov.br/api/pncp/v1/orgaos/${CNPJ_IFES_BSF}/compras?ano=${year}&pagina=1&tamanhoPagina=500`
+      ];
+
+      for (const url of endpoints) {
+        try {
+          const response = await axios.get(url, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept': 'application/json'
+            },
+            timeout: 10000
+          });
+
+          purchases = response.data.data || response.data || [];
+          if (purchases.length > 0) {
+            fetchSuccess = true;
+            console.log(`[PROCUREMENT SYNC] ✅ Endpoint funcionou: ${url.split('?')[0]}`);
+            break;
+          }
+        } catch (endpointError) {
+          // Continua tentando outros endpoints
+          continue;
+        }
+      }
+
+      if (purchases.length > 0) {
+        // Para cada compra, buscar os itens detalhados
+        console.log(`[PROCUREMENT SYNC] Encontradas ${purchases.length} contratações em ${year}. Buscando itens...`);
+
+        for (const purchase of purchases) {
+          try {
+            // Buscar itens da compra
+            const itemsUrl = `https://pncp.gov.br/api/consulta/v1/orgaos/${CNPJ_IFES_BSF}/compras/${year}/${purchase.numeroCompra}/itens?pagina=1&tamanhoPagina=100`;
+            const itemsResponse = await axios.get(itemsUrl, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'application/json'
+              },
+              timeout: 5000
+            });
+
+            purchase.itens = itemsResponse.data.data || [];
+
+            // Pequeno delay para não sobrecarregar a API
+            await new Promise(resolve => setTimeout(resolve, 100));
+          } catch (itemError) {
+            console.warn(`[PROCUREMENT SYNC] ⚠️ Erro ao buscar itens da compra ${purchase.numeroCompra}:`, itemError.message);
+            purchase.itens = [];
+          }
+        }
+
+        // Salvar arquivo JSON
+        const filePath = path.join(PROCUREMENT_DATA_DIR, `contratacoes_${year}.json`);
+        const fileData = {
+          metadata: {
+            extractedAt: new Date().toISOString(),
+            cnpj: CNPJ_IFES_BSF,
+            year: year,
+            totalPurchases: purchases.length
+          },
+          data: purchases
+        };
+
+        fs.writeFileSync(filePath, JSON.stringify(fileData, null, 2));
+        console.log(`[PROCUREMENT SYNC] ✅ Salvo: contratacoes_${year}.json (${purchases.length} contratações)`);
+      } else {
+        // Verifica se já existe um arquivo local
+        const filePath = path.join(PROCUREMENT_DATA_DIR, `contratacoes_${year}.json`);
+        if (fs.existsSync(filePath)) {
+          console.log(`[PROCUREMENT SYNC] ℹ️ Usando dados existentes para ${year} (API não retornou dados)`);
+        } else {
+          console.log(`[PROCUREMENT SYNC] ℹ️ Nenhuma contratação encontrada para ${year}`);
+        }
+      }
+
+      // Delay entre anos para não sobrecarregar a API
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+    } catch (error) {
+      if (error.response && error.response.status === 404) {
+        // Verifica se já existe um arquivo local
+        const filePath = path.join(PROCUREMENT_DATA_DIR, `contratacoes_${year}.json`);
+        if (fs.existsSync(filePath)) {
+          console.log(`[PROCUREMENT SYNC] ℹ️ API indisponível para ${year}, mantendo dados existentes`);
+        } else {
+          console.log(`[PROCUREMENT SYNC] ℹ️ Nenhuma contratação publicada para ${year} (404)`);
+        }
+      } else if (error.response && error.response.status === 400) {
+        console.error(`[PROCUREMENT SYNC] ⚠️ Requisição inválida para ${year}:`, error.response.data?.message || error.message);
+      } else {
+        console.error(`[PROCUREMENT SYNC] ❌ Erro ao sincronizar ${year}:`, error.message);
+        if (error.response) {
+          console.error(`[PROCUREMENT SYNC] Status: ${error.response.status}`);
+        }
+      }
+    }
+  }
+
+  console.log(`[PROCUREMENT SYNC] 🎉 Sincronização de contratações concluída!`);
+}
 
 async function performAutomaticSync() {
-  // ... existing sync logic ...
-  // Keeping this as is since it syncs PCA JSONs, not related to the "scraper" refactor requested
+  // Sync PCA data
   const YEARS_MAP = { '2026': '12', '2025': '12', '2024': '15', '2023': '14', '2022': '20' };
-  console.log(`[${new Date().toISOString()}] 🚀 Iniciando Sincronização PNCP...`);
+  console.log(`[${new Date().toISOString()}] 🚀 Iniciando Sincronização PNCP (PCA)...`);
   for (const [year, seq] of Object.entries(YEARS_MAP)) {
     try {
       const url = `https://pncp.gov.br/api/pncp/v1/orgaos/${CNPJ_IFES_BSF}/pca/${year}/${seq}/itens?pagina=1&tamanhoPagina=1000`;
@@ -323,12 +457,21 @@ async function performAutomaticSync() {
         if (!fs.existsSync(PUBLIC_DATA_DIR)) fs.mkdirSync(PUBLIC_DATA_DIR, { recursive: true });
         const filePath = path.join(PUBLIC_DATA_DIR, `pca_${year}.json`);
         fs.writeFileSync(filePath, JSON.stringify({ data, updatedAt: new Date().toISOString() }, null, 2));
-        console.log(`[SYNC] ✅ Saved: ${year}`);
+        console.log(`[PCA SYNC] ✅ Salvo: pca_${year}.json (${data.length} itens)`);
+      } else {
+        console.log(`[PCA SYNC] ℹ️ Nenhum item encontrado para ${year}`);
       }
     } catch (error) {
-      console.error(`[SYNC] ❌ Error ${year}:`, error.message);
+      if (error.response && error.response.status === 404) {
+        console.log(`[PCA SYNC] ℹ️ PCA ${year} ainda não publicado no PNCP (404)`);
+      } else {
+        console.error(`[PCA SYNC] ❌ Erro ao sincronizar PCA ${year}:`, error.message);
+      }
     }
   }
+
+  // Sync Procurement/Contracting data
+  await syncProcurementData();
 }
 
 import { onRequest } from "firebase-functions/v2/https";
@@ -340,11 +483,123 @@ export const api = onRequest({
   region: 'us-central1'
 }, app);
 
+// Endpoint para ler dados brutos da integração Compras.gov/PNCP (Legacy - mantido para compatibilidade)
+app.get('/api/integration/procurement-data', async (req, res) => {
+  try {
+    const COMPRAS_GOV_PATH = path.join(__dirname, '..', 'dados_abertos_compras', 'compras_gov_result.json');
+    if (fs.existsSync(COMPRAS_GOV_PATH)) {
+      const data = JSON.parse(fs.readFileSync(COMPRAS_GOV_PATH, 'utf8'));
+      return res.json(data);
+    }
+    res.status(404).json({ error: 'Arquivo de integração não encontrado' });
+  } catch (error) {
+    console.error('[INTEGRATION DATA ERROR]', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint para obter dados de contratações de um ano específico
+app.get('/api/procurement/year/:year', async (req, res) => {
+  try {
+    const { year } = req.params;
+    const filePath = path.join(PROCUREMENT_DATA_DIR, `contratacoes_${year}.json`);
+
+    if (fs.existsSync(filePath)) {
+      const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      return res.json(data);
+    }
+
+    res.status(404).json({
+      error: `Dados de contratações para ${year} não encontrados`,
+      message: 'Execute a sincronização primeiro usando /api/procurement/sync'
+    });
+  } catch (error) {
+    console.error('[PROCUREMENT DATA ERROR]', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint para obter todos os dados de contratações (todos os anos)
+app.get('/api/procurement/all', async (req, res) => {
+  try {
+    const YEARS = ['2022', '2023', '2024', '2025', '2026'];
+    const allData = {
+      metadata: {
+        generatedAt: new Date().toISOString(),
+        cnpj: CNPJ_IFES_BSF,
+        years: YEARS
+      },
+      data: []
+    };
+
+    for (const year of YEARS) {
+      const filePath = path.join(PROCUREMENT_DATA_DIR, `contratacoes_${year}.json`);
+      if (fs.existsSync(filePath)) {
+        const yearData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        allData.data.push(...(yearData.data || []));
+      }
+    }
+
+    res.json(allData);
+  } catch (error) {
+    console.error('[PROCUREMENT ALL DATA ERROR]', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint para forçar sincronização manual
+app.post('/api/procurement/sync', async (req, res) => {
+  try {
+    console.log('[MANUAL SYNC] Iniciando sincronização manual de contratações...');
+    for (const year of YEARS) {
+      const filePath = path.join(PROCUREMENT_DATA_DIR, `contratacoes_${year}.json`);
+      if (fs.existsSync(filePath)) {
+        const stats = fs.statSync(filePath);
+        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        status[year] = {
+          exists: true,
+          lastUpdated: data.metadata?.extractedAt || stats.mtime,
+          totalPurchases: data.metadata?.totalPurchases || 0,
+          fileSize: stats.size
+        };
+      } else {
+        status[year] = {
+          exists: false,
+          lastUpdated: null,
+          totalPurchases: 0
+        };
+      }
+    }
+
+    res.json(status);
+  } catch (error) {
+    console.error('[PROCUREMENT STATUS ERROR]', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Executa servidor local apenas se NÃO estivermos no ambiente Cloud Functions
 if (!process.env.FUNCTION_TARGET && !process.env.FIREBASE_CONFIG) {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Servidor rodando em http://localhost:${PORT}`);
+
+    // Executa sincronização inicial após 5 segundos (dá tempo do servidor iniciar completamente)
+    setTimeout(() => {
+      console.log('[AUTO SYNC] Iniciando sincronização automática...');
+      performAutomaticSync().catch(err => {
+        console.error('[AUTO SYNC ERROR]', err);
+      });
+    }, 5000);
+
+    // Sincronização periódica a cada 6 horas (21600000 ms)
+    setInterval(() => {
+      console.log('[PERIODIC SYNC] Executando sincronização periódica...');
+      performAutomaticSync().catch(err => {
+        console.error('[PERIODIC SYNC ERROR]', err);
+      });
+    }, 21600000); // 6 horas
   });
 }
 
 setInterval(() => { }, 60000);
+
