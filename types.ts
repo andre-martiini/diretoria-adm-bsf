@@ -105,6 +105,9 @@ export interface ContractItem {
   numeroDfd?: string;
   ifc?: string;
   sequencialItemPca?: number;
+  classificacaoSuperiorCodigo?: string;
+  classificacaoSuperiorNome?: string;
+  dataDesejada?: string;
 }
 
 export interface PCAMetadata {

@@ -46,7 +46,7 @@ const ContractTable: React.FC<ContractTableProps> = ({
           <tr className={`${viewMode === 'planning' ? 'bg-slate-50/30' : 'bg-blue-50/30'}`}>
             {viewMode === 'planning' ? (
               <>
-                <TableHeader label="DFD" sortKey="numeroDfd" align="center" />
+                <TableHeader label="ITEM PCA" sortKey="numeroItem" align="center" />
                 <TableHeader label="Tipo" sortKey="categoria" align="center" />
                 <TableHeader label="Descrição do Item / Classe / Grupo" sortKey="titulo" />
                 <th
@@ -63,7 +63,7 @@ const ContractTable: React.FC<ContractTableProps> = ({
                   </div>
                 </th>
                 <TableHeader label="Valor total estimado" sortKey="valor" align="right" />
-                <TableHeader label="Data desejada" sortKey="inicio" align="center" />
+                <TableHeader label="Data desejada" sortKey="dataDesejada" align="center" />
               </>
             ) : (
               <>
@@ -113,10 +113,10 @@ const ContractTable: React.FC<ContractTableProps> = ({
 
                   {viewMode === 'planning' ? (
                     <>
-                      {/* DFD Column */}
+                      {/* PCA Item ID Column */}
                       <td className="p-6 text-center">
-                        <span className="text-xs font-bold text-slate-700 font-mono">
-                          {item.numeroDfd || '-'}
+                        <span className="text-xs font-bold text-blue-600 font-mono">
+                          {item.numeroItem || '-'}
                         </span>
                       </td>
 
@@ -140,7 +140,7 @@ const ContractTable: React.FC<ContractTableProps> = ({
                             {item.titulo}
                           </span>
                           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">
-                            Grupo: {item.grupoContratacao || 'N/A'}
+                            {item.classificacaoSuperiorCodigo ? `${item.classificacaoSuperiorCodigo} - ${item.classificacaoSuperiorNome}` : (item.grupoContratacao || 'N/A')}
                           </span>
                           <div className="flex items-center gap-2 mt-2">
                             {item.isManual && <span className="text-[8px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-sm uppercase font-black tracking-widest leading-none">Extra-PCA</span>}
@@ -173,7 +173,7 @@ const ContractTable: React.FC<ContractTableProps> = ({
                       {/* Data Column */}
                       <td className="p-6 text-center">
                         <span className="text-xs font-bold text-slate-700 uppercase">
-                          {formatDate(item.inicio)}
+                          {item.dataDesejada ? formatDate(item.dataDesejada) : formatDate(item.inicio)}
                         </span>
                       </td>
 

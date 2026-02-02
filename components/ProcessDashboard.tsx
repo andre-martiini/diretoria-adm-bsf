@@ -7,7 +7,6 @@ import {
     TrendingUp,
     ChevronDown,
     ChevronUp,
-    ChevronRight,
     CheckCircle,
     FileText,
     Link as LinkIcon,
@@ -15,7 +14,9 @@ import {
     Search,
     ArrowUpDown,
     ArrowUp,
-    ArrowDown
+    ArrowDown,
+    PlusCircle,
+    Eye
 } from 'lucide-react';
 import {
     ResponsiveContainer,
@@ -32,7 +33,6 @@ import {
 } from 'recharts';
 import { ContractItem } from '../types';
 import { formatCurrency } from '../utils/formatters';
-import { groupItemsByDfd, DfdGroup } from '../utils/processLogic';
 import { linkItemsToProcess } from '../services/acquisitionService';
 import { API_SERVER_URL } from '../constants';
 
@@ -40,64 +40,53 @@ interface ProcessDashboardProps {
     data: ContractItem[];
     showGraphs?: boolean;
     showDfdTable?: boolean;
-    onUnlinkDfd?: (group: DfdGroup) => void;
+    onUnlinkDfd?: (group: any) => void; // Mantendo compatibilidade de assinatura, mas não será usado da mesma forma
 }
 
-const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = true, showDfdTable = true, onUnlinkDfd }) => {
+const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = true, showDfdTable = true }) => {
     const [isMounted, setIsMounted] = useState(false);
     const [isChartsVisible, setIsChartsVisible] = useState(true);
     const [linkModalOpen, setLinkModalOpen] = useState(false);
-    const [selectedDfd, setSelectedDfd] = useState<DfdGroup | null>(null);
+
+    // State for Item Selection
+    const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
+
     const [sipacProtocolInput, setSipacProtocolInput] = useState('');
     const [isLinking, setIsLinking] = useState(false);
-    const [expandedDfds, setExpandedDfds] = useState<Set<string>>(new Set());
-    const [dfdCurrentPage, setDfdCurrentPage] = useState(1);
+    const [currentPage, setCurrentPage] = useState(1);
     const [viewingItem, setViewingItem] = useState<ContractItem | null>(null);
-    const [dfdSearchTerm, setDfdSearchTerm] = useState('');
-    const [dfdStatusFilter, setDfdStatusFilter] = useState<'Todos' | 'Pendente' | 'Vinculado'>('Todos');
-    const [dfdSortConfig, setDfdSortConfig] = useState<{ key: keyof DfdGroup, direction: 'asc' | 'desc' }>({ key: 'totalValue', direction: 'desc' });
-    const dfdItemsPerPage = 10;
+    const [searchTerm, setSearchTerm] = useState('');
+    const [sortConfig, setSortConfig] = useState<{ key: keyof ContractItem, direction: 'asc' | 'desc' }>({ key: 'valor', direction: 'desc' });
+    const itemsPerPage = 10;
 
     useEffect(() => {
         setIsMounted(true);
     }, []);
 
-    const toggleDfdExpansion = (dfdNumber: string) => {
-        setExpandedDfds(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(dfdNumber)) {
-                newSet.delete(dfdNumber);
-            } else {
-                newSet.add(dfdNumber);
-            }
-            return newSet;
-        });
-    };
-
-    const dfdGroups = useMemo(() => {
-        return groupItemsByDfd(data);
+    // Filter "Pending" Items (No Protocol linked)
+    const pendingItems = useMemo(() => {
+        return data.filter(item =>
+            !item.protocoloSIPAC || item.protocoloSIPAC.length < 5
+        );
     }, [data]);
 
-    // Logic for filtering and sorting DFDs
-    const allDfds = useMemo(() => {
-        let filtered = dfdGroups.filter(group => {
-            const lowSearch = dfdSearchTerm.toLowerCase();
-            const matchesSearch =
-                group.numeroDfd.toLowerCase().includes(lowSearch) ||
-                group.descricaoGrupo.toLowerCase().includes(lowSearch) ||
-                group.items.some(i =>
-                    (i.ifc && i.ifc.toLowerCase().includes(lowSearch)) ||
-                    (i.protocoloSIPAC && i.protocoloSIPAC.toLowerCase().includes(lowSearch)) ||
-                    (i.codigoItem && i.codigoItem.toLowerCase().includes(lowSearch))
-                );
-
-            const matchesStatus = dfdStatusFilter === 'Todos' || group.status === dfdStatusFilter;
-
-            return matchesSearch && matchesStatus;
+    // Search & Sort Logic
+    const filteredItems = useMemo(() => {
+        let filtered = pendingItems.filter(item => {
+            const lowSearch = searchTerm.toLowerCase();
+            return (
+                item.titulo.toLowerCase().includes(lowSearch) ||
+                (item.codigoItem && item.codigoItem.includes(lowSearch)) ||
+                (item.identificadorFuturaContratacao && item.identificadorFuturaContratacao.toLowerCase().includes(lowSearch)) ||
+                (item.grupoContratacao && item.grupoContratacao.toLowerCase().includes(lowSearch)) ||
+                (item.classificacaoSuperiorCodigo && item.classificacaoSuperiorCodigo.toLowerCase().includes(lowSearch)) ||
+                (item.classificacaoSuperiorNome && item.classificacaoSuperiorNome.toLowerCase().includes(lowSearch))
+            );
         });
 
         return filtered.sort((a, b) => {
-            const { key, direction } = dfdSortConfig;
+            const { key, direction } = sortConfig;
+            // Handle specialized sorts or default
             let valA = a[key];
             let valB = b[key];
 
@@ -110,35 +99,61 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
             if (valA > valB) return direction === 'asc' ? 1 : -1;
             return 0;
         });
-    }, [dfdGroups, dfdSearchTerm, dfdStatusFilter, dfdSortConfig]);
+    }, [pendingItems, searchTerm, sortConfig]);
 
-    const handleDfdSort = (key: keyof DfdGroup) => {
-        setDfdSortConfig(prev => ({
+    const handleSort = (key: keyof ContractItem) => {
+        setSortConfig(prev => ({
             key,
             direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
         }));
     };
 
-    const getSortIcon = (key: keyof DfdGroup) => {
-        if (dfdSortConfig.key !== key) return <ArrowUpDown size={12} className="text-slate-300" />;
-        return dfdSortConfig.direction === 'asc' ? <ArrowUp size={12} className="text-blue-500" /> : <ArrowDown size={12} className="text-blue-500" />;
+    const getSortIcon = (key: keyof ContractItem) => {
+        if (sortConfig.key !== key) return <ArrowUpDown size={12} className="text-slate-300" />;
+        return sortConfig.direction === 'asc' ? <ArrowUp size={12} className="text-blue-500" /> : <ArrowDown size={12} className="text-blue-500" />;
     };
 
-    // Pagination for DFDs
-    const paginatedDfds = useMemo(() => {
-        const start = (dfdCurrentPage - 1) * dfdItemsPerPage;
-        return allDfds.slice(start, start + dfdItemsPerPage);
-    }, [allDfds, dfdCurrentPage, dfdItemsPerPage]);
+    // Pagination
+    const paginatedItems = useMemo(() => {
+        const start = (currentPage - 1) * itemsPerPage;
+        return filteredItems.slice(start, start + itemsPerPage);
+    }, [filteredItems, currentPage, itemsPerPage]);
 
-    const totalDfdPages = Math.ceil(allDfds.length / dfdItemsPerPage);
-    const pendingCount = dfdGroups.filter(g => g.status === 'Pendente').length;
-    const linkedCount = dfdGroups.filter(g => g.status === 'Vinculado').length;
+    const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
 
-    const handleLinkProcess = async (dfdNumber: string, protocol: string) => {
-        if (!selectedDfd) return;
+    // Selection Handlers
+    const toggleSelection = (id: string) => {
+        setSelectedItemIds(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(id)) {
+                newSet.delete(id);
+            } else {
+                newSet.add(id);
+            }
+            return newSet;
+        });
+    };
+
+    const toggleSelectAllPage = () => {
+        const pageIds = paginatedItems.map(i => String(i.id));
+        const allSelected = pageIds.every(id => selectedItemIds.has(id));
+
+        setSelectedItemIds(prev => {
+            const newSet = new Set(prev);
+            if (allSelected) {
+                pageIds.forEach(id => newSet.delete(id));
+            } else {
+                pageIds.forEach(id => newSet.add(id));
+            }
+            return newSet;
+        });
+    };
+
+    const handleLinkProcess = async () => {
+        if (selectedItemIds.size === 0 || !sipacProtocolInput) return;
         setIsLinking(true);
         try {
-            const response = await fetch(`${API_SERVER_URL}/api/sipac/processo?protocolo=${protocol}`);
+            const response = await fetch(`${API_SERVER_URL}/api/sipac/processo?protocolo=${sipacProtocolInput}`);
             if (!response.ok) throw new Error('Falha ao buscar dados no SIPAC');
             const sipacData = await response.json();
 
@@ -148,13 +163,19 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
                 return;
             }
 
-            const itemIds = selectedDfd.items.map(i => i.id);
-            const year = selectedDfd.items[0]?.ano;
-            await linkItemsToProcess(protocol, itemIds, sipacData, year, dfdNumber);
+            // Convert Set to Array
+            const itemIds = Array.from(selectedItemIds);
 
-            alert('Processo vinculado e dados atualizados com sucesso!');
+            // Find year from first item (assuming same year context usually)
+            const firstItem = data.find(i => String(i.id) === itemIds[0]);
+            const year = firstItem?.ano;
+
+            await linkItemsToProcess(sipacProtocolInput, itemIds, sipacData, year);
+
+            alert('Processo criado e itens vinculados com sucesso!');
             setLinkModalOpen(false);
             setSipacProtocolInput('');
+            setSelectedItemIds(new Set());
             window.location.reload();
 
         } catch (err) {
@@ -165,6 +186,7 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
         }
     };
 
+    // --- KPI & Charts Logic (Existing) ---
     const processItems = useMemo(() =>
         data.filter(item => item.protocoloSIPAC && item.protocoloSIPAC.length > 5),
         [data]
@@ -368,49 +390,43 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
                 </div>
             )}
 
-            {/* Seção A: Grupos de Contratação (DFDs) */}
+            {/* Seção A: Itens Disponíveis (Antigo "Grupos de Contratação") */}
             {showDfdTable && (
                 <div className="bg-white rounded-2xl border border-blue-100 shadow-sm overflow-hidden mt-6">
                     <div className="px-6 py-4 border-b border-blue-100 bg-blue-50/30 flex justify-between items-center">
                         <div>
                             <h3 className="text-sm font-black text-blue-900 uppercase tracking-wide flex items-center gap-2">
-                                <FileText size={16} className="text-blue-400" /> Grupos de Contratação (DFDs)
+                                <FileText size={16} className="text-blue-400" /> Itens Disponíveis para Autuação
                             </h3>
                             <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-1 italic">
-                                Todo o planejamento do PCA
+                                Selecione os itens do PCA e crie um novo processo
                             </p>
                         </div>
                         <div className="flex flex-wrap items-center gap-4">
+                            {/* Search */}
                             <div className="relative w-64">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
                                 <input
                                     type="text"
-                                    placeholder="Buscar DFD ou objeto..."
+                                    placeholder="Buscar por descrição, ID ou objeto..."
                                     className="w-full pl-9 pr-4 py-2 bg-white border border-blue-100 rounded-xl text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500/20 transition-all shadow-sm"
-                                    value={dfdSearchTerm}
-                                    onChange={(e) => { setDfdSearchTerm(e.target.value); setDfdCurrentPage(1); }}
+                                    value={searchTerm}
+                                    onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                                 />
                             </div>
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => setDfdStatusFilter('Todos')}
-                                    className={`text-[10px] font-bold px-3 py-1.5 rounded-full transition-all border ${dfdStatusFilter === 'Todos' ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-400'}`}
-                                >
-                                    Todos
-                                </button>
-                                <button
-                                    onClick={() => setDfdStatusFilter('Pendente')}
-                                    className={`text-[10px] font-bold px-3 py-1.5 rounded-full transition-all border ${dfdStatusFilter === 'Pendente' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-white text-slate-400 border-slate-200 hover:border-blue-300'}`}
-                                >
-                                    {pendingCount} Pendentes
-                                </button>
-                                <button
-                                    onClick={() => setDfdStatusFilter('Vinculado')}
-                                    className={`text-[10px] font-bold px-3 py-1.5 rounded-full transition-all border ${dfdStatusFilter === 'Vinculado' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-white text-slate-400 border-slate-200 hover:border-emerald-300'}`}
-                                >
-                                    {linkedCount} Vinculados
-                                </button>
-                            </div>
+
+                            {/* Create Process Button */}
+                            <button
+                                onClick={() => setLinkModalOpen(true)}
+                                disabled={selectedItemIds.size === 0}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all shadow-md ${selectedItemIds.size > 0
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200'
+                                    : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
+                                    }`}
+                            >
+                                <PlusCircle size={14} />
+                                Criar Processo ({selectedItemIds.size})
+                            </button>
                         </div>
                     </div>
 
@@ -418,70 +434,74 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
                         <table className="w-full text-left">
                             <thead>
                                 <tr className="bg-white border-b border-slate-100">
-                                    <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleDfdSort('numeroDfd')}>
-                                        <div className="flex items-center gap-2">DFD {getSortIcon('numeroDfd')}</div>
+                                    <th className="px-4 py-3 w-10 text-center">
+                                        <input
+                                            type="checkbox"
+                                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                            checked={paginatedItems.length > 0 && paginatedItems.every(i => selectedItemIds.has(String(i.id)))}
+                                            onChange={toggleSelectAllPage}
+                                        />
                                     </th>
-                                    <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleDfdSort('descricaoGrupo')}>
-                                        <div className="flex items-center gap-2">Objeto / Descrição {getSortIcon('descricaoGrupo')}</div>
+                                    <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleSort('numeroItem')}>
+                                        <div className="flex items-center gap-2">ITEM PCA {getSortIcon('numeroItem')}</div>
                                     </th>
-                                    <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleDfdSort('itemCount')}>
-                                        <div className="flex items-center justify-center gap-2">Qtd. Itens {getSortIcon('itemCount')}</div>
+                                    <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleSort('titulo')}>
+                                        <div className="flex items-center gap-2">Descrição {getSortIcon('titulo')}</div>
                                     </th>
-                                    <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleDfdSort('dataInicio')}>
-                                        <div className="flex items-center justify-center gap-2">Prev. Início {getSortIcon('dataInicio')}</div>
+                                    <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        Grupo / Classe
                                     </th>
-                                    <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleDfdSort('dataFim')}>
-                                        <div className="flex items-center justify-center gap-2">Prev. Término {getSortIcon('dataFim')}</div>
+                                    <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleSort('quantidade')}>
+                                        <div className="flex items-center justify-center gap-2">Qtd. {getSortIcon('quantidade')}</div>
                                     </th>
-                                    <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleDfdSort('totalValue')}>
-                                        <div className="flex items-center justify-end gap-2">Valor Total {getSortIcon('totalValue')}</div>
+                                    <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleSort('valorUnitario')}>
+                                        <div className="flex items-center justify-end gap-2">V. Unitário {getSortIcon('valorUnitario')}</div>
                                     </th>
-                                    <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Ação</th>
+                                    <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleSort('valor')}>
+                                        <div className="flex items-center justify-end gap-2">V. Total {getSortIcon('valor')}</div>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
-                                {paginatedDfds.length === 0 ? (
-                                    <tr><td colSpan={7} className="px-6 py-8 text-center text-xs text-slate-400 font-bold">Nenhum processo pendente encontrado.</td></tr>
+                                {paginatedItems.length === 0 ? (
+                                    <tr><td colSpan={7} className="px-6 py-8 text-center text-xs text-slate-400 font-bold">Nenhum item pendente encontrado.</td></tr>
                                 ) : (
-                                    paginatedDfds.map((group) => {
+                                    paginatedItems.map((item) => {
+                                        const isSelected = selectedItemIds.has(String(item.id));
                                         return (
-                                            <tr key={group.id} className="hover:bg-blue-50/30 transition-colors">
-                                                <td className="px-6 py-4 text-xs font-black text-slate-700 font-mono">{group.numeroDfd}</td>
-                                                <td className="px-6 py-4 text-xs font-medium text-slate-600">
-                                                    <span title={group.descricaoGrupo}>{group.descricaoGrupo}</span>
+                                            <tr key={item.id} className={`transition-colors cursor-pointer ${isSelected ? 'bg-blue-50/50' : 'hover:bg-slate-50'}`} onClick={() => setViewingItem(item)}>
+                                                <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                                    <input
+                                                        type="checkbox"
+                                                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                                        checked={isSelected}
+                                                        onChange={() => toggleSelection(String(item.id))}
+                                                    />
                                                 </td>
-                                                <td className="px-6 py-4 text-xs font-bold text-slate-600 text-center">{group.itemCount || 1}</td>
-                                                <td className="px-6 py-4 text-xs font-medium text-slate-600 text-center">
-                                                    {group.dataInicio ? new Date(group.dataInicio).toLocaleDateString('pt-BR') : '-'}
+                                                <td className="px-4 py-4 text-center text-[11px] font-black text-blue-600 font-mono">
+                                                    {item.numeroItem || '-'}
                                                 </td>
-                                                <td className="px-6 py-4 text-xs font-medium text-slate-600 text-center">
-                                                    {group.dataFim ? new Date(group.dataFim).toLocaleDateString('pt-BR') : '-'}
+                                                <td className="px-4 py-4">
+                                                    <div className="flex flex-col max-w-[300px]">
+                                                        <span className="text-[11px] font-bold text-slate-800 uppercase leading-tight" title={item.titulo}>{item.titulo}</span>
+                                                        {item.ifc && (
+                                                            <span className="text-[9px] text-blue-500 font-black mt-0.5">IFC: {item.ifc}</span>
+                                                        )}
+                                                    </div>
                                                 </td>
-                                                <td className="px-6 py-4 text-xs font-bold text-slate-600 text-right">{formatCurrency(group.totalValue)}</td>
-                                                <td className="px-6 py-4 text-center">
-                                                    {group.status === 'Vinculado' ? (
-                                                        <div className="flex flex-col items-center gap-1">
-                                                            <div className="flex items-center justify-center gap-1">
-                                                                <CheckCircle size={10} className="text-emerald-500" />
-                                                                <span className="text-[9px] font-black text-emerald-600">
-                                                                    {group.items.find(i => i.protocoloSIPAC)?.protocoloSIPAC}
-                                                                </span>
-                                                            </div>
-                                                            <button
-                                                                onClick={() => onUnlinkDfd?.(group)}
-                                                                className="text-[8px] font-black text-red-400 hover:text-red-600 uppercase tracking-tighter transition-colors"
-                                                            >
-                                                                Remover vínculo
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => { setSelectedDfd(group); setLinkModalOpen(true); }}
-                                                            className="px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg text-[10px] font-black hover:bg-blue-100 transition-all flex items-center gap-1 mx-auto"
-                                                        >
-                                                            <LinkIcon size={12} /> Vincular
-                                                        </button>
-                                                    )}
+                                                <td className="px-4 py-4">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase leading-tight block max-w-[200px]">
+                                                        {item.classificacaoSuperiorCodigo ? `${item.classificacaoSuperiorCodigo} - ${item.classificacaoSuperiorNome}` : '---'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4 text-center text-[11px] font-black text-slate-700">
+                                                    {item.quantidade}
+                                                </td>
+                                                <td className="px-4 py-4 text-right text-[11px] font-black text-slate-700 tabular-nums">
+                                                    {formatCurrency(item.valorUnitario || 0)}
+                                                </td>
+                                                <td className="px-4 py-4 text-right text-[11px] font-black text-blue-600 tabular-nums">
+                                                    {formatCurrency(item.valor)}
                                                 </td>
                                             </tr>
                                         );
@@ -492,22 +512,22 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
                     </div>
 
                     {/* Pagination */}
-                    {totalDfdPages > 1 && (
+                    {totalPages > 1 && (
                         <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/30 flex items-center justify-between">
                             <span className="text-xs font-bold text-slate-500">
-                                Página {dfdCurrentPage} de {totalDfdPages}
+                                Página {currentPage} de {totalPages}
                             </span>
                             <div className="flex gap-2">
                                 <button
-                                    onClick={() => setDfdCurrentPage(p => Math.max(1, p - 1))}
-                                    disabled={dfdCurrentPage === 1}
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
                                     className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                 >
                                     Anterior
                                 </button>
                                 <button
-                                    onClick={() => setDfdCurrentPage(p => Math.min(totalDfdPages, p + 1))}
-                                    disabled={dfdCurrentPage === totalDfdPages}
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
                                     className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                 >
                                     Próxima
@@ -518,23 +538,23 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
                 </div>
             )}
 
-            {/* Modal de Vínculo */}
-            {linkModalOpen && selectedDfd && (
+            {/* Modal de Vínculo (Agora "Criar Processo") */}
+            {linkModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-slate-200 overflow-hidden font-sans">
                         <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                            <h3 className="text-sm font-black text-slate-800">Vincular Processo SIPAC</h3>
+                            <h3 className="text-sm font-black text-slate-800">Criar Processo Administrativo</h3>
                             <button onClick={() => setLinkModalOpen(false)} className="text-slate-400 hover:text-red-500 transition-colors"><X size={18} /></button>
                         </div>
                         <div className="p-6">
                             <p className="text-xs text-slate-500 mb-6">
-                                Digite o número do processo para o DFD <strong>{selectedDfd.numeroDfd}</strong>.
-                                Isso vinculará automaticamente os <strong className="text-slate-800">{selectedDfd.itemCount} itens</strong> deste grupo.
+                                Você selecionou <strong>{selectedItemIds.size} itens</strong>.
+                                Informe o número do processo administrativo para vincular esses itens e iniciar o acompanhamento.
                             </p>
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Número do Processo</label>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Número do Processo (SIPAC)</label>
                                     <input
                                         type="text"
                                         autoFocus
@@ -554,11 +574,11 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
                                 Cancelar
                             </button>
                             <button
-                                onClick={() => handleLinkProcess(selectedDfd.numeroDfd, sipacProtocolInput)}
+                                onClick={handleLinkProcess}
                                 disabled={!sipacProtocolInput || isLinking}
                                 className="px-6 py-3 bg-blue-600 text-white rounded-xl text-xs font-black hover:bg-blue-700 disabled:opacity-50 transition-all shadow-lg shadow-blue-200"
                             >
-                                {isLinking ? 'Vinculando...' : 'Confirmar Vínculo'}
+                                {isLinking ? 'Autuando...' : 'Confirmar e Autuar'}
                             </button>
                         </div>
                     </div>

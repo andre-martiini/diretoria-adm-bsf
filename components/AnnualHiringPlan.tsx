@@ -2412,7 +2412,7 @@ const AnnualHiringPlan: React.FC = () => {
               <div>
                 <h3 className="text-sm font-black text-slate-800">Detalhes do Item do PCA</h3>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                  Item #{viewingItem.sequencialItemPca || viewingItem.numeroItem} • DFD {viewingItem.numeroDfd}
+                  Item #{viewingItem.sequencialItemPca || viewingItem.numeroItem} • IFC {viewingItem.ifc || viewingItem.identificadorFuturaContratacao}
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -2434,14 +2434,10 @@ const AnnualHiringPlan: React.FC = () => {
               </div>
             </div>
             <div className="p-6 space-y-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-left">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">DFD</label>
-                  <p className="text-sm font-bold text-slate-700">{viewingItem.numeroDfd || '-'}</p>
-                </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="text-left">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">IFC (Item)</label>
-                  <p className="text-sm font-bold text-slate-700">{viewingItem.ifc || '-'}</p>
+                  <p className="text-sm font-bold text-slate-700">{viewingItem.ifc || viewingItem.identificadorFuturaContratacao || '-'}</p>
                 </div>
                 <div className="text-left">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Categoria</label>
