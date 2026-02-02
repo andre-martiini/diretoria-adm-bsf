@@ -15,7 +15,8 @@ import {
     ArrowUpDown,
     ArrowUp,
     ArrowDown,
-    PlusCircle
+    PlusCircle,
+    Eye
 } from 'lucide-react';
 import {
     ResponsiveContainer,
@@ -77,7 +78,9 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
                 item.titulo.toLowerCase().includes(lowSearch) ||
                 (item.codigoItem && item.codigoItem.includes(lowSearch)) ||
                 (item.identificadorFuturaContratacao && item.identificadorFuturaContratacao.toLowerCase().includes(lowSearch)) ||
-                (item.grupoContratacao && item.grupoContratacao.toLowerCase().includes(lowSearch))
+                (item.grupoContratacao && item.grupoContratacao.toLowerCase().includes(lowSearch)) ||
+                (item.classificacaoSuperiorCodigo && item.classificacaoSuperiorCodigo.toLowerCase().includes(lowSearch)) ||
+                (item.classificacaoSuperiorNome && item.classificacaoSuperiorNome.toLowerCase().includes(lowSearch))
             );
         });
 
@@ -416,11 +419,10 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
                             <button
                                 onClick={() => setLinkModalOpen(true)}
                                 disabled={selectedItemIds.size === 0}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all shadow-md ${
-                                    selectedItemIds.size > 0
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all shadow-md ${selectedItemIds.size > 0
                                     ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200'
                                     : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
-                                }`}
+                                    }`}
                             >
                                 <PlusCircle size={14} />
                                 Criar Processo ({selectedItemIds.size})
@@ -440,30 +442,35 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
                                             onChange={toggleSelectAllPage}
                                         />
                                     </th>
-                                    <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleSort('codigoItem')}>
-                                        <div className="flex items-center gap-2">Código/ID {getSortIcon('codigoItem')}</div>
+                                    <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleSort('numeroItem')}>
+                                        <div className="flex items-center gap-2">ITEM PCA {getSortIcon('numeroItem')}</div>
                                     </th>
-                                    <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleSort('titulo')}>
-                                        <div className="flex items-center gap-2">Descrição / Objeto {getSortIcon('titulo')}</div>
+                                    <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleSort('titulo')}>
+                                        <div className="flex items-center gap-2">Descrição {getSortIcon('titulo')}</div>
                                     </th>
-                                    <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleSort('quantidade')}>
+                                    <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        Grupo / Classe
+                                    </th>
+                                    <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleSort('quantidade')}>
                                         <div className="flex items-center justify-center gap-2">Qtd. {getSortIcon('quantidade')}</div>
                                     </th>
-                                    <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleSort('valor')}>
-                                        <div className="flex items-center justify-end gap-2">Valor Estimado {getSortIcon('valor')}</div>
+                                    <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleSort('valorUnitario')}>
+                                        <div className="flex items-center justify-end gap-2">V. Unitário {getSortIcon('valorUnitario')}</div>
                                     </th>
-                                    <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Ação</th>
+                                    <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleSort('valor')}>
+                                        <div className="flex items-center justify-end gap-2">V. Total {getSortIcon('valor')}</div>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
                                 {paginatedItems.length === 0 ? (
-                                    <tr><td colSpan={6} className="px-6 py-8 text-center text-xs text-slate-400 font-bold">Nenhum item pendente encontrado.</td></tr>
+                                    <tr><td colSpan={7} className="px-6 py-8 text-center text-xs text-slate-400 font-bold">Nenhum item pendente encontrado.</td></tr>
                                 ) : (
                                     paginatedItems.map((item) => {
                                         const isSelected = selectedItemIds.has(String(item.id));
                                         return (
-                                            <tr key={item.id} className={`transition-colors ${isSelected ? 'bg-blue-50/50' : 'hover:bg-slate-50'}`}>
-                                                <td className="px-4 py-4 text-center">
+                                            <tr key={item.id} className={`transition-colors cursor-pointer ${isSelected ? 'bg-blue-50/50' : 'hover:bg-slate-50'}`} onClick={() => setViewingItem(item)}>
+                                                <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
                                                     <input
                                                         type="checkbox"
                                                         className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
@@ -471,26 +478,30 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
                                                         onChange={() => toggleSelection(String(item.id))}
                                                     />
                                                 </td>
-                                                <td className="px-4 py-4 text-xs font-black text-slate-700 font-mono">
-                                                    {item.codigoItem || item.id}
+                                                <td className="px-4 py-4 text-center text-[11px] font-black text-blue-600 font-mono">
+                                                    {item.numeroItem || '-'}
                                                 </td>
-                                                <td className="px-6 py-4 text-xs font-medium text-slate-600">
-                                                    <span title={item.titulo}>{item.titulo}</span>
-                                                    {item.grupoContratacao && (
-                                                        <span className="block text-[9px] text-slate-400 mt-1 uppercase tracking-wider">
-                                                            {item.grupoContratacao}
-                                                        </span>
-                                                    )}
+                                                <td className="px-4 py-4">
+                                                    <div className="flex flex-col max-w-[300px]">
+                                                        <span className="text-[11px] font-bold text-slate-800 uppercase leading-tight" title={item.titulo}>{item.titulo}</span>
+                                                        {item.ifc && (
+                                                            <span className="text-[9px] text-blue-500 font-black mt-0.5">IFC: {item.ifc}</span>
+                                                        )}
+                                                    </div>
                                                 </td>
-                                                <td className="px-6 py-4 text-xs font-bold text-slate-600 text-center">{item.quantidade}</td>
-                                                <td className="px-6 py-4 text-xs font-bold text-slate-600 text-right">{formatCurrency(item.valor)}</td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <button
-                                                        onClick={() => setViewingItem(item)}
-                                                        className="px-3 py-1.5 bg-white border border-slate-200 text-slate-500 rounded-lg text-[10px] font-bold hover:bg-slate-100 hover:text-blue-600 transition-all"
-                                                    >
-                                                        Detalhes
-                                                    </button>
+                                                <td className="px-4 py-4">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase leading-tight block max-w-[200px]">
+                                                        {item.classificacaoSuperiorCodigo ? `${item.classificacaoSuperiorCodigo} - ${item.classificacaoSuperiorNome}` : '---'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4 text-center text-[11px] font-black text-slate-700">
+                                                    {item.quantidade}
+                                                </td>
+                                                <td className="px-4 py-4 text-right text-[11px] font-black text-slate-700 tabular-nums">
+                                                    {formatCurrency(item.valorUnitario || 0)}
+                                                </td>
+                                                <td className="px-4 py-4 text-right text-[11px] font-black text-blue-600 tabular-nums">
+                                                    {formatCurrency(item.valor)}
                                                 </td>
                                             </tr>
                                         );

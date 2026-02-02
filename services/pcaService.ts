@@ -83,7 +83,7 @@ export const fetchLocalPcaSnapshot = async (year: string): Promise<ContractItem[
                     identificadorFuturaContratacao: item.grupoContratacaoCodigo || '',
                     numeroItem: item.numeroItem || index + 1,
                     codigoItem: item.codigoItemPca || item.codigoItemCatalogado || '',
-                    unidadeMedida: item.unidadeMedida || '',
+                    unidadeMedida: item.unidadeMedida || item.unidadeFornecimento || '',
                     quantidade: Number(item.quantidade || 0),
                     valorUnitario: Number(item.valorUnitario || 0),
                     unidadeRequisitante: item.unidadeRequisitante || item.nomeUnidade || '',
@@ -92,6 +92,9 @@ export const fetchLocalPcaSnapshot = async (year: string): Promise<ContractItem[
                     numeroDfd: dfdNumber,
                     ifc: ifcCode,
                     sequencialItemPca: item.numeroItem || index + 1,
+                    classificacaoSuperiorCodigo: item.classificacaoSuperiorCodigo || '',
+                    classificacaoSuperiorNome: item.classificacaoSuperiorNome || '',
+                    dataDesejada: item.dataDesejada || '',
                     protocoloSIPAC: '',
                     dadosSIPAC: null
                 };
@@ -301,7 +304,7 @@ export const fetchPcaData = async (
             ano: String(year),
             numeroItem: item.numeroItem || index + 1,
             codigoItem: item.codigoItemPca || item.codigoItemCatalogado || '',
-            unidadeMedida: item.unidadeMedida || '',
+            unidadeMedida: item.unidadeMedida || item.unidadeFornecimento || '',
             quantidade: Number(item.quantidade || 0),
             valorUnitario: Number(item.valorUnitario || 0),
             unidadeRequisitante: item.unidadeRequisitante || item.nomeUnidade || '',
@@ -309,7 +312,10 @@ export const fetchPcaData = async (
             descricaoDetalhada: item.descricao || "Item do Plano de Contratação",
             numeroDfd: dfdNumber,
             ifc: ifcCode,
-            sequencialItemPca: item.numeroItem || index + 1
+            sequencialItemPca: item.numeroItem || index + 1,
+            classificacaoSuperiorCodigo: item.classificacaoSuperiorCodigo || '',
+            classificacaoSuperiorNome: item.classificacaoSuperiorNome || '',
+            dataDesejada: item.dataDesejada || ''
         };
     });
 
