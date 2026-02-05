@@ -100,6 +100,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { findPncpPurchaseByProcess, findPncpPurchaseByProcessCached, fetchPncpPurchaseItems, PNCPPurchase, PNCPItem } from '../services/pncpService';
 import { getFinancialStatusByProcess, ProcurementHistory } from '../services/procurementService';
+import { ShoppingSearch } from './ShoppingSearch';
 
 // Configuração do Worker do PDF.js localmente
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
@@ -148,7 +149,7 @@ const AnnualHiringPlan: React.FC = () => {
   const [despachosContent, setDespachosContent] = useState<{ tipo: string, data: string, texto: string, ordem: string }[]>([]);
   const [isLoadingDespachos, setIsLoadingDespachos] = useState<boolean>(false);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState<boolean>(false);
-  const [dashboardView, setDashboardView] = useState<'planning' | 'status'>('planning');
+  const [dashboardView, setDashboardView] = useState<'planning' | 'status' | 'shopping'>('shopping');
   const [viewingItem, setViewingItem] = useState<ContractItem | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [chartsReady, setChartsReady] = useState(false);
@@ -882,6 +883,7 @@ const AnnualHiringPlan: React.FC = () => {
             </div>
             <div className="border-l border-slate-100 pl-3 ml-3 md:pl-6 md:ml-6">
               <div className="flex bg-slate-100 p-1 rounded-xl">
+                <button onClick={() => setDashboardView('shopping')} className={`px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-black transition-all ${dashboardView === 'shopping' ? 'bg-ifes-green text-white shadow-lg shadow-ifes-green/20 ring-1 ring-ifes-green' : 'text-slate-400 hover:text-slate-600'}`}>Google Compras</button>
                 <button onClick={() => setDashboardView('planning')} className={`px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-black transition-all ${dashboardView === 'planning' ? 'bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-100' : 'text-slate-400 hover:text-slate-600'}`}>PCA</button>
                 <button onClick={() => setDashboardView('status')} className={`px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-black transition-all ${dashboardView === 'status' ? 'bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-100' : 'text-slate-400 hover:text-slate-600'}`}>Processos</button>
               </div>
@@ -900,6 +902,10 @@ const AnnualHiringPlan: React.FC = () => {
       </header>
 
       <main className="w-full max-w-[1920px] px-6 mx-auto py-8 space-y-8">
+        {dashboardView === 'shopping' && (
+          <ShoppingSearch />
+        )}
+
         {dashboardView === 'planning' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -1060,78 +1066,80 @@ const AnnualHiringPlan: React.FC = () => {
         )}
 
         {/* 2. Tabela de Processos em Andamento / Detalhamento do Plano */}
-        <div className={`bg-white rounded-2xl border ${dashboardView === 'planning' ? 'border-slate-200' : 'border-blue-100'} shadow-sm overflow-hidden flex flex-col font-sans mb-6`}>
-          <div className={`p-6 border-b ${dashboardView === 'planning' ? 'border-slate-100 bg-slate-50/30' : 'border-blue-100 bg-blue-50/30'} flex flex-col md:flex-row items-center justify-between gap-6`}>
-            <div>
-              <h2 className={`text-xl font-black ${dashboardView === 'planning' ? 'text-slate-800' : 'text-blue-900'} tracking-tight`}>
-                {dashboardView === 'planning' ? 'Detalhamento do Plano (PNCP)' : 'Processos em Andamento'}
-              </h2>
-              <p className={`text-[10px] font-bold ${dashboardView === 'planning' ? 'text-slate-400' : 'text-blue-400'} uppercase tracking-widest mt-1 italic`}>
-                {dashboardView === 'planning' ? `Lista completa de itens importados do PNCP - Ano ${selectedYear}` : 'Listagem de processos com protocolo SIPAC vinculado'}
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
-                <input
-                  type="text"
-                  placeholder="Buscar por descrição ou área..."
-                  className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:ring-2 focus:ring-ifes-green/20 transition-all"
-                  value={searchTerm}
-                  onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                />
+        {dashboardView !== 'shopping' && (
+          <div className={`bg-white rounded-2xl border ${dashboardView === 'planning' ? 'border-slate-200' : 'border-blue-100'} shadow-sm overflow-hidden flex flex-col font-sans mb-6`}>
+            <div className={`p-6 border-b ${dashboardView === 'planning' ? 'border-slate-100 bg-slate-50/30' : 'border-blue-100 bg-blue-50/30'} flex flex-col md:flex-row items-center justify-between gap-6`}>
+              <div>
+                <h2 className={`text-xl font-black ${dashboardView === 'planning' ? 'text-slate-800' : 'text-blue-900'} tracking-tight`}>
+                  {dashboardView === 'planning' ? 'Detalhamento do Plano (PNCP)' : 'Processos em Andamento'}
+                </h2>
+                <p className={`text-[10px] font-bold ${dashboardView === 'planning' ? 'text-slate-400' : 'text-blue-400'} uppercase tracking-widest mt-1 italic`}>
+                  {dashboardView === 'planning' ? `Lista completa de itens importados do PNCP - Ano ${selectedYear}` : 'Listagem de processos com protocolo SIPAC vinculado'}
+                </p>
               </div>
-              <button
-                onClick={() => setIsManualModalOpen(true)}
-                className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-black hover:bg-slate-700 transition-colors shadow-sm"
-              >
-                <Plus size={16} />
-                <span>Nova Demanda</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="relative w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
+                  <input
+                    type="text"
+                    placeholder="Buscar por descrição ou área..."
+                    className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:ring-2 focus:ring-ifes-green/20 transition-all"
+                    value={searchTerm}
+                    onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                  />
+                </div>
+                <button
+                  onClick={() => setIsManualModalOpen(true)}
+                  className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-black hover:bg-slate-700 transition-colors shadow-sm"
+                >
+                  <Plus size={16} />
+                  <span>Nova Demanda</span>
+                </button>
+              </div>
             </div>
+
+            {!loading && totalPages > 1 && (
+              <div className={`px-6 py-4 border-b ${dashboardView === 'planning' ? 'border-slate-50 bg-slate-50/10' : 'border-blue-50 bg-blue-50/10'} flex items-center justify-between`}>
+                <div className="flex items-center gap-2">
+                  <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="h-9 w-9 flex items-center justify-center border border-slate-200 rounded-lg bg-white disabled:opacity-30 hover:bg-slate-50 text-slate-500 transition-all cursor-pointer"><ChevronLeft size={16} /></button>
+                  <div className="px-4 h-9 flex items-center bg-white border border-slate-200 rounded-lg shadow-sm">
+                    <span className="text-xs font-black text-slate-600 uppercase">Página <span className="text-ifes-green mx-1">{currentPage}</span> de {totalPages}</span>
+                  </div>
+                  <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="h-9 w-9 flex items-center justify-center border border-slate-200 rounded-lg bg-white disabled:opacity-30 hover:bg-slate-50 text-slate-500 transition-all cursor-pointer"><ChevronRight size={16} /></button>
+                </div>
+                <span className="text-[10px] font-bold text-slate-400 italic">Exibindo {pagedData.length} de {activeData.length} itens</span>
+              </div>
+            )}
+
+            <ContractTable
+              viewMode={dashboardView as 'planning' | 'status'}
+              data={pagedData}
+              loading={loading}
+              onSort={(key) => { const direction = sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc'; setSortConfig({ key, direction }); }}
+              sortConfig={sortConfig}
+              selectedIds={selectedIds}
+              onToggleSelection={(id) => { setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]); }}
+              onToggleAll={() => { const allIds = pagedData.map(i => String(i.id)); if (allIds.every(id => selectedIds.includes(id))) { setSelectedIds(prev => prev.filter(id => !allIds.includes(id))); } else { setSelectedIds(prev => [...prev, ...allIds]); } }}
+              onEdit={(item) => { setEditingItem(item); setIsEditModalOpen(true); }}
+              onViewDetails={(item) => { setViewingItem(item); setActiveTab('planning'); setIsDetailsModalOpen(true); }}
+              onViewPcaDetails={(item) => { setViewingItem(item); setIsPcaModalOpen(true); }}
+              onViewSummary={(item) => { setViewingItem(item); setIsFlashModalOpen(true); }}
+            />
+
+            {!loading && totalPages > 1 && (
+              <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="h-9 w-9 flex items-center justify-center border border-slate-200 rounded-lg bg-white disabled:opacity-30 hover:bg-slate-50 text-slate-500 transition-all cursor-pointer"><ChevronLeft size={16} /></button>
+                  <div className="px-4 h-9 flex items-center bg-white border border-slate-200 rounded-lg shadow-sm">
+                    <span className="text-xs font-black text-slate-600 uppercase">Página <span className="text-ifes-green mx-1">{currentPage}</span> de {totalPages}</span>
+                  </div>
+                  <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="h-9 w-9 flex items-center justify-center border border-slate-200 rounded-lg bg-white disabled:opacity-30 hover:bg-slate-50 text-slate-500 transition-all cursor-pointer"><ChevronRight size={16} /></button>
+                </div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic font-mono">Total: {activeData.length} registros</span>
+              </div>
+            )}
           </div>
-
-          {!loading && totalPages > 1 && (
-            <div className={`px-6 py-4 border-b ${dashboardView === 'planning' ? 'border-slate-50 bg-slate-50/10' : 'border-blue-50 bg-blue-50/10'} flex items-center justify-between`}>
-              <div className="flex items-center gap-2">
-                <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="h-9 w-9 flex items-center justify-center border border-slate-200 rounded-lg bg-white disabled:opacity-30 hover:bg-slate-50 text-slate-500 transition-all cursor-pointer"><ChevronLeft size={16} /></button>
-                <div className="px-4 h-9 flex items-center bg-white border border-slate-200 rounded-lg shadow-sm">
-                  <span className="text-xs font-black text-slate-600 uppercase">Página <span className="text-ifes-green mx-1">{currentPage}</span> de {totalPages}</span>
-                </div>
-                <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="h-9 w-9 flex items-center justify-center border border-slate-200 rounded-lg bg-white disabled:opacity-30 hover:bg-slate-50 text-slate-500 transition-all cursor-pointer"><ChevronRight size={16} /></button>
-              </div>
-              <span className="text-[10px] font-bold text-slate-400 italic">Exibindo {pagedData.length} de {activeData.length} itens</span>
-            </div>
-          )}
-
-          <ContractTable
-            viewMode={dashboardView}
-            data={pagedData}
-            loading={loading}
-            onSort={(key) => { const direction = sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc'; setSortConfig({ key, direction }); }}
-            sortConfig={sortConfig}
-            selectedIds={selectedIds}
-            onToggleSelection={(id) => { setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]); }}
-            onToggleAll={() => { const allIds = pagedData.map(i => String(i.id)); if (allIds.every(id => selectedIds.includes(id))) { setSelectedIds(prev => prev.filter(id => !allIds.includes(id))); } else { setSelectedIds(prev => [...prev, ...allIds]); } }}
-            onEdit={(item) => { setEditingItem(item); setIsEditModalOpen(true); }}
-            onViewDetails={(item) => { setViewingItem(item); setActiveTab('planning'); setIsDetailsModalOpen(true); }}
-            onViewPcaDetails={(item) => { setViewingItem(item); setIsPcaModalOpen(true); }}
-            onViewSummary={(item) => { setViewingItem(item); setIsFlashModalOpen(true); }}
-          />
-
-          {!loading && totalPages > 1 && (
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="h-9 w-9 flex items-center justify-center border border-slate-200 rounded-lg bg-white disabled:opacity-30 hover:bg-slate-50 text-slate-500 transition-all cursor-pointer"><ChevronLeft size={16} /></button>
-                <div className="px-4 h-9 flex items-center bg-white border border-slate-200 rounded-lg shadow-sm">
-                  <span className="text-xs font-black text-slate-600 uppercase">Página <span className="text-ifes-green mx-1">{currentPage}</span> de {totalPages}</span>
-                </div>
-                <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="h-9 w-9 flex items-center justify-center border border-slate-200 rounded-lg bg-white disabled:opacity-30 hover:bg-slate-50 text-slate-500 transition-all cursor-pointer"><ChevronRight size={16} /></button>
-              </div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic font-mono">Total: {activeData.length} registros</span>
-            </div>
-          )}
-        </div>
+        )}
 
         {/* 3. Tabela de Grupos de Contratação (DFDs) - Apenas na view 'status' */}
         {dashboardView === 'status' && (

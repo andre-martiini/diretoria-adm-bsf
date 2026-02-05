@@ -1,0 +1,171 @@
+Manual Técnico de Engenharia de Dados: Extração e Estruturação de Dados de Compras do IFES (2021-2026)
+1. Contextualização da Arquitetura de Dados e Escopo Institucional
+A construção de um repositório de dados estruturado que reflita com fidelidade a totalidade das operações de compra e contratação do Instituto Federal de Educação, Ciência e Tecnologia do Espírito Santo (Ifes) exige uma compreensão profunda não apenas das tecnologias de extração de dados (ETL), mas também do complexo arcabouço jurídico e administrativo que rege essas transações. O período estipulado de cinco anos (2021 a 2026) impõe um desafio técnico singular: a transição entre regimes legislativos que alterou fundamentalmente a taxonomia e a topologia dos dados governamentais.
+Durante esse interregno, a administração pública federal migrou de um modelo descentralizado de divulgação, ancorado na Lei nº 8.666/1993 e no sistema SIASG/Comprasnet, para um modelo centralizado e digitalmente nativo sob a égide da Lei nº 14.133/2021, operacionalizado pelo Portal Nacional de Contratações Públicas (PNCP). Para o desenvolvedor encarregado de extrair "dados de planejamento" — especificamente descrições, quantitativos, grupos, classes e códigos de catalogação (CATMAT/CATSER) — essa dualidade implica a necessidade de orquestrar uma arquitetura de ingestão híbrida. Não existe um único endpoint capaz de fornecer a totalidade histórica com a granularidade exigida; é necessário federar dados de múltiplas fontes soberanas.
+O Ifes, como autarquia federal dotada de autonomia administrativa, financeira e patrimonial, não opera como uma entidade monolítica no ecossistema de dados. Sua estrutura multicampi fragmenta a geração de dados em diversas Unidades Administrativas de Serviços Gerais (UASGs). Cada campus atua como um polo gerador de dados, lançando editais, dispensas e contratos que possuem identificadores próprios, embora compartilhem a raiz do CNPJ institucional (10.838.653). A falha em mapear corretamente essa rede distribuída resulta invariavelmente em datasets incompletos, que sub-representam o volume real de dispêndio público e distorcem análises de eficiência logística.
+Este documento técnico detalha a engenharia necessária para capturar, normalizar e estruturar essa massa de informações, focando na obtenção de um artefato final em formato JSON (JavaScript Object Notation) que sirva como "fonte da verdade" para análises de inteligência de negócios e transparência pública. A ênfase recai sobre a captura dos dados de planejamento — o momento anterior à despesa, onde a demanda é especificada — utilizando as APIs mais recentes disponíveis no ecossistema Gov.br, com estratégias de contingência para os dados legados.
+2. Anatomia das Unidades Gestoras (UASGs) e Topologia da Rede IFES
+A extração exaustiva de dados depende primariamente da identificação correta dos nós emissores de informação. No sistema federal de compras, a unidade atômica de identificação não é o órgão superior (Ministério da Educação) nem apenas a entidade vinculada (Ifes), mas sim a UASG. O Ifes opera através de uma rede de unidades descentralizadas, onde cada campus possui competência para realizar licitações próprias, aderir a Atas de Registro de Preços (SRP) e executar dispensas de licitação.
+A análise dos metadados de contratações recentes revela que a Reitoria (UASG 158151) atua frequentemente como órgão gerenciador, centralizando certames de grande vulto ou de itens padronizados (como computadores e serviços de vigilância), enquanto os campi do interior mantêm autonomia para aquisições específicas, como insumos agrícolas, obras de engenharia local e gêneros alimentícios perecíveis. O mapeamento abaixo, consolidado a partir de editais e atas de registro de preços vigentes entre 2024 e 2026, constitui o array de entrada obrigatório para qualquer script de extração que vise a totalidade dos dados.
+2.1. Tabela Mestra de Unidades Administrativas (UASGs) do Ifes
+A tabela a seguir apresenta os identificadores técnicos essenciais para a parametrização das chamadas de API. A coluna "Perfil de Dados" oferece insights sobre o tipo de item (CATMAT/CATSER) predominante em cada unidade, permitindo ao desenvolvedor antecipar a natureza dos objetos JSON que serão recuperados.
+Nome da Unidade	Código UASG	Localização e Logística	Perfil de Dados e Contratações Típicas	Fonte de Validação
+Reitoria	158151	Vitória (Santa Lúcia)	Alta Complexidade e TI. Atua como hub central. Processa aquisições de grande volume (TIC, veículos) e gerencia IRPs corporativas. Frequentemente vinculada a compras do Campus Viana.	
+Campus Vitória	158416	Vitória (Jucutuquara)	Ensino e Pesquisa. Grande volume de itens de laboratório, reagentes químicos e material de consumo educacional.	
+Campus Vila Velha	158427	Vila Velha	Biotecnologia e Química. Histórico robusto de aquisições para laboratórios especializados. Licitações recentes focadas em mobiliário técnico.	
+Campus Serra	158417	Serra	Automação e Robótica. Contratações focadas em equipamentos de engenharia, manutenção predial e outsourcing de impressão.	
+Campus Cariacica	158421	Cariacica	Logística e Infraestrutura. Dados recentes indicam foco em manutenção predial pesada (telhados, ginásios).	
+Campus Aracruz	158419	Aracruz	Serviços Institucionais. Histórico de dispensas eletrônicas para serviços gráficos, confecção de placas e itens comemorativos.	
+Campus Linhares	158420	Linhares	Serviços Continuados. Contratos recorrentes de vigilância armada e manutenção predial com dedicação exclusiva de mão de obra.	
+Campus São Mateus	158423	São Mateus	Engenharia e Serviços Gerais. Unidade polo do norte. Grande autonomia em pregões de limpeza, conservação e engenharia.	
+Campus Nova Venécia	158422	Nova Venécia	Obras e Tecnologia. Licitações híbridas envolvendo desde obras civis residenciais até equipamentos de transmissão digital.	
+Campus Montanha	158884	Montanha	Agropecuária. Forte incidência de dispensas para serviços gráficos e construção civil (blocos de laboratórios).	
+Campus Barra de São Francisco	158886	Barra de São Francisco	Infraestrutura Civil. Histórico recente de grandes obras (ginásio poliesportivo) e manutenção predial.	
+Campus Colatina	158272	Colatina (Urbano)	Tecnologia Avançada. Aquisições recentes de Drones (RPAs) e tecnologia de ponta. Distinto do Campus Itapina.	
+Campus Itapina	158424	Colatina (Rural)	Transporte e Agro. Perfil rural. Contratações massivas de transporte escolar e insumos para atividades agrícolas.	
+Campus Alegre	158425	Alegre	Agropecuária Intensiva. Contratação de mão de obra operacional (tratoristas, eletricistas) e insumos de campo.	
+Campus Cachoeiro de Itapemirim	158418	Cachoeiro de Itapemirim	Mineração e Indústria. Serviços de vigilância armada e insumos para laboratórios de mecânica/mineração.	
+Campus Guarapari	158883	Guarapari	Gestão e Turismo. Foco em serviços de apoio administrativo e vigilância. Gestão de contratos terceirizados.	
+Campus Piúma	158892	Piúma	Pesca e Química. Obras específicas para armazenamento de produtos químicos e infraestrutura de pesca.	
+Campus Ibatiba	158428	Ibatiba	Ensino Geral. Registro de preços para equipamentos de laboratório e itens de consumo geral.	
+Campus Venda Nova do Imigrante	158429	Venda Nova do Imigrante	Administração. Atuação com Plano de Contratações Anual (PCA) estruturado e dispensas eletrônicas.	
+Campus Santa Teresa	158426	Santa Teresa	Saúde e Biologia. Aquisição de medicamentos e obras de blocos educacionais.	
+Campus Centro-Serrano	158885	Santa Maria de Jetibá	Logística Rural. Transporte escolar diário e apoio logístico em região serrana.	
+Campus Viana	n/a	Viana	Vinculado à Reitoria/Outros. Frequentemente suas compras são processadas pela UASG 158151 (Reitoria), exigindo filtragem por Local de Entrega.	
+2.2. Implicações Técnicas da Descentralização
+A arquitetura descentralizada do Ifes impõe uma lógica de extração iterativa. Um desenvolvedor que consulte apenas a UASG da Reitoria (158151) obterá uma visão distorcida, enviesada para serviços de TI e grandes contratos corporativos, perdendo a "cauda longa" das compras de insumos agrícolas, reagentes químicos e obras locais que ocorrem nos campi do interior.
+Além disso, a existência de unidades como o Campus Viana, que possui CNPJ e estrutura física mas cujas compras de grande porte (como videomonitoramento) são processadas pela UASG da Reitoria (158151) , exige que o algoritmo de extração analise não apenas o cabeçalho da compra, mas também os metadados de Local de Entrega dentro dos itens. O script deve ser capaz de diferenciar uma compra da Reitoria de uma compra pela Reitoria para o Campus Viana.
+Outro ponto crítico é a gestão de Intenções de Registro de Preços (IRP). Muitas vezes, uma UASG (ex: Reitoria) abre uma IRP para "compra nacional" ou estadual, onde outras UASGs (Campi) manifestam interesse. No modelo de dados, isso aparece como uma licitação única, mas com "cotas" ou itens destinados a diferentes unidades. O JSON final deve ser capaz de desmembrar essas cotas para atribuir corretamente o planejamento de despesa a cada unidade consumidora, evitando a dupla contagem ou a atribuição errônea de todo o volume à unidade gerenciadora.
+3. Arquitetura de Dados Governamentais: PNCP vs. Legado
+Para o recorte temporal de 2021 a 2026, o ecossistema de dados de compras públicas brasileiras encontra-se em um estado híbrido. A compreensão dessa dualidade é pré-requisito para o sucesso da extração.
+3.1. O Portal Nacional de Contratações Públicas (PNCP)
+Instituído pela Lei nº 14.133/2021, o PNCP tornou-se o repositório oficial e centralizado obrigatório. A partir de 2023, e compulsoriamente em 2024/2025, praticamente todas as novas contratações do Ifes tramitam por esta plataforma.
+●	Arquitetura: API RESTful moderna, documentada via OpenAPI 3.0 (Swagger).
+●	Modelo de Dados: Centrado no documento (Edital, Aviso, Contrato). Os dados são estruturados hierarquicamente (Compra -> Itens -> Resultados).
+●	Vantagem: Oferece endpoints específicos para o Plano de Contratações Anual (PCA), permitindo acesso aos dados de planejamento puro, antes mesmo da publicação do edital.
+●	Limitação: A migração de dados antigos (anteriores a 2023) é, por vezes, incompleta. Contratos assinados sob a lei antiga (8.666) podem ter apenas seus metadados básicos migrados, sem o detalhamento de itens.
+3.2. A API de Dados Abertos (Compras.gov.br / SIASG)
+Representa o legado das Leis 8.666/1993 e 10.520/2002. É a fonte primária para o detalhamento granular de itens comprados entre 2021 e 2023.
+●	Arquitetura: REST com forte uso de HATEOAS (Hypermedia as the Engine of Application State). A navegação depende de seguir links fornecidos nas respostas.
+●	Modelo de Dados: Relacional e fragmentado. É necessário consultar múltiplos módulos (Licitações, Contratos, Itens) para reconstruir uma única transação.
+●	Vantagem: Possui o maior acervo histórico de descrições detalhadas e vínculos com os catálogos CATMAT/CATSER antigos.
+●	Limitação: Performance inferior e documentação dispersa.
+3.3. Estratégia de Federação de Dados
+Para o relatório "exaustivo" solicitado, recomenda-se uma abordagem de Prioridade em Cascata:
+1.	Fonte Primária (2024-2026): Utilizar exclusivamente o PNCP. A estrutura é mais limpa e reflete a vigência legal atual.
+2.	Fonte Secundária (2021-2023): Consultar primeiro o PNCP. Caso os itens não estejam detalhados (retorno vazio ou incompleto), realizar o fallback para a API de Dados Abertos (Compras.gov.br) utilizando a chave composta UASG + Número da Licitação + Ano.
+4. Protocolos de Extração Técnica: O Ecossistema PNCP
+Esta seção detalha os endpoints específicos do PNCP que devem ser consumidos para obter os dados de planejamento (descrição, quantitativo e catálogo). A base da URL para consultas públicas é https://pncp.gov.br/api/pncp ou https://pncp.gov.br/api/consulta.
+4.1. Passo 1: Recuperação das Contratações (Harvesting)
+O ponto de entrada é a listagem de compras por órgão. Como o PNCP utiliza o CNPJ como chave primária, é necessário converter as UASGs listadas na Seção 2 para seus respectivos CNPJs ou filtrar o retorno da raiz.
+●	Endpoint: GET /v1/orgaos/{cnpj}/compras
+●	Parâmetros Essenciais:
+○	ano: Iterar {2021, 2022, 2023, 2024, 2025, 2026}.
+○	pagina: Controle de paginação (obrigatório).
+●	Lógica de Processamento:
+1.	O sistema deve iterar sobre cada ano e cada página.
+2.	O JSON de resposta contém uma lista de objetos resumidos.
+3.	Filtro de Unidade: O Ifes utiliza o CNPJ raiz 10.838.653/0001-06 para muitas operações da Reitoria e de unidades vinculadas. É crucial inspecionar o campo unidadeOrgao.codigoUnidade dentro de cada objeto retornado para garantir que o registro pertence à UASG de interesse (ex: filtrar apenas 158427 para Vila Velha se a busca foi feita pelo CNPJ raiz).
+4.	Extração de Chaves: Armazenar sequencialCompra e anoCompra para o próximo passo.
+4.2. Passo 2: Extração Granular de Itens (Drilling Down)
+Este é o endpoint crítico para satisfazer o requisito de "dados de planejamento" (descrição, CATMAT, quantidade). Sem este passo, o relatório conterá apenas metadados administrativos, sem valor analítico sobre o que está sendo comprado.
+●	Endpoint: GET /v1/orgaos/{cnpj}/compras/{ano}/{sequencialCompra}/itens
+●	Relevância: Retorna o array completo de itens licitados, contendo a especificação técnica original.
+●	Campos Alvo no JSON de Resposta:
+○	numeroItem: Identificador sequencial (1, 2, 3...).
+○	descricao: O texto livre descritivo do objeto.
+○	materialOuServico: Indicador de tipo (1=Material, 2=Serviço).
+○	codigoCatmat / codigoCatser: O código numérico do catálogo.
+○	descricaoCatalogo: A descrição padronizada do PDM (Padrão Descritivo de Material). Insight: Use este campo preferencialmente para agrupamento de dados, pois a descricao livre varia muito (erro humano), enquanto a descricaoCatalogo é normalizada.
+○	quantidade: O volume planejado.
+○	valorUnitarioEstimado: O preço de referência do planejamento.
+○	valorTotalEstimado: quantidade * valorUnitarioEstimado.
+○	unidadeMedida: (ex: "Caixa", "Serviço", "Hora").
+4.3. Passo 3: Dados de Planejamento Puro (PCA - Plano de Contratações Anual)
+Para uma visão preditiva e estritamente de planejamento (antes mesmo da licitação ocorrer), o desenvolvedor deve consultar o Plano de Contratações Anual. O Ifes é obrigado a publicar seu PCA no PNCP.
+●	Endpoint: GET /v1/orgaos/{cnpj}/pca/{ano}
+●	Sub-recurso de Itens: GET /v1/orgaos/{cnpj}/pca/{ano}/itens
+●	Valor Analítico: Este endpoint fornece a intenção de compra bruta. É ideal para responder perguntas como "O que o Campus Alegre planejou comprar em 2025, independente do que foi efetivamente licitado?".
+●	Mapeamento de Campos:
+○	codigoItem: Código CATMAT/CATSER.
+○	descricaoItem: Descrição do catálogo.
+○	unidadeRequisitante: Identifica qual setor ou campus solicitou (fundamental para desmembrar o planejamento da Reitoria).
+○	quantidadeEstimada: Demanda prevista.
+○	valorEstimado: Orçamento reservado.
+5. Protocolos de Extração Técnica: O Legado (Dados Abertos)
+Para cobrir as lacunas de 2021-2023, onde o PNCP pode não ter a totalidade dos itens detalhados, o desenvolvedor deve recorrer à API de Dados Abertos do Compras.gov.br.
+5.1. Estratégia de Acesso
+Ao contrário do PNCP, esta API é hipermedia-driven. Não se constrói URLs com IDs sequenciais simples; navega-se por links.
+●	Endpoint Base: https://compras.dados.gov.br.
+●	Formato: JSON (adicionar extensão .json ou header Accept: application/json).
+5.2. Fluxo de Recuperação de Itens Legados
+1.	Listar Licitações por UASG:
+○	GET /licitacoes/v1/licitacoes.json?uasg={UASG}&data_publicacao_min=2021-01-01&data_publicacao_max=2023-12-31
+○	Este retorno fornece o identificador da licitação.
+2.	Recuperar Itens da Licitação:
+○	GET /licitacoes/doc/licitacao/{identificador}/itens.json.
+○	Atenção: A paginação aqui utiliza offset e limit (padrão 500). É mandatório verificar se o número de registros retornados é igual ao limite; se for, solicitar o próximo offset.
+3.	Extração de Catálogo (CATMAT/CATSER):
+○	Nesta API, os campos são codigo_item_material e codigo_item_servico.
+○	Para obter a descrição completa (Grupo/Classe), muitas vezes é necessário fazer uma chamada adicional ao endpoint de materiais: GET /materiais/v1/materiais/{codigo}.json.
+6. O Catálogo de Materiais (CATMAT) e Serviços (CATSER)
+A solicitação original enfatiza a necessidade de obter "Grupo" e "Classe". Esses dados raramente estão explícitos no objeto da compra; eles são propriedades do item de catálogo. Para enriquecer o JSON final, o desenvolvedor deve implementar uma rotina de lookup de catálogo.
+6.1. Hierarquia do PDM (Padrão Descritivo de Material)
+O governo federal estrutura seus materiais em uma árvore lógica:
+1.	Grupo (2 dígitos): A categoria mais ampla (ex: 65 - Equipamentos Médicos).
+2.	Classe (4 dígitos): A subdivisão (ex: 6515 - Instrumentos Cirúrgicos).
+3.	PDM (5 dígitos): O padrão descritivo (ex: "Bisturi Eletrônico").
+4.	Item (7 dígitos): O material específico (ex: "Bisturi Eletrônico, voltagem 110v, marca X").
+6.2. Enriquecimento via API
+O JSON bruto da licitação geralmente fornece apenas o código do Item (7 dígitos). Para obter o Grupo e a Classe (exigência do usuário), o script deve:
+1.	Extrair o codigoCatmat do item da licitação.
+2.	Consultar o endpoint de catálogo do PNCP: GET /v1/catalogos/materiais/{codigoCatmat}.
+3.	Do retorno, extrair as propriedades codigoGrupo, descricaoGrupo, codigoClasse e descricaoClasse.
+4.	Otimização: Como os códigos se repetem milhares de vezes (ex: milhares de compras de "Papel A4"), deve-se implementar um cache local (Dicionário/Hash Map) para evitar chamadas repetidas à API de catálogo para o mesmo item.
+7. Estratégia de Engenharia de Dados (Pipeline ETL)
+A construção do script de extração deve seguir princípios robustos de engenharia de software para lidar com a instabilidade da rede e o volume de dados.
+7.1. Tratamento de Erros e Resiliência
+●	Rate Limiting (Limitação de Taxa): As APIs do governo não documentam limites estritos, mas comportamentos empíricos sugerem que mais de 20 requisições simultâneas podem disparar bloqueios temporários (HTTP 429 ou timeouts).
+○	Diretriz: Implementar um padrão de Semaphore limitando a concorrência a 5-10 threads.
+●	Retries (Tentativas): Erros de conexão (502, 503, 504) são comuns durante o horário comercial. O código deve implementar Exponential Backoff (esperar 1s, depois 2s, depois 4s...) antes de falhar definitivamente.
+●	Dados Inconsistentes: Se um campo numérico (ex: valorUnitario) vier como null ou string vazia, o pipeline deve normalizá-lo para 0.0 ou marcar o registro com uma flag de "dado incompleto", em vez de quebrar a execução.
+7.2. Normalização de Dados
+●	Moeda: As APIs podem retornar valores como strings ("1.200,50") ou floats (1200.50). O parser deve unificar tudo para Decimal ou Float (ponto flutuante) para permitir somas no JSON final.
+●	Datas: Converter todas as datas (que podem vir em DD/MM/YYYY ou YYYY-MM-DD) para o formato ISO 8601 (YYYY-MM-DDTHH:MM:SSZ).
+●	Texto: Descrições de itens frequentemente contêm quebras de linha (\n), tabulações (\t) e aspas não escapadas que invalidam o JSON. Implementar sanitização de strings antes da gravação.
+8. Especificação do Modelo de Dados (JSON Schema)
+O artefato final do projeto é um arquivo JSON estruturado. Abaixo, define-se o schema proposto, desenhado para atender aos requisitos de "planejamento" e granularidade por unidade. Este modelo aninha os itens dentro das contratações, que por sua vez estão vinculadas à unidade gestora.
+{
+  "metadados_relatorio": {
+    "data_geracao": "2026-02-03T18:00:00Z",
+    "periodo_coberto": {
+      "inicio": "2021-01-01",
+      "fim": "2026-12-31"
+    },
+    "versao_schema": "2.0"
+  },
+  "unidades_gestoras":
+        }
+      ]
+    }
+  ]
+}
+
+8.1. Análise dos Campos do Schema
+●	uasg_origem vs pncp_id: O pncp_id é único globalmente, mas a uasg_origem permite filtrar as compras descentralizadas.
+●	catalogo: Este objeto agrupa as informações solicitadas (Grupo, Classe, Descrição). É aqui que o enriquecimento de dados da Seção 6 se manifesta.
+●	local_entrega_especifico: Campo crucial para identificar se a compra, embora feita pela Reitoria, é destinada a um campus específico (como Viana).
+9. Validação e Consistência (Quality Assurance)
+Após a execução do pipeline ETL, o dataset gerado deve ser submetido a testes de consistência.
+9.1. Validação Cruzada com Relatórios de Gestão
+O Ifes publica anualmente seu "Relatório de Gestão". Estes documentos contêm os valores macroeconômicos executados.
+●	Teste: Somar o campo valor_total_homologado de todas as contratações do ano de 2024 no JSON gerado.
+●	Comparação: Verificar se o valor se aproxima do montante de "Despesas de Custeio e Investimento" declaradas no Relatório de Gestão (aprox. R$ 159 milhões em despesas liquidadas de custeio em 2024). Uma discrepância maior que 10-15% indica falha na captura de UASGs (possivelmente esquecendo unidades menores) ou falha na conversão de modalidades (esquecendo Dispensas ou Inexigibilidades).
+9.2. Verificação de Dados de Planejamento
+●	Teste de Nulidade: Verificar a porcentagem de itens onde o objeto catalogo está vazio ou nulo.
+●	Meta: Em dados do PNCP (2024-2026), a taxa de nulidade deve ser próxima de 0%, pois o sistema obriga a catalogação. Em dados legados (2021), aceita-se uma taxa maior devido à qualidade inferior dos registros históricos.
+10. Conclusão e Recomendações Finais
+A execução deste manual técnico permitirá a criação de uma infraestrutura de dados capaz de espelhar digitalmente a complexidade logística do Ifes. Ao integrar as APIs do PNCP (para o presente e futuro) e do Compras.gov.br (para o passado), e ao tratar cuidadosamente a taxonomia das UASGs distribuídas, o desenvolvedor entregará um produto de alto valor agregado.
+Recomenda-se que o desenvolvimento inicie focando no período 2024-2026 e nas unidades Reitoria, Vitória, Serra e São Mateus, que concentram aproximadamente 60-70% do volume financeiro. Uma vez validada a estrutura do JSON e a lógica de extração de itens para este subconjunto, o algoritmo pode ser escalado para cobrir a cauda histórica (2021-2023) e as unidades menores, mitigando riscos de bloqueio de API e complexidade de tratamento de dados legados na fase inicial do projeto.
+Referências citadas
+1. Detalhes da Liquidação - Portal da Transparência de Baixo Guandu - ES, https://baixoguandu-es.portaltp.com.br/consultas/detalhes/liquidacao.aspx?id=C384A48D35404631A3228883FE8042AD|0002823/2025 2. TabelaPregao.102019.158425 - IFRN, https://preguinho.ifrn.edu.br/?uasg=158425&pregao=102019 3. ATA DE REGISTRO DE PREÇOS - MINISTÉRIO DA EDUCAÇÃO INSTITUTO FEDERAL DO ESPÍRITO SANTO CAMPUS VITÓRIA Avenida Vitória, 1729 – Jucutuquara – 29040-780 - Portal Nacional de Contratações Públicas - PNCP, https://pncp.gov.br/pncp-api/v1/orgaos/10838653000106/compras/2024/418/atas/1/arquivos/1 4. Aviso de Contratação 24/2025 - Ifes - SIPAC Mobile, https://sipac.ifes.edu.br/public/verArquivoDocumento?idArquivo=4407033&key=7067fa17d1bdc244c60e7beead8544ba&idDocumento=2702986&downloadArquivo=true&publicPath=true 5. ANEXO I Relação das Unidades Administrativas de Serviços Gerais - UASG - com manifestação deferida: - Portal Gov.br, https://www.gov.br/gestao/pt-br/assuntos/central-de-compras/almoxarifado-virtual-nacional/paginas/Relacao_IRP.pdf 6. SIASGnet IRP, https://www2.comprasnet.gov.br/siasgnet-irp/consultarIRPComprasNetSubmit.do;jsessionid=08568F68FFED05495D08867861315E8F.siasgnet2?filtrosSelecionados=&uasgGerenciadora.numeroUasg=&servicoInteresse.itemCatalogo.nomeFormatado=&nomeFuncaoRetorno=&servicoInteresse.itemCatalogo.categoria=&filtro=3&municipioUasgGerenciadora.codigoMunicipio=&materialInteresse.itemCatalogo.tipo=&servicoInteresse.itemCatalogo.nome=&materialInteresse.itemCatalogo.nome=&materialInteresse.itemCatalogo.nomeFormatado=&servicoInteresse.itemCatalogo.codigo=&numeroIrp=&municipioUasgGerenciadora.municipioFormatado=&numeroPagina=9&materialInteresse.itemCatalogo.categoria=&materialInteresse.itemCatalogo.codigo=&servicoInteresse.itemCatalogo.tipo=&situacoesIrp=2&uasgGerenciadora.nome=&method=consultarIRPComprasNet 7. Swagger UI - Portal Nacional de Contratações Públicas - PNCP, https://pncp.gov.br/api/consulta/swagger-ui/index.html 8. Manual de Integração PNCP Portal Nacional de Contratações Públicas - Portal Gov.br, https://www.gov.br/pncp/pt-br/central-de-conteudo/manuais/versoes-anteriores/ManualdeIntegraoPNCPVerso2.2.1.pdf 9. API de Compras Governamentais, https://api.compras.dados.gov.br/ 10. Compras Públicas do Governo Federal - Portal de Dados Abertos, https://dados.gov.br/dados/conjuntos-dados/compras-publicas-do-governo-federal 11. Manual do Usuário – API do Compras.gov.br, https://www.gov.br/compras/pt-br/acesso-a-informacao/manuais/manual-dados-abertos/manual-api-compras.pdf 12. Relatório de Gestão 2024 - Instituto Federal do Espírito Santo, https://prodi.ifes.edu.br/gestao-de-pessoas/cpp/cpp/16774-relatorio-de-gestao-2024?start=8

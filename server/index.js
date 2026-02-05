@@ -578,6 +578,289 @@ app.post('/api/procurement/sync', async (req, res) => {
   }
 });
 
+// --- MÓDULO GOOGLE DE COMPRAS IFES ---
+
+const CATALOGO_DOC_PATH = path.join(__dirname, '..', 'historico_compras_ifes_completo.json');
+const CART_DOC_PATH = path.join(__dirname, '..', 'carrinho_ifes_local.json');
+
+/**
+ * Importa e higieniza os dados do JSON para o Firestore
+ */
+app.post('/api/catalog/import', async (req, res) => {
+  if (!db_admin) return res.status(500).json({ error: 'Firebase Admin não inicializado' });
+
+  try {
+    if (!fs.existsSync(CATALOGO_DOC_PATH)) {
+      return res.status(404).json({ error: 'Arquivo histórico não encontrado para importação.' });
+    }
+
+    const rawData = JSON.parse(fs.readFileSync(CATALOGO_DOC_PATH, 'utf8'));
+    const items = rawData.historico || [];
+
+    console.log(`[CATALOG IMPORT] Iniciando processamento de ${items.length} itens...`);
+
+    const catalogMap = new Map();
+
+    for (const item of items) {
+      // 1. Sanitização (Filtros de Qualidade)
+      if (!item.valor_unitario || item.valor_unitario <= 0) continue;
+      if (!item.unidade_fornecimento || item.unidade_fornecimento === "-" || item.unidade_fornecimento.trim() === "") continue;
+
+      const catmatCompleto = item.codigo_catmat;
+      const familiaId = catmatCompleto.split('-')[0];
+
+      if (catalogMap.has(catmatCompleto)) {
+        // 2. Deduplicação Inteligente (Ranking)
+        const existing = catalogMap.get(catmatCompleto);
+        existing.frequencia_uso += 1;
+        // Média ponderada simplificada ou apenas manter a média
+        existing.valor_referencia = (existing.valor_referencia + item.valor_unitario) / 2;
+      } else {
+        catalogMap.set(catmatCompleto, {
+          codigo_catmat_completo: catmatCompleto,
+          familia_id: familiaId,
+          tipo_item: item.tipo || "MATERIAL",
+          descricao_busca: item.descricao_resumida.toUpperCase(),
+          descricao_tecnica: item.descricao_detalhada,
+          unidade_padrao: item.unidade_fornecimento,
+          valor_referencia: item.valor_unitario,
+          frequencia_uso: 1,
+          uasg_origem_exemplo: item.uasg_nome,
+          data_importacao: admin.firestore.FieldValue.serverTimestamp()
+        });
+      }
+    }
+
+    console.log(`[CATALOG IMPORT] Sanitização concluída. ${catalogMap.size} itens únicos para salvar.`);
+
+    // Batch upload para o Firestore
+    const batchSize = 400;
+    const itemsArray = Array.from(catalogMap.values());
+
+    for (let i = 0; i < itemsArray.length; i += batchSize) {
+      const batch = db_admin.batch();
+      const chunk = itemsArray.slice(i, i + batchSize);
+
+      chunk.forEach(item => {
+        const docId = item.codigo_catmat_completo.replace(/\//g, '-');
+        const docRef = db_admin.collection('catalogo_mestre').doc(docId);
+        batch.set(docRef, item, { merge: true });
+      });
+
+      await batch.commit();
+      console.log(`[CATALOG IMPORT] Batch ${Math.floor(i / batchSize) + 1} enviado.`);
+    }
+
+    res.json({
+      success: true,
+      processed: items.length,
+      imported: catalogMap.size
+    });
+
+  } catch (error) {
+    console.error('[CATALOG IMPORT ERROR]', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Motor de Busca (Backend API) - Google de Compras
+ */
+app.get('/api/catalog/search', async (req, res) => {
+  const { q } = req.query;
+  if (!q || q.length < 2) return res.json([]);
+
+  const term = q.toUpperCase();
+
+  try {
+    // Tenta primeiro via Firestore se disponível
+    if (db_admin) {
+      try {
+        const snapshot = await db_admin.collection('catalogo_mestre')
+          .orderBy('frequencia_uso', 'desc')
+          .get();
+
+        const results = [];
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.descricao_busca.includes(term)) {
+            results.push({ id: doc.id, ...data });
+          }
+          if (results.length >= 20) return;
+        });
+
+        if (results.length > 0) return res.json(results);
+      } catch (dbError) {
+        console.warn('[CATALOG] Firestore indisponível, usando fallback local.');
+      }
+    }
+
+    // Fallback Local (Lê diretamente do arquivo JSON consolidado)
+    if (fs.existsSync(CATALOGO_DOC_PATH)) {
+      const rawData = JSON.parse(fs.readFileSync(CATALOGO_DOC_PATH, 'utf8'));
+      const items = rawData.historico || [];
+
+      // Busca e Ranqueamento em memória (Simulação de Motor de Busca)
+      const results = items
+        .filter(item =>
+          item.descricao_resumida.toUpperCase().includes(term) ||
+          item.codigo_catmat.includes(term)
+        )
+        .sort((a, b) => (b.frequencia_uso || 0) - (a.frequencia_uso || 0))
+        .slice(0, 20)
+        .map(item => ({
+          id: item.codigo_catmat.replace(/\//g, '-'),
+          codigo_catmat_completo: item.codigo_catmat,
+          tipo_item: item.tipo || "MATERIAL",
+          descricao_busca: item.descricao_resumida.toUpperCase(),
+          descricao_tecnica: item.descricao_detalhada,
+          unidade_padrao: item.unidade_fornecimento,
+          valor_referencia: item.valor_unitario,
+          frequencia_uso: item.frequencia_uso || 1,
+          uasg_origem_exemplo: item.uasg_nome
+        }));
+
+      return res.json(results);
+    }
+
+    res.json([]);
+  } catch (error) {
+    console.error('[CATALOG SEARCH ERROR]', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Carrinho de Demandas
+ */
+app.post('/api/cart/add', async (req, res) => {
+  const { userId, itemId, quantidade, justificativa, prioridade } = req.body;
+
+  try {
+    let itemData = null;
+
+    // Tenta buscar item do Firestore ou fallback local
+    if (db_admin) {
+      try {
+        const itemDoc = await db_admin.collection('catalogo_mestre').doc(itemId).get();
+        if (itemDoc.exists) itemData = itemDoc.data();
+      } catch (e) { }
+    }
+
+    if (!itemData && fs.existsSync(CATALOGO_DOC_PATH)) {
+      const raw = JSON.parse(fs.readFileSync(CATALOGO_DOC_PATH, 'utf8'));
+      const item = raw.historico.find(h => h.codigo_catmat.replace(/\//g, '-') === itemId || h.codigo_catmat === itemId);
+      if (item) {
+        itemData = {
+          descricao_busca: item.descricao_resumida.toUpperCase(),
+          unidade_padrao: item.unidade_fornecimento,
+          valor_referencia: item.valor_unitario,
+          codigo_catmat_completo: item.codigo_catmat
+        };
+      }
+    }
+
+    if (!itemData) return res.status(404).json({ error: 'Item não encontrado no catálogo' });
+
+    const cartItem = {
+      usuario_id: userId || 'anonimo',
+      item_id: itemId,
+      item_detalhes: {
+        descricao: itemData.descricao_busca,
+        unidade: itemData.unidade_padrao,
+        valor_referencia: itemData.valor_referencia,
+        catmat: itemData.codigo_catmat_completo
+      },
+      quantidade: Number(quantidade),
+      valor_total_estimado: Number(quantidade) * itemData.valor_referencia,
+      justificativa_usuario: justificativa,
+      prioridade: prioridade || 'MEDIA',
+      status: 'RASCUNHO',
+      createdAt: new Date().toISOString()
+    };
+
+    // Tenta salvar no Firestore se disponível
+    if (db_admin) {
+      try {
+        const docRef = await db_admin.collection('carrinho_demanda').add({
+          ...cartItem,
+          createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        return res.json({ success: true, cartId: docRef.id });
+      } catch (e) {
+        console.warn('[CART] Erro ao salvar no Firestore, usando fallback local.');
+      }
+    }
+
+    // Fallback Local
+    let cart = [];
+    if (fs.existsSync(CART_DOC_PATH)) {
+      cart = JSON.parse(fs.readFileSync(CART_DOC_PATH, 'utf8'));
+    }
+    const newId = `local-${Date.now()}`;
+    cart.unshift({ id: newId, ...cartItem });
+    fs.writeFileSync(CART_DOC_PATH, JSON.stringify(cart, null, 2));
+
+    res.json({ success: true, cartId: newId });
+
+  } catch (error) {
+    console.error('[CART ADD ERROR]', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/cart', async (req, res) => {
+  try {
+    // Tenta Firestore
+    if (db_admin) {
+      try {
+        const snapshot = await db_admin.collection('carrinho_demanda')
+          .orderBy('createdAt', 'desc')
+          .get();
+        const items = [];
+        snapshot.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
+        if (items.length > 0) return res.json(items);
+      } catch (e) {
+        console.warn('[CART] Firestore indisponível para consulta do carrinho.');
+      }
+    }
+
+    // Fallback Local
+    if (fs.existsSync(CART_DOC_PATH)) {
+      const cart = JSON.parse(fs.readFileSync(CART_DOC_PATH, 'utf8'));
+      return res.json(cart);
+    }
+
+    res.json([]);
+  } catch (error) {
+    console.error('[CART GET ERROR]', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/cart/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    if (db_admin && !id.startsWith('local-')) {
+      try {
+        await db_admin.collection('carrinho_demanda').doc(id).delete();
+        return res.json({ success: true });
+      } catch (e) { }
+    }
+
+    // Fallback/Local Delete
+    if (fs.existsSync(CART_DOC_PATH)) {
+      let cart = JSON.parse(fs.readFileSync(CART_DOC_PATH, 'utf8'));
+      cart = cart.filter(item => item.id !== id);
+      fs.writeFileSync(CART_DOC_PATH, JSON.stringify(cart, null, 2));
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Executa servidor local apenas se NÃO estivermos no ambiente Cloud Functions
 if (!process.env.FUNCTION_TARGET && !process.env.FIREBASE_CONFIG) {
   app.listen(PORT, '0.0.0.0', () => {
