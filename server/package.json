@@ -26,6 +26,7 @@
         "google-auth-library": "^10.5.0",
         "langchain": "^1.2.15",
         "mime-types": "^3.0.2",
+        "minisearch": "^7.2.0",
         "pdf-parse": "^2.4.5",
         "puppeteer": "^24.36.0",
         "puppeteer-core": "^24.36.0",
