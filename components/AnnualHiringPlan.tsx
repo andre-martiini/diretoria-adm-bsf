@@ -1530,6 +1530,23 @@ const AnnualHiringPlan: React.FC = () => {
                           <h3 className="text-2xl font-black text-slate-900 tracking-tight">{formatCurrency(viewingItem.valor)}</h3>
                           <p className="text-[10px] font-bold text-slate-400 mt-1">Custo Estimado Total</p>
                         </div>
+                        {viewingItem.valorEmpenhado && viewingItem.valorEmpenhado > 0 && (
+                          <div className="mt-4 pt-4 border-t border-slate-100">
+                            <div className="flex justify-between items-end">
+                              <div>
+                                <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest block">Valor Empenhado</span>
+                                <span className="text-lg font-black text-emerald-700">{formatCurrency(viewingItem.valorEmpenhado)}</span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-[9px] font-bold text-slate-400 block">% Exec.</span>
+                                <span className="text-sm font-black text-slate-600">{Math.round((viewingItem.valorEmpenhado / viewingItem.valor) * 100)}%</span>
+                              </div>
+                            </div>
+                            <div className="w-full h-1.5 bg-slate-100 rounded-full mt-2 overflow-hidden">
+                              <div className="h-full bg-emerald-500" style={{ width: `${Math.min(100, (viewingItem.valorEmpenhado / viewingItem.valor) * 100)}%` }}></div>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
@@ -2637,6 +2654,35 @@ const AnnualHiringPlan: React.FC = () => {
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Descrição</label>
                   <p className="text-sm font-medium text-slate-600 leading-relaxed">{viewingItem.titulo || viewingItem.descricaoDetalhada}</p>
                 </div>
+              </div>
+
+              {viewingItem.valorEmpenhado && viewingItem.valorEmpenhado > 0 && (
+                <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 flex items-center justify-between">
+                  <div>
+                    <label className="block text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Valor Empenhado</label>
+                    <p className="text-lg font-black text-emerald-700">{formatCurrency(viewingItem.valorEmpenhado)}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="block text-[10px] font-bold text-emerald-600/70 uppercase tracking-widest">% Execução</span>
+                    <span className="text-sm font-black text-emerald-700">{Math.round((viewingItem.valorEmpenhado / viewingItem.valor) * 100)}%</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-left">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Previsão de Início</label>
+                  <p className="text-sm font-medium text-slate-600">
+                    {viewingItem.inicio ? new Date(viewingItem.inicio).toLocaleDateString('pt-BR') : '-'}
+                  </p>
+                </div>
+                <div className="text-left">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Previsão de Término</label>
+                  <p className="text-sm font-medium text-slate-600">
+                    {viewingItem.fim ? new Date(viewingItem.fim).toLocaleDateString('pt-BR') : '-'}
+                  </p>
+                </div>
+              </div>
 
                 <div className="grid grid-cols-3 gap-4">
                   <div className="text-left">

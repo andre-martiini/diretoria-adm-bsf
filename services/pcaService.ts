@@ -31,10 +31,30 @@ const inMemoryCache: Record<string, {
 
 export const hasPcaInMemoryCache = (year: string) => !!inMemoryCache[year];
 
+const normalizeProcessNumber = (processNumber: string | undefined | null): string => {
+    if (!processNumber) return '';
+    return processNumber.replace(/[\.\/\-\s]/g, '');
+};
+
 export const fetchLocalPcaSnapshot = async (year: string): Promise<ContractItem[]> => {
     const api_url = `/data/pca_${year}.json?t=${Date.now()}`;
+    const exec_url = `/data/execution_data.json?t=${Date.now()}`;
+
     try {
-        const response = await fetch(api_url);
+        const [response, execResponse] = await Promise.all([
+            fetch(api_url),
+            fetch(exec_url).catch(() => ({ ok: false, json: async () => ({}) } as Response))
+        ]);
+
+        let executionData: any[] = [];
+        if (execResponse.ok) {
+            const execJson = await execResponse.json();
+            executionData = execJson.pncp || [];
+            console.log("Loaded Execution Data:", executionData.length);
+        } else {
+            console.error("Failed to load execution data");
+        }
+
         if (response.ok) {
             const jsonData = await response.json();
             const raw = jsonData.data || (Array.isArray(jsonData) ? jsonData : []);
@@ -92,11 +112,26 @@ export const fetchLocalPcaSnapshot = async (year: string): Promise<ContractItem[
                     numeroDfd: dfdNumber,
                     ifc: ifcCode,
                     sequencialItemPca: item.numeroItem || index + 1,
-                    classificacaoSuperiorCodigo: item.classificacaoSuperiorCodigo || '',
-                    classificacaoSuperiorNome: item.classificacaoSuperiorNome || '',
-                    dataDesejada: item.dataDesejada || '',
-                    protocoloSIPAC: '',
-                    dadosSIPAC: null
+                    protocoloSIPAC: item.protocoloSIPAC || '',
+                    dadosSIPAC: null,
+                    valorEmpenhado: (() => {
+                        const protocol = item.protocoloSIPAC || '';
+                        if (protocol && executionData.length > 0) {
+                            const normalized = normalizeProcessNumber(protocol);
+                            const match = executionData.find((ex: any) => normalizeProcessNumber(ex.processo) === normalized);
+                            if (match) console.log("MATCH FOUND for", normalized, match.valorTotalHomologado);
+                            return match ? (match.valorTotalHomologado || 0) : 0;
+                        }
+                        return 0;
+                    })(),
+                    dadosExecucao: (() => {
+                        const protocol = item.protocoloSIPAC || '';
+                        if (protocol && executionData.length > 0) {
+                            const normalized = normalizeProcessNumber(protocol);
+                            return executionData.find((ex: any) => normalizeProcessNumber(ex.processo) === normalized) || null;
+                        }
+                        return null;
+                    })()
                 };
             });
 
@@ -134,6 +169,7 @@ export const fetchPcaData = async (
     let firestoreManualItems: ContractItem[] = [];
     let firestoreDataUpdates: Record<string, any> = {};
     let cacheMetadata: any = null;
+    let executionData: any[] = [];
 
     // 2. Helper para Carregamento Local (Prioridade de Velocidade)
     const tryLocalJson = async () => {
@@ -150,10 +186,27 @@ export const fetchPcaData = async (
         return [];
     };
 
+    // Helper para carregar dados de execução (Integração PNCP/Compras.gov)
+    const tryExecutionData = async () => {
+        const api_url = `/data/execution_data.json?t=${Date.now()}`;
+        try {
+            const response = await fetch(api_url);
+            if (response.ok) {
+                const jsonData = await response.json();
+                return jsonData.pncp || [];
+            }
+        } catch (e) {
+            console.warn("[PCA Service] JSON de execução não encontrado:", api_url);
+        }
+        return [];
+    };
+
     // 3. Tentar carregar Snapshot Local PRIMEIRO (para não travar a tela)
     report(10);
-    rawOfficialItems = await tryLocalJson();
-    console.log(`[PCA Service] ✅ Snapshot local carregado: ${rawOfficialItems.length} itens brutos.`);
+    const [rawItems, execItems] = await Promise.all([tryLocalJson(), tryExecutionData()]);
+    rawOfficialItems = rawItems;
+    executionData = execItems;
+    console.log(`[PCA Service] ✅ Snapshot local carregado: ${rawOfficialItems.length} itens brutos. ${executionData.length} itens de execução.`);
 
     // 4. Buscar no Firestore
     try {
@@ -286,12 +339,28 @@ export const fetchPcaData = async (
             item.grupoContratacaoNome ||
             "Item do PCA";
 
+        // Execution Data Linking
+        let valorEmpenhado = 0;
+        let dadosExecucao = null;
+        const protocol = extra.protocoloSIPAC || '';
+        if (protocol && executionData.length > 0) {
+            const normalizedProtocol = normalizeProcessNumber(protocol);
+            const match = executionData.find((ex: any) => normalizeProcessNumber(ex.processo) === normalizedProtocol);
+            if (match) {
+                // Using homologated value as proxy for committed value (Empenhado)
+                valorEmpenhado = match.valorTotalHomologado || 0;
+                dadosExecucao = match;
+            }
+        }
+
         return {
             id: officialId,
             titulo: itemTitle,
             categoria: categoria,
             valor: valor,
             valorExecutado: Number(extra.valorExecutado || 0),
+            valorEmpenhado: valorEmpenhado,
+            dadosExecucao: dadosExecucao,
             inicio: item.dataEstimadaInicioProcesso || item.dataDesejada || new Date().toISOString().split('T')[0],
             fim: item.dataDesejada || item.dataFim || '',
             area: item.nomeUnidade || "IFES - BSF",

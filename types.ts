@@ -101,6 +101,8 @@ export interface ContractItem {
   identificadorFuturaContratacao?: string;
   computedStatus?: string;
   computedSituation?: string;
+  valorEmpenhado?: number;
+  dadosExecucao?: any;
   // PNCP Detail Fields
   numeroItem?: number;
   codigoItem?: string;
