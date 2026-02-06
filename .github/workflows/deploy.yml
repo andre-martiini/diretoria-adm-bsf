@@ -1,0 +1,32 @@
+name: Diretoria Adm BSF
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Instalar dependências e Build
+        run: |
+          npm install
+          npm run build
+
+      - name: Deploy para Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          # Aqui vai o SEGREDO (chave privada)
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DIRETORIA_ADM_BSF }}'
+          channelId: live
+          # Aqui vai o ID PÚBLICO (texto normal, não é secret)
+          # Exemplo: reforco-positivo-app
+          projectId: diretoria-adm-bsf
+        env:
+          FIREBASE_CLI_PREVIEWS: hostingchannels

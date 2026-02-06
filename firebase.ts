@@ -18,12 +18,27 @@ const firebaseConfig = {
     measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-const app = initializeApp(firebaseConfig);
-const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
-const db = initializeFirestore(app, {
-    localCache: persistentLocalCache({
-        tabManager: persistentMultipleTabManager()
+const isConfigValid = !!firebaseConfig.projectId && !!firebaseConfig.apiKey;
+
+
+let app;
+try {
+    app = initializeApp(firebaseConfig);
+} catch (error) {
+    console.error("Firebase initialization failed:", error);
+}
+
+const analytics = (typeof window !== 'undefined' && isConfigValid && app)
+    ? getAnalytics(app)
+    : null;
+
+const db = (app && isConfigValid)
+    ? initializeFirestore(app, {
+        localCache: persistentLocalCache({
+            tabManager: persistentMultipleTabManager()
+        })
     })
-});
+    : null;
+
 
 export { app, analytics, db };

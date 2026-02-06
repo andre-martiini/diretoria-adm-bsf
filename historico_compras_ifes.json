@@ -1,0 +1,66 @@
+{
+  "metadata": {
+    "titulo": "Histórico Consolidado de Compras IFES",
+    "descricao": "Extraído das integrações de PCA e Contratações disponíveis no sistema.",
+    "data_extracao": "2026-02-05T21:20:01.010Z",
+    "total_itens": 7
+  },
+  "historico": [
+    {
+      "codigo_catmat": "26859",
+      "descricao_resumida": "OUTSOURCING DE IMPRESSÃO - LOCAÇÃO PÁGINAS IMPRESSAS A4 POLICROMÁTICA SEM PAPEL",
+      "descricao_detalhada": "OUTSOURCING DE IMPRESSÃO - LOCAÇÃO PÁGINAS IMPRESSAS A4 POLICROMÁTICA SEM PAPEL",
+      "unidade_fornecimento": "-",
+      "valor_unitario": 4000,
+      "uasg_nome": "Campus Barra de São Francisco"
+    },
+    {
+      "codigo_catmat": "25194",
+      "descricao_resumida": "SERVIÇO ESPECIALIZADO DE LIMPEZA",
+      "descricao_detalhada": "SERVIÇO ESPECIALIZADO DE LIMPEZA",
+      "unidade_fornecimento": "-",
+      "valor_unitario": 450000,
+      "uasg_nome": "Campus Barra de São Francisco"
+    },
+    {
+      "codigo_catmat": "3433",
+      "descricao_resumida": "CONFECÇÃO / COLOCAÇÃO / REMANEJAMENTO / MANUTENÇÃO - DIVISÓ-RIA / MÓDULO",
+      "descricao_detalhada": "CONFECÇÃO / COLOCAÇÃO / REMANEJAMENTO / MANUTENÇÃO - DIVISÓ-RIA / MÓDULO",
+      "unidade_fornecimento": "-",
+      "valor_unitario": 1000000,
+      "uasg_nome": "Campus Barra de São Francisco"
+    },
+    {
+      "codigo_catmat": "8016",
+      "descricao_resumida": "GLOBO GEOGRAFICO",
+      "descricao_detalhada": "GLOBO GEOGRAFICO",
+      "unidade_fornecimento": "-",
+      "valor_unitario": 0,
+      "uasg_nome": "Campus Barra de São Francisco"
+    },
+    {
+      "codigo_catmat": "5792",
+      "descricao_resumida": "CONTAINER",
+      "descricao_detalhada": "CONTAINER",
+      "unidade_fornecimento": "-",
+      "valor_unitario": 0,
+      "uasg_nome": "Campus Barra de São Francisco"
+    },
+    {
+      "codigo_catmat": "13720",
+      "descricao_resumida": "CONJUNTO INSTRUÇÃO",
+      "descricao_detalhada": "CONJUNTO INSTRUÇÃO",
+      "unidade_fornecimento": "-",
+      "valor_unitario": 0,
+      "uasg_nome": "Campus Barra de São Francisco"
+    },
+    {
+      "codigo_catmat": 3,
+      "descricao_resumida": "Fornecimento de Refeições / Lanches / Salgados / Doces",
+      "descricao_detalhada": "Fornecimento de Refeições / Lanches / Salgados / Doces",
+      "unidade_fornecimento": "UN",
+      "valor_unitario": 5514.7,
+      "uasg_nome": "Campus Barra de São Francisco"
+    }
+  ]
+}
