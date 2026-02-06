@@ -582,6 +582,155 @@ app.post('/api/procurement/sync', async (req, res) => {
 
 const CATALOGO_DOC_PATH = path.join(__dirname, '..', 'historico_compras_ifes_completo.json');
 const CART_DOC_PATH = path.join(__dirname, '..', 'carrinho_ifes_local.json');
+const PUBLIC_DATA_DIR_PATH = path.join(__dirname, '..', 'public', 'data');
+const PROCUREMENT_DATA_DIR_PATH = path.join(__dirname, '..', 'dados_abertos_compras');
+
+// --- IN-MEMORY CACHE FOR CATALOG ---
+let CACHED_CATALOG = [];
+let IS_CATALOG_LOADED = false;
+
+/**
+ * Loads and processes catalog items from all available sources into memory.
+ */
+function loadCatalogIntoMemory() {
+  console.log('[CATALOG LOAD] Iniciando carregamento do catálogo em memória...');
+  const startTime = Date.now();
+  const catalogMap = new Map();
+
+  // 1. Carrega Histórico Base (15k itens)
+  if (fs.existsSync(CATALOGO_DOC_PATH)) {
+    try {
+      const rawData = JSON.parse(fs.readFileSync(CATALOGO_DOC_PATH, 'utf8'));
+      const items = rawData.historico || [];
+      console.log(`[CATALOG LOAD] Processando ${items.length} itens do histórico base...`);
+
+      items.forEach(item => {
+        if (!item.codigo_catmat) return;
+        const id = item.codigo_catmat.replace(/\//g, '-');
+        catalogMap.set(id, {
+            id: id,
+            codigo_catmat_completo: item.codigo_catmat,
+            familia_id: item.codigo_catmat.split('-')[0],
+            tipo_item: item.tipo || "MATERIAL",
+            descricao_busca: item.descricao_resumida.toUpperCase(),
+            descricao_tecnica: item.descricao_detalhada,
+            unidade_padrao: item.unidade_fornecimento,
+            valor_referencia: item.valor_unitario,
+            frequencia_uso: item.frequencia_uso || 1,
+            uasg_origem_exemplo: item.uasg_nome,
+            source: 'HISTORICO_BASE'
+        });
+      });
+    } catch (e) {
+      console.error('[CATALOG LOAD] Erro ao ler histórico base:', e.message);
+    }
+  }
+
+  // 2. Carrega PCA (Planned Items) - public/data/pca_*.json
+  if (fs.existsSync(PUBLIC_DATA_DIR_PATH)) {
+    try {
+      const files = fs.readdirSync(PUBLIC_DATA_DIR_PATH).filter(f => f.startsWith('pca_') && f.endsWith('.json'));
+      console.log(`[CATALOG LOAD] Encontrados ${files.length} arquivos PCA.`);
+
+      files.forEach(file => {
+        try {
+          const content = JSON.parse(fs.readFileSync(path.join(PUBLIC_DATA_DIR_PATH, file), 'utf8'));
+          const items = content.data || [];
+          items.forEach(item => {
+             // PCA items usually have codigoItem (CATMAT/CATSER)
+             if (!item.codigoItem || !item.descricao) return;
+
+             const id = `PCA-${item.anoPca}-${item.codigoItem}-${item.numeroItem}`;
+             // Check if we already have this CATMAT in base history to enhance it, or add new
+             // For search purposes, we want diverse options.
+             // If we already have this CATMAT from base history, we might skip or add as variant.
+             // Let's add as new item if not identical description/price to allow "fresh" prices.
+
+             // Simplification: Add everything that has a price and unit
+             if (item.valorUnitario > 0) {
+                 const normalizedId = `PCA-${item.codigoItem}`;
+                 // If we use normalizedId based on CATMAT only, we overwrite.
+                 // Let's use unique ID to allow multiple options for same CATMAT but different prices/specs?
+                 // Current frontend behavior aggregates by ID.
+                 // Let's overwrite/update existing if from PCA (newer) or add if missing.
+
+                 // Strategy: Add all unique combinations of Description + Price as options?
+                 // Or just trust the ID.
+                 // Let's add them to the map. PCA items are valuable.
+
+                 // Check if it exists in base
+                 const existingBase = catalogMap.get(item.codigoItem.replace(/\//g, '-')); // Base uses CATMAT as ID
+
+                 if (!existingBase) {
+                     catalogMap.set(id, {
+                        id: id,
+                        codigo_catmat_completo: String(item.codigoItem),
+                        familia_id: String(item.codigoItem).substring(0, 4), // Guess
+                        tipo_item: item.nomeClassificacao === 'Serviço' ? 'SERVICO' : 'MATERIAL',
+                        descricao_busca: item.descricao.toUpperCase(),
+                        descricao_tecnica: item.descricao, // PCA doesn't have detailed tech desc usually
+                        unidade_padrao: item.unidadeFornecimento !== '-' ? item.unidadeFornecimento : 'UNIDADE',
+                        valor_referencia: item.valorUnitario,
+                        frequencia_uso: 1, // Boost manually or logic
+                        uasg_origem_exemplo: item.nomeUnidade || 'PCA',
+                        source: `PCA_${item.anoPca}`
+                     });
+                 }
+             }
+          });
+        } catch (e) { console.error(`[CATALOG LOAD] Erro ao ler ${file}:`, e.message); }
+      });
+    } catch (e) { console.error('[CATALOG LOAD] Erro ao ler diretório PCA:', e.message); }
+  }
+
+  // 3. Carrega Contratações Recentes - dados_abertos_compras/contratacoes_*.json
+  if (fs.existsSync(PROCUREMENT_DATA_DIR_PATH)) {
+      try {
+          const files = fs.readdirSync(PROCUREMENT_DATA_DIR_PATH).filter(f => f.startsWith('contratacoes_') && f.endsWith('.json'));
+          console.log(`[CATALOG LOAD] Encontrados ${files.length} arquivos de contratações.`);
+
+          files.forEach(file => {
+             try {
+                const content = JSON.parse(fs.readFileSync(path.join(PROCUREMENT_DATA_DIR_PATH, file), 'utf8'));
+                const purchases = content.data || [];
+                purchases.forEach(purchase => {
+                    if (!purchase.itens) return;
+                    purchase.itens.forEach(item => {
+                        if (!item.descricao || item.valor_unitario <= 0) return;
+
+                        const id = `REC-${purchase.fetchYear}-${item.numero_item}-${purchase.numeroCompra}`;
+
+                        // Try to find if we already have this item to avoid spamming "Caneta" 1000 times
+                        // But "Computador" we want to find.
+
+                        catalogMap.set(id, {
+                            id: id,
+                            codigo_catmat_completo: String(item.codigo_item || 'N/A'),
+                            familia_id: 'N/A',
+                            tipo_item: 'MATERIAL', // Assumption
+                            descricao_busca: item.descricao.toUpperCase(),
+                            descricao_tecnica: item.descricao,
+                            unidade_padrao: 'UNIDADE', // Data is missing in this source
+                            valor_referencia: item.valor_unitario,
+                            frequencia_uso: 5, // Give it a boost as it is a recent purchase
+                            uasg_origem_exemplo: purchase.unidadeOrgaoNomeUnidade || 'COMPRA RECENTE',
+                            source: `COMPRA_${purchase.fetchYear}`
+                        });
+                    });
+                });
+             } catch (e) { console.error(`[CATALOG LOAD] Erro ao ler ${file}:`, e.message); }
+          });
+      } catch (e) { console.error('[CATALOG LOAD] Erro ao ler diretório contratações:', e.message); }
+  }
+
+  CACHED_CATALOG = Array.from(catalogMap.values());
+  IS_CATALOG_LOADED = true;
+  const duration = (Date.now() - startTime) / 1000;
+  console.log(`[CATALOG LOAD] Carregamento concluído em ${duration}s. Total de itens em memória: ${CACHED_CATALOG.length}`);
+}
+
+// Initial load
+loadCatalogIntoMemory();
 
 /**
  * Importa e higieniza os dados do JSON para o Firestore
@@ -673,6 +822,20 @@ app.get('/api/catalog/search', async (req, res) => {
   const term = q.toUpperCase();
 
   try {
+    // Check in-memory cache first (FASTEST)
+    if (IS_CATALOG_LOADED && CACHED_CATALOG.length > 0) {
+        // Simple heuristic search
+        const results = CACHED_CATALOG
+            .filter(item =>
+                (item.descricao_busca && item.descricao_busca.includes(term)) ||
+                (item.codigo_catmat_completo && item.codigo_catmat_completo.includes(term))
+            )
+            .sort((a, b) => (b.frequencia_uso || 0) - (a.frequencia_uso || 0))
+            .slice(0, 50); // Increased limit slightly
+
+        return res.json(results);
+    }
+
     // Tenta primeiro via Firestore se disponível
     if (db_admin) {
       try {
@@ -695,32 +858,18 @@ app.get('/api/catalog/search', async (req, res) => {
       }
     }
 
-    // Fallback Local (Lê diretamente do arquivo JSON consolidado)
-    if (fs.existsSync(CATALOGO_DOC_PATH)) {
-      const rawData = JSON.parse(fs.readFileSync(CATALOGO_DOC_PATH, 'utf8'));
-      const items = rawData.historico || [];
-
-      // Busca e Ranqueamento em memória (Simulação de Motor de Busca)
-      const results = items
-        .filter(item =>
-          item.descricao_resumida.toUpperCase().includes(term) ||
-          item.codigo_catmat.includes(term)
-        )
-        .sort((a, b) => (b.frequencia_uso || 0) - (a.frequencia_uso || 0))
-        .slice(0, 20)
-        .map(item => ({
-          id: item.codigo_catmat.replace(/\//g, '-'),
-          codigo_catmat_completo: item.codigo_catmat,
-          tipo_item: item.tipo || "MATERIAL",
-          descricao_busca: item.descricao_resumida.toUpperCase(),
-          descricao_tecnica: item.descricao_detalhada,
-          unidade_padrao: item.unidade_fornecimento,
-          valor_referencia: item.valor_unitario,
-          frequencia_uso: item.frequencia_uso || 1,
-          uasg_origem_exemplo: item.uasg_nome
-        }));
-
-      return res.json(results);
+    // If cache not loaded yet and firestore failed, try on-demand load
+    loadCatalogIntoMemory();
+    // Retry search immediately after load
+    if (CACHED_CATALOG.length > 0) {
+         const results = CACHED_CATALOG
+            .filter(item =>
+                (item.descricao_busca && item.descricao_busca.includes(term)) ||
+                (item.codigo_catmat_completo && item.codigo_catmat_completo.includes(term))
+            )
+            .sort((a, b) => (b.frequencia_uso || 0) - (a.frequencia_uso || 0))
+            .slice(0, 50);
+        return res.json(results);
     }
 
     res.json([]);
@@ -739,14 +888,20 @@ app.post('/api/cart/add', async (req, res) => {
   try {
     let itemData = null;
 
-    // Tenta buscar item do Firestore ou fallback local
-    if (db_admin) {
+    // 1. Check Memory Cache first
+    if (IS_CATALOG_LOADED) {
+        itemData = CACHED_CATALOG.find(i => i.id === itemId);
+    }
+
+    // 2. Tenta buscar item do Firestore ou fallback local
+    if (!itemData && db_admin) {
       try {
         const itemDoc = await db_admin.collection('catalogo_mestre').doc(itemId).get();
         if (itemDoc.exists) itemData = itemDoc.data();
       } catch (e) { }
     }
 
+    // 3. Last resort: File read (Old method)
     if (!itemData && fs.existsSync(CATALOGO_DOC_PATH)) {
       const raw = JSON.parse(fs.readFileSync(CATALOGO_DOC_PATH, 'utf8'));
       const item = raw.historico.find(h => h.codigo_catmat.replace(/\//g, '-') === itemId || h.codigo_catmat === itemId);
