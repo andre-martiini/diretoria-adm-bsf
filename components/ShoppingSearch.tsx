@@ -32,6 +32,13 @@ interface CatalogItem {
     valor_referencia: number;
     frequencia_uso: number;
     uasg_origem_exemplo: string;
+    stats?: {
+        min_price: number;
+        max_price: number;
+        price_count: number;
+        sources: string[];
+    };
+    _score?: number;
 }
 
 interface CartItem {
@@ -208,13 +215,29 @@ export const ShoppingSearch: React.FC = () => {
                                         <p className="text-xs text-slate-400 font-bold line-clamp-1">{item.descricao_tecnica}</p>
                                     </div>
                                 </div>
-                                <div className="flex flex-col items-end shrink-0 pl-6 border-l border-slate-100">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Valor Médio</span>
+                                <div className="flex flex-col items-end shrink-0 pl-6 border-l border-slate-100 min-w-[120px]">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Valor Estimado</span>
                                     <span className="text-xl font-black text-slate-900 tracking-tighter">{formatCurrency(item.valor_referencia)}</span>
-                                    <div className="flex items-center gap-1 mt-1">
+
+                                    {item.stats && item.stats.min_price !== item.stats.max_price && (
+                                        <div className="flex items-center gap-1 mt-0.5">
+                                            <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                                                {formatCurrency(item.stats.min_price)} a {formatCurrency(item.stats.max_price)}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    <div className="flex items-center gap-1 mt-2">
                                         < TrendingUp size={10} className="text-emerald-500" />
-                                        <span className="text-[10px] font-bold text-emerald-600 uppercase">Top {item.frequencia_uso} no IFES</span>
+                                        <span className="text-[10px] font-bold text-emerald-600 uppercase">
+                                            Relevância {Math.round(item.frequencia_uso * 10) / 10}
+                                        </span>
                                     </div>
+                                    {item.stats && (
+                                        <span className="text-[8px] font-bold text-slate-300 mt-1 uppercase tracking-tight">
+                                            Base: {item.stats.price_count} fontes
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         ))}

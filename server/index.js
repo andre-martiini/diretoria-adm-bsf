@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import MiniSearch from 'minisearch';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -585,148 +586,159 @@ const CART_DOC_PATH = path.join(__dirname, '..', 'carrinho_ifes_local.json');
 const PUBLIC_DATA_DIR_PATH = path.join(__dirname, '..', 'public', 'data');
 const PROCUREMENT_DATA_DIR_PATH = path.join(__dirname, '..', 'dados_abertos_compras');
 
-// --- IN-MEMORY CACHE FOR CATALOG ---
+// --- IN-MEMORY CACHE FOR CATALOG & INTELLIGENT SEARCH ---
 let CACHED_CATALOG = [];
+let CATALOG_MAP = new Map(); // Permite busca O(1) por ID
+let MINI_SEARCH = new MiniSearch({
+  fields: ['descricao_busca', 'codigo_catmat_completo', 'descricao_tecnica', 'keywords'], // Campos indexados
+  storeFields: ['id'], // Campos retornados na busca (usamos o ID para pegar o objeto completo no MAP)
+  searchOptions: {
+    boost: { descricao_busca: 2, codigo_catmat_completo: 3, keywords: 1.5 },
+    fuzzy: 0.2, // Permite erros de digitação (Levenshtein distance)
+    prefix: true // Permite busca por prefixo ("cade" acha "cadeira")
+  }
+});
 let IS_CATALOG_LOADED = false;
 
 /**
  * Loads and processes catalog items from all available sources into memory.
+ * Implementa AGREGACAO INTELIGENTE: Itens com mesmo CATMAT são agrupados para estatísticas.
  */
 function loadCatalogIntoMemory() {
-  console.log('[CATALOG LOAD] Iniciando carregamento do catálogo em memória...');
+  console.log('[CATALOG LOAD] Iniciando carregamento do catálogo com Indexação Inteligente...');
   const startTime = Date.now();
-  const catalogMap = new Map();
+  const tempMap = new Map(); // Map temporário para agregação (Chave: CATMAT/Código Único)
 
-  // 1. Carrega Histórico Base (15k itens)
+  // Função auxiliar para normalizar e agregar itens
+  const processAndAggregateItem = (sourceItem, sourceName, weightBoost = 0) => {
+    // Normalização de campos
+    let catmat = String(sourceItem.codigo_catmat || sourceItem.codigo_catmat_completo || sourceItem.codigoItem || sourceItem.codigo_item || '').trim();
+    if (!catmat || catmat === 'undefined') return;
+
+    // Padronizar ID como apenas números e hífens
+    const normalizedId = catmat.replace(/\//g, '-');
+
+    const desc = (sourceItem.descricao_resumida || sourceItem.descricao || sourceItem.descricao_busca || '').toUpperCase();
+    const descTec = (sourceItem.descricao_detalhada || sourceItem.descricao_tecnica || sourceItem.descricao || '').toUpperCase();
+    const price = parseFloat(sourceItem.valor_unitario || sourceItem.valorUnitario || sourceItem.valor_referencia || 0);
+    const unit = (sourceItem.unidade_fornecimento || sourceItem.unidadeFornecimento || sourceItem.unidade_padrao || 'UNIDADE').toUpperCase();
+
+    // Filtros de qualidade básica
+    if (price <= 0 || unit === '-' || !desc) return;
+
+    if (!tempMap.has(normalizedId)) {
+      // Novo Item no Catálogo Mestre
+      tempMap.set(normalizedId, {
+        id: normalizedId,
+        codigo_catmat_completo: catmat,
+        familia_id: catmat.split('-')[0] || '0000',
+        tipo_item: (sourceItem.tipo || sourceItem.nomeClassificacao === 'Serviço') ? 'SERVICO' : 'MATERIAL',
+        descricao_busca: desc,
+        descricao_tecnica: descTec,
+        unidade_padrao: unit,
+        valor_referencia: price,
+        frequencia_uso: 1 + weightBoost,
+        uasg_origem_exemplo: sourceItem.uasg_nome || sourceItem.nomeUnidade || sourceItem.unidadeOrgaoNomeUnidade || sourceName,
+
+        // Dados estatísticos para agregação
+        stats: {
+          price_sum: price,
+          price_count: 1,
+          min_price: price,
+          max_price: price,
+          sources: [sourceName]
+        },
+        // Set de descrições para indexação rica
+        all_descriptions: new Set([desc, descTec])
+      });
+    } else {
+      // Item existente: Agregar dados
+      const existing = tempMap.get(normalizedId);
+
+      // Atualizar estatísticas de preço
+      existing.stats.price_sum += price;
+      existing.stats.price_count += 1;
+      existing.stats.min_price = Math.min(existing.stats.min_price, price);
+      existing.stats.max_price = Math.max(existing.stats.max_price, price);
+
+      // Atualizar valor de referência (Média)
+      existing.valor_referencia = existing.stats.price_sum / existing.stats.price_count;
+
+      // Incrementar relevância
+      existing.frequencia_uso += (1 + weightBoost);
+
+      // Adicionar fonte se nova
+      if (!existing.stats.sources.includes(sourceName)) {
+        existing.stats.sources.push(sourceName);
+      }
+
+      // Enriquecer descrições para busca
+      existing.all_descriptions.add(desc);
+      existing.all_descriptions.add(descTec);
+
+      // Se a nova descrição técnica for maior/melhor, usamos ela como principal para exibição
+      if (descTec.length > existing.descricao_tecnica.length) {
+        existing.descricao_tecnica = descTec;
+      }
+    }
+  };
+
+  // 1. Carrega Histórico Base (Peso 1)
   if (fs.existsSync(CATALOGO_DOC_PATH)) {
     try {
       const rawData = JSON.parse(fs.readFileSync(CATALOGO_DOC_PATH, 'utf8'));
-      const items = rawData.historico || [];
-      console.log(`[CATALOG LOAD] Processando ${items.length} itens do histórico base...`);
-
-      items.forEach(item => {
-        if (!item.codigo_catmat) return;
-        const id = item.codigo_catmat.replace(/\//g, '-');
-        catalogMap.set(id, {
-            id: id,
-            codigo_catmat_completo: item.codigo_catmat,
-            familia_id: item.codigo_catmat.split('-')[0],
-            tipo_item: item.tipo || "MATERIAL",
-            descricao_busca: item.descricao_resumida.toUpperCase(),
-            descricao_tecnica: item.descricao_detalhada,
-            unidade_padrao: item.unidade_fornecimento,
-            valor_referencia: item.valor_unitario,
-            frequencia_uso: item.frequencia_uso || 1,
-            uasg_origem_exemplo: item.uasg_nome,
-            source: 'HISTORICO_BASE'
-        });
-      });
-    } catch (e) {
-      console.error('[CATALOG LOAD] Erro ao ler histórico base:', e.message);
-    }
+      (rawData.historico || []).forEach(item => processAndAggregateItem(item, 'HISTORICO_BASE', 0));
+    } catch (e) { console.error('[CATALOG LOAD] Erro histórico:', e.message); }
   }
 
-  // 2. Carrega PCA (Planned Items) - public/data/pca_*.json
+  // 2. Carrega PCA (Peso 2 - Planejamento recente é relevante)
   if (fs.existsSync(PUBLIC_DATA_DIR_PATH)) {
     try {
       const files = fs.readdirSync(PUBLIC_DATA_DIR_PATH).filter(f => f.startsWith('pca_') && f.endsWith('.json'));
-      console.log(`[CATALOG LOAD] Encontrados ${files.length} arquivos PCA.`);
-
       files.forEach(file => {
         try {
           const content = JSON.parse(fs.readFileSync(path.join(PUBLIC_DATA_DIR_PATH, file), 'utf8'));
-          const items = content.data || [];
-          items.forEach(item => {
-             // PCA items usually have codigoItem (CATMAT/CATSER)
-             if (!item.codigoItem || !item.descricao) return;
-
-             const id = `PCA-${item.anoPca}-${item.codigoItem}-${item.numeroItem}`;
-             // Check if we already have this CATMAT in base history to enhance it, or add new
-             // For search purposes, we want diverse options.
-             // If we already have this CATMAT from base history, we might skip or add as variant.
-             // Let's add as new item if not identical description/price to allow "fresh" prices.
-
-             // Simplification: Add everything that has a price and unit
-             if (item.valorUnitario > 0) {
-                 const normalizedId = `PCA-${item.codigoItem}`;
-                 // If we use normalizedId based on CATMAT only, we overwrite.
-                 // Let's use unique ID to allow multiple options for same CATMAT but different prices/specs?
-                 // Current frontend behavior aggregates by ID.
-                 // Let's overwrite/update existing if from PCA (newer) or add if missing.
-
-                 // Strategy: Add all unique combinations of Description + Price as options?
-                 // Or just trust the ID.
-                 // Let's add them to the map. PCA items are valuable.
-
-                 // Check if it exists in base
-                 const existingBase = catalogMap.get(item.codigoItem.replace(/\//g, '-')); // Base uses CATMAT as ID
-
-                 if (!existingBase) {
-                     catalogMap.set(id, {
-                        id: id,
-                        codigo_catmat_completo: String(item.codigoItem),
-                        familia_id: String(item.codigoItem).substring(0, 4), // Guess
-                        tipo_item: item.nomeClassificacao === 'Serviço' ? 'SERVICO' : 'MATERIAL',
-                        descricao_busca: item.descricao.toUpperCase(),
-                        descricao_tecnica: item.descricao, // PCA doesn't have detailed tech desc usually
-                        unidade_padrao: item.unidadeFornecimento !== '-' ? item.unidadeFornecimento : 'UNIDADE',
-                        valor_referencia: item.valorUnitario,
-                        frequencia_uso: 1, // Boost manually or logic
-                        uasg_origem_exemplo: item.nomeUnidade || 'PCA',
-                        source: `PCA_${item.anoPca}`
-                     });
-                 }
-             }
-          });
-        } catch (e) { console.error(`[CATALOG LOAD] Erro ao ler ${file}:`, e.message); }
+          const year = file.match(/pca_(\d+)/)?.[1] || 'PCA';
+          (content.data || []).forEach(item => processAndAggregateItem(item, `PCA_${year}`, 2));
+        } catch (e) {}
       });
-    } catch (e) { console.error('[CATALOG LOAD] Erro ao ler diretório PCA:', e.message); }
+    } catch (e) { console.error('[CATALOG LOAD] Erro PCA:', e.message); }
   }
 
-  // 3. Carrega Contratações Recentes - dados_abertos_compras/contratacoes_*.json
+  // 3. Carrega Contratações Recentes (Peso 3 - Compras reais recentes são muito relevantes)
   if (fs.existsSync(PROCUREMENT_DATA_DIR_PATH)) {
       try {
           const files = fs.readdirSync(PROCUREMENT_DATA_DIR_PATH).filter(f => f.startsWith('contratacoes_') && f.endsWith('.json'));
-          console.log(`[CATALOG LOAD] Encontrados ${files.length} arquivos de contratações.`);
-
           files.forEach(file => {
              try {
                 const content = JSON.parse(fs.readFileSync(path.join(PROCUREMENT_DATA_DIR_PATH, file), 'utf8'));
-                const purchases = content.data || [];
-                purchases.forEach(purchase => {
-                    if (!purchase.itens) return;
-                    purchase.itens.forEach(item => {
-                        if (!item.descricao || item.valor_unitario <= 0) return;
-
-                        const id = `REC-${purchase.fetchYear}-${item.numero_item}-${purchase.numeroCompra}`;
-
-                        // Try to find if we already have this item to avoid spamming "Caneta" 1000 times
-                        // But "Computador" we want to find.
-
-                        catalogMap.set(id, {
-                            id: id,
-                            codigo_catmat_completo: String(item.codigo_item || 'N/A'),
-                            familia_id: 'N/A',
-                            tipo_item: 'MATERIAL', // Assumption
-                            descricao_busca: item.descricao.toUpperCase(),
-                            descricao_tecnica: item.descricao,
-                            unidade_padrao: 'UNIDADE', // Data is missing in this source
-                            valor_referencia: item.valor_unitario,
-                            frequencia_uso: 5, // Give it a boost as it is a recent purchase
-                            uasg_origem_exemplo: purchase.unidadeOrgaoNomeUnidade || 'COMPRA RECENTE',
-                            source: `COMPRA_${purchase.fetchYear}`
-                        });
-                    });
+                const year = file.match(/contratacoes_(\d+)/)?.[1] || 'RECENTE';
+                (content.data || []).forEach(purchase => {
+                    if (purchase.itens) {
+                        purchase.itens.forEach(item => processAndAggregateItem(item, `COMPRA_${year}`, 3));
+                    }
                 });
-             } catch (e) { console.error(`[CATALOG LOAD] Erro ao ler ${file}:`, e.message); }
+             } catch (e) {}
           });
-      } catch (e) { console.error('[CATALOG LOAD] Erro ao ler diretório contratações:', e.message); }
+      } catch (e) { console.error('[CATALOG LOAD] Erro Contratações:', e.message); }
   }
 
-  CACHED_CATALOG = Array.from(catalogMap.values());
+  // Finalização: Prepara objetos para Cache e Indexação
+  CATALOG_MAP = tempMap;
+  CACHED_CATALOG = Array.from(tempMap.values()).map(item => {
+    // Flatten para o frontend e cria campo keywords para o MiniSearch
+    item.keywords = Array.from(item.all_descriptions).join(' ');
+    delete item.all_descriptions; // Limpa memória
+    return item;
+  });
+
+  // Reconstruir Índice de Busca
+  MINI_SEARCH.removeAll();
+  MINI_SEARCH.addAll(CACHED_CATALOG);
+
   IS_CATALOG_LOADED = true;
   const duration = (Date.now() - startTime) / 1000;
-  console.log(`[CATALOG LOAD] Carregamento concluído em ${duration}s. Total de itens em memória: ${CACHED_CATALOG.length}`);
+  console.log(`[CATALOG LOAD] Indexação concluída em ${duration}s. Itens únicos (Agrupados): ${CACHED_CATALOG.length}`);
 }
 
 // Initial load
@@ -814,65 +826,52 @@ app.post('/api/catalog/import', async (req, res) => {
 
 /**
  * Motor de Busca (Backend API) - Google de Compras
+ * Implementa busca Full-Text com Fuzzy Matching e Ranking
  */
 app.get('/api/catalog/search', async (req, res) => {
   const { q } = req.query;
   if (!q || q.length < 2) return res.json([]);
 
-  const term = q.toUpperCase();
+  // Garante que o índice está carregado
+  if (!IS_CATALOG_LOADED) {
+    loadCatalogIntoMemory();
+  }
 
   try {
-    // Check in-memory cache first (FASTEST)
-    if (IS_CATALOG_LOADED && CACHED_CATALOG.length > 0) {
-        // Simple heuristic search
-        const results = CACHED_CATALOG
-            .filter(item =>
-                (item.descricao_busca && item.descricao_busca.includes(term)) ||
-                (item.codigo_catmat_completo && item.codigo_catmat_completo.includes(term))
-            )
-            .sort((a, b) => (b.frequencia_uso || 0) - (a.frequencia_uso || 0))
-            .slice(0, 50); // Increased limit slightly
+    // 1. Busca Exata/Fuzzy via MiniSearch
+    let searchResults = MINI_SEARCH.search(q, {
+      boost: { codigo_catmat_completo: 10, descricao_busca: 3, keywords: 1 },
+      fuzzy: 0.25,
+      prefix: true,
+      combineWith: 'AND' // Tenta ser preciso primeiro
+    });
 
-        return res.json(results);
+    // 2. Fallback: Se não achar nada, tenta 'OR' para achar pelo menos um dos termos
+    if (searchResults.length === 0) {
+      searchResults = MINI_SEARCH.search(q, {
+        boost: { descricao_busca: 2 },
+        fuzzy: 0.35,
+        prefix: true,
+        combineWith: 'OR'
+      });
     }
 
-    // Tenta primeiro via Firestore se disponível
-    if (db_admin) {
-      try {
-        const snapshot = await db_admin.collection('catalogo_mestre')
-          .orderBy('frequencia_uso', 'desc')
-          .get();
+    // 3. Hidratação dos resultados (Recupera objetos completos)
+    const results = searchResults
+      .slice(0, 100)
+      .map(hit => {
+        const item = CATALOG_MAP.get(hit.id);
+        if (!item) return null;
+        // Retorna o item enriquecido com metadados do match
+        return {
+          ...item,
+          _score: hit.score,
+          _match: hit.match
+        };
+      })
+      .filter(item => item !== null);
 
-        const results = [];
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          if (data.descricao_busca.includes(term)) {
-            results.push({ id: doc.id, ...data });
-          }
-          if (results.length >= 20) return;
-        });
-
-        if (results.length > 0) return res.json(results);
-      } catch (dbError) {
-        console.warn('[CATALOG] Firestore indisponível, usando fallback local.');
-      }
-    }
-
-    // If cache not loaded yet and firestore failed, try on-demand load
-    loadCatalogIntoMemory();
-    // Retry search immediately after load
-    if (CACHED_CATALOG.length > 0) {
-         const results = CACHED_CATALOG
-            .filter(item =>
-                (item.descricao_busca && item.descricao_busca.includes(term)) ||
-                (item.codigo_catmat_completo && item.codigo_catmat_completo.includes(term))
-            )
-            .sort((a, b) => (b.frequencia_uso || 0) - (a.frequencia_uso || 0))
-            .slice(0, 50);
-        return res.json(results);
-    }
-
-    res.json([]);
+    return res.json(results);
   } catch (error) {
     console.error('[CATALOG SEARCH ERROR]', error);
     res.status(500).json({ error: error.message });
