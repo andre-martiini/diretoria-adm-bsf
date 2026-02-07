@@ -830,16 +830,20 @@ app.post('/api/catalog/import', async (req, res) => {
  */
 app.get('/api/catalog/search', async (req, res) => {
   const { q } = req.query;
-  if (!q || q.length < 2) return res.json([]);
+  if (!q || q.trim().length < 2) return res.json([]);
+
+  const searchTerm = q.trim();
+  console.log(`[CATALOG SEARCH] Buscando por: "${searchTerm}"`);
 
   // Garante que o índice está carregado
   if (!IS_CATALOG_LOADED) {
+    console.warn('[CATALOG SEARCH] Índice não carregado. Tentando carregar agora...');
     loadCatalogIntoMemory();
   }
 
   try {
     // 1. Busca Exata/Fuzzy via MiniSearch
-    let searchResults = MINI_SEARCH.search(q, {
+    let searchResults = MINI_SEARCH.search(searchTerm, {
       boost: { codigo_catmat_completo: 10, descricao_busca: 3, keywords: 1 },
       fuzzy: 0.25,
       prefix: true,
@@ -848,13 +852,16 @@ app.get('/api/catalog/search', async (req, res) => {
 
     // 2. Fallback: Se não achar nada, tenta 'OR' para achar pelo menos um dos termos
     if (searchResults.length === 0) {
-      searchResults = MINI_SEARCH.search(q, {
+      console.log(`[CATALOG SEARCH] Nenhum resultado exato/AND para "${searchTerm}". Tentando fuzzy/OR...`);
+      searchResults = MINI_SEARCH.search(searchTerm, {
         boost: { descricao_busca: 2 },
         fuzzy: 0.35,
         prefix: true,
         combineWith: 'OR'
       });
     }
+
+    console.log(`[CATALOG SEARCH] Encontrados ${searchResults.length} resultados brutos para "${searchTerm}"`);
 
     // 3. Hidratação dos resultados (Recupera objetos completos)
     const results = searchResults
@@ -871,6 +878,7 @@ app.get('/api/catalog/search', async (req, res) => {
       })
       .filter(item => item !== null);
 
+    console.log(`[CATALOG SEARCH] Retornando ${results.length} itens para o cliente.`);
     return res.json(results);
   } catch (error) {
     console.error('[CATALOG SEARCH ERROR]', error);
