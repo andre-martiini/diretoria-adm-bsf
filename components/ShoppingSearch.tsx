@@ -186,7 +186,17 @@ export const ShoppingSearch: React.FC = () => {
                     </div>
 
                     <div className="grid grid-cols-1 gap-4">
-                        {results.length === 0 && searchTerm.length >= 2 && !loading && (
+                        {loading && (
+                            <div className="bg-white p-12 rounded-3xl border border-dashed border-slate-200 flex flex-col items-center text-center animate-pulse">
+                                <div className="p-4 bg-slate-50 text-ifes-green rounded-full mb-4">
+                                    <RefreshCw className="animate-spin" size={40} />
+                                </div>
+                                <h4 className="text-lg font-black text-slate-600">Buscando itens...</h4>
+                                <p className="text-sm text-slate-400 mt-1">Estamos consultando o catálogo inteligente.</p>
+                            </div>
+                        )}
+
+                        {!loading && results.length === 0 && searchTerm.length >= 2 && (
                             <div className="bg-white p-12 rounded-3xl border border-dashed border-slate-200 flex flex-col items-center text-center">
                                 <div className="p-4 bg-slate-50 text-slate-300 rounded-full mb-4">
                                     <Search size={40} />
@@ -196,7 +206,7 @@ export const ShoppingSearch: React.FC = () => {
                             </div>
                         )}
 
-                        {results.map((item) => (
+                        {!loading && results.map((item) => (
                             <div
                                 key={item.id}
                                 onClick={() => setSelectedItem(item)}
@@ -291,16 +301,6 @@ export const ShoppingSearch: React.FC = () => {
                                 </div>
                             )}
                         </div>
-                    </div>
-
-                    <div className="bg-blue-600 p-8 rounded-[32px] text-white shadow-xl shadow-blue-200 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:rotate-12 transition-transform duration-500">
-                            <Info size={120} />
-                        </div>
-                        <h4 className="text-xs font-black uppercase tracking-[0.2em] mb-4">Dica do Especialista</h4>
-                        <p className="text-sm font-bold leading-relaxed opacity-90">
-                            Usar itens com alta frequência de uso agiliza o processo de compra, pois as descrições técnicas e unidades já foram validadas pelo setor de licitações em compras anteriores.
-                        </p>
                     </div>
                 </div>
             </div>
