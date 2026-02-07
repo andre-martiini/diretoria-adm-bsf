@@ -13,10 +13,7 @@ export const PCA_YEARS_MAP: Record<string, string> = {
 
 export const DEFAULT_YEAR = '2026';
 
-export const API_SERVER_URL = import.meta.env.VITE_API_URL ||
-    (typeof window !== 'undefined'
-        ? `${window.location.protocol}//${window.location.hostname}:3002`
-        : 'http://localhost:3002');
+export const API_SERVER_URL = import.meta.env.VITE_API_URL || '';
 
 // A URL base agora será construída dinamicamente no App.tsx
 

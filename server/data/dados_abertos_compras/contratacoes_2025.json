@@ -1,0 +1,143 @@
+{
+  "metadata": {
+    "extractedAt": "2026-02-02T13:58:29.556Z",
+    "cnpj": "10838653000106",
+    "year": "2025",
+    "totalPurchases": 1,
+    "source": "imported_from_legacy"
+  },
+  "data": [
+    {
+      "idCompra": "15888606900012025",
+      "numeroControlePNCP": "10838653000106-1-000248/2025",
+      "anoCompraPncp": 2025,
+      "sequencialCompraPncp": 248,
+      "orgaoEntidadeCnpj": "10838653000106",
+      "orgaoSubrogadoCnpj": null,
+      "codigoOrgao": 60935,
+      "orgaoEntidadeRazaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
+      "orgaoSubrogadoRazaoSocial": null,
+      "orgaoEntidadeEsferaId": "F",
+      "orgaoSubrogadoEsferaId": null,
+      "orgaoEntidadePoderId": "E",
+      "orgaoSubrogadoPoderId": null,
+      "unidadeOrgaoCodigoUnidade": "158886",
+      "unidadeSubrogadaCodigoUnidade": null,
+      "unidadeOrgaoNomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+      "unidadeSubrogadaNomeUnidade": null,
+      "unidadeOrgaoUfSigla": "ES",
+      "unidadeSubrogadaUfSigla": null,
+      "unidadeOrgaoMunicipioNome": "BARRA DE SÃO FRANCISCO",
+      "unidade_subrogada_municipio_nome": null,
+      "unidadeOrgaoCodigoIbge": 3200904,
+      "unidadeSubrogadaCodigoIbge": null,
+      "numeroCompra": "90001",
+      "modalidadeIdPncp": 8,
+      "codigoModalidade": 6,
+      "modalidadeNome": "Dispensa",
+      "srp": false,
+      "modoDisputaIdPncp": 4,
+      "codigoModoDisputa": 4,
+      "amparoLegalCodigoPncp": 19,
+      "amparoLegalNome": "Lei 14.133/2021, Art. 75, II",
+      "amparoLegalDescricao": "Dispensa de Licitação: para contratação que envolva valores inferiores a R$ 50.000,00 (cinquenta mil reais), no caso de outros serviços e compras",
+      "informacaoComplementar": "Em razão do valor.",
+      "processo": "23543000178202585",
+      "objetoCompra": "O objeto do presente procedimento é a escolha da proposta mais vantajosa para a contratação, por dispensa de licitação, de equipamentos e materiais elétricos/eletrônicos, conforme condições, quantidades e exigências estabelecidas no Aviso de Contratação Direta e seus anexos.",
+      "existeResultado": true,
+      "orcamentoSigilosoCodigo": 1,
+      "orcamentoSigilosoDescricao": "Compra sem sigilo",
+      "situacaoCompraIdPncp": 1,
+      "situacaoCompraNomePncp": "Divulgada no PNCP",
+      "tipoInstrumentoConvocatorioCodigoPncp": 2,
+      "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
+      "modoDisputaNomePncp": "Dispensa Com Disputa",
+      "valorTotalEstimado": 26020.88,
+      "valorTotalHomologado": 12201.95,
+      "dataInclusaoPncp": "2025-04-14T17:45:59",
+      "dataAtualizacaoPncp": "2025-04-14T17:45:59",
+      "dataPublicacaoPncp": "2025-04-14T17:45:59",
+      "dataAberturaPropostaPncp": "2025-04-14T17:45:56",
+      "dataEncerramentoPropostaPncp": "2025-04-22T07:59:59",
+      "contratacaoExcluida": false,
+      "source": "PNCP_14133",
+      "modalidadeCode": 6,
+      "fetchYear": "2025",
+      "itens": [
+        {
+          "numero_item": 1,
+          "descricao": "Fusível Limitador Corrente",
+          "codigo_item": 3,
+          "valor_unitario": 384.95,
+          "quantidade": 10,
+          "numero_dfd_encontrado": null,
+          "dfd_metadata": null
+        },
+        {
+          "numero_item": 2,
+          "descricao": "Gerador Energia",
+          "codigo_item": 3,
+          "valor_unitario": 7887.25,
+          "quantidade": 1,
+          "numero_dfd_encontrado": null,
+          "dfd_metadata": null
+        },
+        {
+          "numero_item": 3,
+          "descricao": "Detector Ausencia Tensão",
+          "codigo_item": 3,
+          "valor_unitario": 639.9,
+          "quantidade": 2,
+          "numero_dfd_encontrado": null,
+          "dfd_metadata": null
+        },
+        {
+          "numero_item": 4,
+          "descricao": "Motor Elétrico",
+          "codigo_item": 3,
+          "valor_unitario": 2553.72,
+          "quantidade": 2,
+          "numero_dfd_encontrado": null,
+          "dfd_metadata": null
+        },
+        {
+          "numero_item": 5,
+          "descricao": "Máquina Solda Portátil",
+          "codigo_item": 3,
+          "valor_unitario": 937.01,
+          "quantidade": 1,
+          "numero_dfd_encontrado": null,
+          "dfd_metadata": null
+        },
+        {
+          "numero_item": 6,
+          "descricao": "Compressor De Ar",
+          "codigo_item": 3,
+          "valor_unitario": 1384.8,
+          "quantidade": 1,
+          "numero_dfd_encontrado": null,
+          "dfd_metadata": null
+        },
+        {
+          "numero_item": 7,
+          "descricao": "Soprador",
+          "codigo_item": 3,
+          "valor_unitario": 1446.55,
+          "quantidade": 1,
+          "numero_dfd_encontrado": null,
+          "dfd_metadata": null
+        },
+        {
+          "numero_item": 8,
+          "descricao": "Forno Microondas",
+          "codigo_item": 3,
+          "valor_unitario": 589.79,
+          "quantidade": 7,
+          "numero_dfd_encontrado": null,
+          "dfd_metadata": null
+        }
+      ],
+      "dfds_relacionados": []
+    }
+  ]
+}

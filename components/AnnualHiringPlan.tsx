@@ -2654,7 +2654,6 @@ const AnnualHiringPlan: React.FC = () => {
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Descrição</label>
                   <p className="text-sm font-medium text-slate-600 leading-relaxed">{viewingItem.titulo || viewingItem.descricaoDetalhada}</p>
                 </div>
-              </div>
 
               {viewingItem.valorEmpenhado && viewingItem.valorEmpenhado > 0 && (
                 <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 flex items-center justify-between">
