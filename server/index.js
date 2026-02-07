@@ -318,8 +318,12 @@ app.get('/api/sipac/documento/conteudo', async (req, res) => {
 
 
 const CNPJ_IFES_BSF = '10838653000106';
-const PUBLIC_DATA_DIR = path.join(__dirname, '..', 'public', 'data');
-const PROCUREMENT_DATA_DIR = path.join(__dirname, '..', 'dados_abertos_compras');
+const PUBLIC_DATA_DIR = fs.existsSync(path.join(__dirname, 'data', 'public_data'))
+  ? path.join(__dirname, 'data', 'public_data')
+  : path.join(__dirname, '..', 'public', 'data');
+const PROCUREMENT_DATA_DIR = fs.existsSync(path.join(__dirname, 'data', 'dados_abertos_compras'))
+  ? path.join(__dirname, 'data', 'dados_abertos_compras')
+  : path.join(__dirname, '..', 'dados_abertos_compras');
 
 /**
  * Sincroniza dados de contratações (compras) do PNCP para os anos especificados
@@ -487,7 +491,7 @@ export const api = onRequest({
 // Endpoint para ler dados brutos da integração Compras.gov/PNCP (Legacy - mantido para compatibilidade)
 app.get('/api/integration/procurement-data', async (req, res) => {
   try {
-    const COMPRAS_GOV_PATH = path.join(__dirname, '..', 'dados_abertos_compras', 'compras_gov_result.json');
+    const COMPRAS_GOV_PATH = path.join(PROCUREMENT_DATA_DIR, 'compras_gov_result.json');
     if (fs.existsSync(COMPRAS_GOV_PATH)) {
       const data = JSON.parse(fs.readFileSync(COMPRAS_GOV_PATH, 'utf8'));
       return res.json(data);
@@ -581,10 +585,21 @@ app.post('/api/procurement/sync', async (req, res) => {
 
 // --- MÓDULO GOOGLE DE COMPRAS IFES ---
 
-const CATALOGO_DOC_PATH = path.join(__dirname, '..', 'historico_compras_ifes_completo.json');
-const CART_DOC_PATH = path.join(__dirname, '..', 'carrinho_ifes_local.json');
-const PUBLIC_DATA_DIR_PATH = path.join(__dirname, '..', 'public', 'data');
-const PROCUREMENT_DATA_DIR_PATH = path.join(__dirname, '..', 'dados_abertos_compras');
+const CATALOGO_DOC_PATH = fs.existsSync(path.join(__dirname, 'data', 'historico_compras_ifes_completo.json'))
+  ? path.join(__dirname, 'data', 'historico_compras_ifes_completo.json')
+  : path.join(__dirname, '..', 'historico_compras_ifes_completo.json');
+
+const CART_DOC_PATH = fs.existsSync(path.join(__dirname, 'data', 'carrinho_ifes_local.json'))
+  ? path.join(__dirname, 'data', 'carrinho_ifes_local.json')
+  : path.join(__dirname, '..', 'carrinho_ifes_local.json');
+
+const PUBLIC_DATA_DIR_PATH = fs.existsSync(path.join(__dirname, 'data', 'public_data'))
+  ? path.join(__dirname, 'data', 'public_data')
+  : path.join(__dirname, '..', 'public', 'data');
+
+const PROCUREMENT_DATA_DIR_PATH = fs.existsSync(path.join(__dirname, 'data', 'dados_abertos_compras'))
+  ? path.join(__dirname, 'data', 'dados_abertos_compras')
+  : path.join(__dirname, '..', 'dados_abertos_compras');
 
 // --- IN-MEMORY CACHE FOR CATALOG & INTELLIGENT SEARCH ---
 let CACHED_CATALOG = [];
