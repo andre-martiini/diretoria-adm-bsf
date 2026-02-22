@@ -83,6 +83,7 @@ import {
 } from 'recharts';
 
 import { fetchPcaData, hasPcaInMemoryCache, fetchLocalPcaSnapshot, updatePcaCache } from '../services/pcaService';
+import { motion, AnimatePresence } from 'motion/react';
 
 // Components
 import ContractTable from './ContractTable';
@@ -883,9 +884,9 @@ const AnnualHiringPlan: React.FC = () => {
             </div>
             <div className="border-l border-slate-100 pl-3 ml-3 md:pl-6 md:ml-6">
               <div className="flex bg-slate-100 p-1 rounded-xl">
-                <button onClick={() => setDashboardView('shopping')} className={`px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-black transition-all ${dashboardView === 'shopping' ? 'bg-ifes-green text-white shadow-lg shadow-ifes-green/20 ring-1 ring-ifes-green' : 'text-slate-400 hover:text-slate-600'}`}>Google Compras</button>
-                <button onClick={() => setDashboardView('planning')} className={`px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-black transition-all ${dashboardView === 'planning' ? 'bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-100' : 'text-slate-400 hover:text-slate-600'}`}>PCA</button>
-                <button onClick={() => setDashboardView('status')} className={`px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-black transition-all ${dashboardView === 'status' ? 'bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-100' : 'text-slate-400 hover:text-slate-600'}`}>Processos</button>
+                <button onClick={() => setDashboardView('shopping')} className={`px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-black transition-all ${dashboardView === 'shopping' ? 'bg-ifes-green text-white shadow-lg shadow-ifes-green/20 ring-1 ring-ifes-green' : 'text-slate-400 hover:text-slate-600'}`}>Consulta de Catálogo</button>
+                <button onClick={() => setDashboardView('planning')} className={`px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-black transition-all ${dashboardView === 'planning' ? 'bg-ifes-green text-white shadow-lg shadow-ifes-green/20 ring-1 ring-ifes-green' : 'text-slate-400 hover:text-slate-600'}`}>PCA (PNCP)</button>
+                <button onClick={() => setDashboardView('status')} className={`px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-black transition-all ${dashboardView === 'status' ? 'bg-ifes-green text-white shadow-lg shadow-ifes-green/20 ring-1 ring-ifes-green' : 'text-slate-400 hover:text-slate-600'}`}>Processos SIPAC</button>
               </div>
             </div>
           </div>
@@ -1206,9 +1207,10 @@ const AnnualHiringPlan: React.FC = () => {
         </div>
       )}
 
+      <AnimatePresence>
       {isManualModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white rounded-[40px] w-full max-w-4xl shadow-2xl border border-slate-200 overflow-hidden font-sans">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-white rounded-[2.5rem] w-full max-w-4xl shadow-premium border border-slate-200 overflow-hidden font-sans">
             <header className="px-10 py-8 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-20">
               <div className="flex items-center gap-5">
                 <div className="p-2 bg-ifes-blue/10 rounded-2xl text-ifes-blue">
@@ -1310,15 +1312,16 @@ const AnnualHiringPlan: React.FC = () => {
               <button
                 onClick={handleAddManualItem}
                 disabled={saving}
-                className="flex-[2] px-8 py-4 bg-ifes-blue text-white rounded-lg text-xs font-black hover:bg-blue-700 transition-all shadow-xl shadow-blue-200 flex items-center justify-center gap-3 disabled:opacity-50 uppercase tracking-widest"
+                className="flex-[2] px-8 py-4 bg-ifes-green hover:bg-[#15803d] text-white rounded-lg text-xs font-black transition-all shadow-lg shadow-ifes-green/20 flex items-center justify-center gap-3 disabled:opacity-50 uppercase tracking-widest"
               >
                 {saving ? <RefreshCw size={18} className="animate-spin" /> : <Plus size={18} strokeWidth={3} />}
                 Prontinho! Registrar Demanda
               </button>
             </footer>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* Modal de Detalhes SIPAC - FULL PAGE EDITION */}
       {

@@ -21,6 +21,7 @@
     "firebase-admin": "^13.6.0",
     "lucide-react": "^0.562.0",
     "minisearch": "^7.2.0",
+    "motion": "^12.34.3",
     "pdfjs-dist": "^5.4.530",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",

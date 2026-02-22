@@ -27,13 +27,13 @@ const ContractTable: React.FC<ContractTableProps> = ({
 }) => {
   const TableHeader = ({ label, sortKey, align = 'left' }: { label: string; sortKey?: keyof ContractItem; align?: 'left' | 'center' | 'right' }) => (
     <th
-      className={`p-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b ${viewMode === 'planning' ? 'border-slate-200 hover:bg-slate-50' : 'border-blue-100 hover:bg-blue-50'} ${sortKey ? 'cursor-pointer' : ''} transition-colors whitespace-nowrap ${align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'}`}
+      className={`p-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-white hover:bg-slate-50 ${sortKey ? 'cursor-pointer hover:text-ifes-green' : ''} transition-colors whitespace-nowrap ${align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'}`}
       onClick={() => sortKey && onSort(sortKey)}
     >
       <div className={`flex items-center gap-1 ${align === 'right' ? 'justify-end' : align === 'center' ? 'justify-center' : ''}`}>
         {label}
         {sortKey && (
-          <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === sortKey ? (viewMode === 'planning' ? 'opacity-100 text-blue-600' : 'opacity-100 text-blue-800') : 'opacity-20'}`} />
+          <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === sortKey ? 'opacity-100 text-ifes-green' : 'opacity-20'}`} />
         )}
       </div>
     </th>
@@ -43,23 +43,23 @@ const ContractTable: React.FC<ContractTableProps> = ({
     <div className="overflow-x-auto">
       <table className="w-full border-collapse">
         <thead>
-          <tr className={`${viewMode === 'planning' ? 'bg-slate-50/30' : 'bg-blue-50/30'}`}>
+          <tr className="bg-slate-50/50 border-b border-slate-100">
             {viewMode === 'planning' ? (
               <>
                 <TableHeader label="ITEM PCA" sortKey="numeroItem" align="center" />
                 <TableHeader label="Tipo" sortKey="categoria" align="center" />
                 <TableHeader label="Descrição do Item / Classe / Grupo" sortKey="titulo" />
                 <th
-                  className="p-6 text-right text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors whitespace-nowrap group"
+                  className="p-6 text-right text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-white hover:bg-slate-50 hover:text-ifes-green cursor-pointer transition-colors whitespace-nowrap group"
                   onClick={() => onSort('ifc')}
                   title="IFC: Identificador de Futura Contratação"
                 >
                   <div className="flex items-center gap-1 justify-end">
                     <span className="flex items-center gap-1">
                       IFC
-                      <Info size={10} className="text-slate-300 group-hover:text-blue-400 transition-colors" />
+                      <Info size={10} className="text-slate-300 group-hover:text-ifes-green transition-colors" />
                     </span>
-                    <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'ifc' ? 'opacity-100 text-blue-600' : 'opacity-20'}`} />
+                    <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'ifc' ? 'opacity-100 text-ifes-green' : 'opacity-20'}`} />
                   </div>
                 </th>
                 <TableHeader label="Valor total estimado" sortKey="valor" align="right" />
@@ -101,7 +101,7 @@ const ContractTable: React.FC<ContractTableProps> = ({
               return (
                 <tr
                   key={item.id}
-                  className={`transition-all group cursor-pointer ${isSelected ? 'bg-ifes-green/5' : 'hover:bg-slate-50/80'}`}
+                  className={`transition-all group cursor-pointer ${isSelected ? 'bg-ifes-green/5' : 'hover:bg-ifes-green/[0.02]'}`}
                   onClick={() => {
                     if (viewMode === 'status') {
                       onViewDetails?.(item);

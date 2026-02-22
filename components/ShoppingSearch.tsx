@@ -20,6 +20,7 @@ import { formatCurrency } from '../utils/formatters';
 import { API_SERVER_URL } from '../constants';
 import axios from 'axios';
 import Toast, { ToastType } from './Toast';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface CatalogItem {
     id: string;
@@ -140,9 +141,9 @@ export const ShoppingSearch: React.FC = () => {
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
             {/* Hero Search Section */}
-            <div className="bg-white p-12 rounded-[40px] border border-slate-200 shadow-xl shadow-slate-200/50 flex flex-col items-center text-center relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-ifes-green/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
-                <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl" />
+            <div className="glass bg-white/70 p-12 rounded-[2.5rem] border border-white/40 shadow-premium flex flex-col items-center text-center relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-ifes-green/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl animate-pulse" />
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-ifes-green/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
 
                 <div className="relative z-10 w-full max-w-2xl">
                     <div className="p-3 bg-ifes-green/10 w-fit rounded-2xl text-ifes-green mx-auto mb-6">
@@ -158,7 +159,7 @@ export const ShoppingSearch: React.FC = () => {
                         <input
                             type="text"
                             placeholder="O que você precisa hoje? (Ex: Caneta, Notebook, Ar Condicionado...)"
-                            className="w-full pl-16 pr-6 py-6 bg-slate-50 border-2 border-slate-100 rounded-[30px] text-lg font-bold outline-none focus:bg-white focus:border-ifes-green focus:ring-8 focus:ring-ifes-green/5 transition-all shadow-inner"
+                            className="w-full pl-16 pr-6 py-6 bg-white/80 border-2 border-white/60 rounded-[2rem] text-lg font-bold outline-none focus:bg-white focus:border-ifes-green/40 focus:ring-4 focus:ring-ifes-green/10 transition-all shadow-inner backdrop-blur-sm"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -187,7 +188,7 @@ export const ShoppingSearch: React.FC = () => {
 
                     <div className="grid grid-cols-1 gap-4">
                         {loading && (
-                            <div className="bg-white p-12 rounded-3xl border border-dashed border-slate-200 flex flex-col items-center text-center animate-pulse">
+                            <div className="glass bg-white/70 p-12 rounded-[2rem] border border-white/40 flex flex-col items-center text-center shadow-sm">
                                 <div className="p-4 bg-slate-50 text-ifes-green rounded-full mb-4">
                                     <RefreshCw className="animate-spin" size={40} />
                                 </div>
@@ -197,7 +198,7 @@ export const ShoppingSearch: React.FC = () => {
                         )}
 
                         {!loading && results.length === 0 && searchTerm.length >= 2 && (
-                            <div className="bg-white p-12 rounded-3xl border border-dashed border-slate-200 flex flex-col items-center text-center">
+                            <div className="glass bg-white/70 p-12 rounded-[2rem] border border-white/40 flex flex-col items-center text-center shadow-sm">
                                 <div className="p-4 bg-slate-50 text-slate-300 rounded-full mb-4">
                                     <Search size={40} />
                                 </div>
@@ -210,7 +211,7 @@ export const ShoppingSearch: React.FC = () => {
                             <div
                                 key={item.id}
                                 onClick={() => setSelectedItem(item)}
-                                className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:border-ifes-green hover:shadow-xl hover:shadow-ifes-green/5 transition-all cursor-pointer group flex items-center justify-between gap-6"
+                                className="glass bg-white/70 p-6 rounded-[2rem] border border-white/40 shadow-sm hover:border-ifes-green/40 hover:shadow-premium transition-all cursor-pointer group flex items-center justify-between gap-6"
                             >
                                 <div className="flex items-center gap-5 min-w-0">
                                     <div className="bg-slate-100 w-16 h-16 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-ifes-green group-hover:text-white transition-all shrink-0">
@@ -256,7 +257,7 @@ export const ShoppingSearch: React.FC = () => {
 
                 {/* Sidebar Summary/Help */}
                 <div className="space-y-6">
-                    <div className="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm overflow-hidden relative">
+                    <div className="glass bg-white/70 p-8 rounded-[2rem] border border-white/40 shadow-premium overflow-hidden relative">
                         <div className="absolute top-0 right-0 p-8 opacity-5">
                             <CartIcon size={120} />
                         </div>
@@ -306,9 +307,10 @@ export const ShoppingSearch: React.FC = () => {
             </div>
 
             {/* DETAIL MODAL */}
+            <AnimatePresence>
             {selectedItem && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-300">
-                    <div className="bg-white rounded-[40px] w-full max-w-4xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-white rounded-[2.5rem] w-full max-w-4xl shadow-premium border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
                         <header className="px-10 py-8 border-b border-slate-100 flex items-center justify-between">
                             <div className="flex items-center gap-6">
                                 <div className="p-3 bg-ifes-green/10 rounded-2xl text-ifes-green">
@@ -413,14 +415,15 @@ export const ShoppingSearch: React.FC = () => {
                             <button
                                 onClick={addToCart}
                                 disabled={!justification}
-                                className="flex-1 px-10 py-4 bg-ifes-green text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-ifes-green-dark transition-all shadow-xl shadow-ifes-green/20 flex items-center justify-center gap-3 disabled:opacity-50"
+                                className="flex-1 px-10 py-4 bg-ifes-green hover:bg-[#15803d] text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-ifes-green/20 flex items-center justify-center gap-3 disabled:opacity-50"
                             >
                                 <CartIcon size={18} /> Adicionar ao Meu Pedido
                             </button>
                         </footer>
-                    </div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )}
+            </AnimatePresence>
         </div>
     );
 };

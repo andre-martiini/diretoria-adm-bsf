@@ -47,6 +47,7 @@ import { fetchSystemConfig } from '../services/configService';
 import { SystemConfig } from '../types';
 import { formatCurrency } from '../utils/formatters';
 import logoIfes from '../logo-ifes.png';
+import { motion, AnimatePresence } from 'motion/react';
 
 const MONTHS = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -453,41 +454,44 @@ const BudgetManagement: React.FC = () => {
             <main className={`${viewMode === 'monthly' || viewMode === 'list' ? 'max-w-full px-6' : 'max-w-7xl px-4'} mx-auto py-8 space-y-8 transition-all duration-500`}>
                 {/* KPI Cards */}
                 <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass bg-white/70 p-6 rounded-[2rem] border border-white/40 shadow-premium">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Empenhado Total</p>
                         <h3 className="text-2xl font-black text-slate-900">{formatCurrency(totals.empenhado)}</h3>
                         <div className="mt-2 flex items-center gap-1 text-blue-500">
                             <ArrowUpRight size={14} />
                             <span className="text-[10px] font-bold">Acumulado {selectedYear}</span>
                         </div>
-                    </div>
+                    </motion.div>
 
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="glass bg-white/70 p-6 rounded-[2rem] border border-white/40 shadow-premium">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Restos a Pagar (RP)</p>
                         <h3 className="text-2xl font-black text-slate-900">{formatCurrency(totals.executadoRP)}</h3>
                         <div className="mt-2 flex items-center gap-1 text-amber-500">
                             <Calendar size={14} />
                             <span className="text-[10px] font-bold">Saldo Antigo</span>
                         </div>
-                    </div>
+                    </motion.div>
 
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass bg-white/70 p-6 rounded-[2rem] border border-white/40 shadow-premium">
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Executado Ano</p>
                         <h3 className="text-2xl font-black text-slate-900">{formatCurrency(totals.executado)}</h3>
                         <div className="mt-2 flex items-center gap-1 text-emerald-500">
                             <TrendingUp size={14} />
                             <span className="text-[10px] font-bold">Liquidado Pago</span>
                         </div>
-                    </div>
+                    </motion.div>
 
-                    <div className="bg-ifes-green p-6 rounded-2xl shadow-lg shadow-ifes-green/20 text-white">
-                        <p className="text-[10px] font-black text-white/70 uppercase tracking-widest mb-1">Pagamento Total</p>
-                        <h3 className="text-2xl font-black">{formatCurrency(totals.finalTotal)}</h3>
-                        <div className="mt-2 flex items-center gap-1 text-white/80">
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="bg-ifes-green p-6 rounded-[2rem] shadow-premium text-white flex flex-col justify-between relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-bl-full pointer-events-none"></div>
+                        <div className="relative z-10">
+                            <p className="text-[10px] font-black text-white/70 uppercase tracking-widest mb-1">Pagamento Total</p>
+                            <h3 className="text-2xl font-black">{formatCurrency(totals.finalTotal)}</h3>
+                        </div>
+                        <div className="mt-2 flex items-center gap-1 text-white/80 relative z-10">
                             <DollarSign size={14} />
                             <span className="text-[10px] font-bold">Soma Final</span>
                         </div>
-                    </div>
+                    </motion.div>
                 </section>
 
                 {/* Elements Section */}
@@ -601,7 +605,7 @@ const BudgetManagement: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden overflow-x-auto">
+                    <div className="glass bg-white/70 rounded-[2.5rem] border border-white/40 shadow-premium overflow-hidden overflow-x-auto">
                         {viewMode === 'list' ? (
                             <>
                                 <table className="w-full text-left border-collapse min-w-[800px]">
@@ -858,9 +862,10 @@ const BudgetManagement: React.FC = () => {
             </main>
 
             {/* Element Modal */}
+            <AnimatePresence>
             {isElementModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl border border-slate-200 overflow-hidden">
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-white rounded-[2rem] w-full max-w-md shadow-premium border border-slate-200 overflow-hidden">
                         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                             <div>
                                 <h3 className="text-xl font-black text-slate-800 tracking-tight">{editingElement ? 'Editar Elemento' : 'Novo Elemento'}</h3>
@@ -928,14 +933,16 @@ const BudgetManagement: React.FC = () => {
                                 </button>
                             )}
                         </div>
-                    </div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )}
+            </AnimatePresence>
 
             {/* Record Modal (Single Month / Quick Entry) */}
+            <AnimatePresence>
             {isRecordModalOpen && selectedRecordElement && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-slate-200 overflow-hidden">
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-white rounded-[2.5rem] w-full max-w-lg shadow-premium border border-slate-200 overflow-hidden">
                         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                             <div>
                                 <h3 className="text-xl font-black text-slate-800 tracking-tight">Inserir Valores</h3>
@@ -1024,15 +1031,16 @@ const BudgetManagement: React.FC = () => {
                             <button
                                 onClick={handleSaveRecords}
                                 disabled={saving}
-                                className="flex-1 px-8 py-3 bg-ifes-green text-white rounded-2xl text-sm font-black hover:bg-emerald-600 transition-all shadow-lg flex items-center justify-center gap-2"
+                                className="flex-1 px-8 py-3 bg-ifes-green hover:bg-[#15803d] text-white rounded-2xl text-sm font-black transition-all shadow-lg shadow-ifes-green/20 flex items-center justify-center gap-2"
                             >
                                 {saving ? <RefreshCw className="animate-spin" size={18} /> : <Save size={18} />}
                                 Salvar Lançamento
                             </button>
                         </div>
-                    </div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )}
+            </AnimatePresence>
         </div>
     );
 };

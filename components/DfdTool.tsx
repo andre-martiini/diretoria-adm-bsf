@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Wand2, FileText, Calendar, AlertCircle, CheckCircle2, Loader2, FileDown, Copy, Download, Tags, Trash2, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Wand2, FileText, Calendar, AlertCircle, CheckCircle2, Loader2, FileDown, Copy, Download, Tags, Trash2, ChevronDown, ChevronUp, RefreshCw, ShieldCheck, History } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { extractNeeds, selectBestCandidate } from './Catmat/dfdAiService';
 import { searchCatalog } from './Catmat/catalogService';
+import logoIfes from '../logo-ifes.png';
+import { fetchSystemConfig } from '../services/configService';
+import { SystemConfig } from '../types';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface GeneratedResult {
   succinctDescription: string;
@@ -15,6 +19,38 @@ interface GeneratedResult {
 
 const DfdTool: React.FC = () => {
   const navigate = useNavigate();
+  const [config, setConfig] = useState<SystemConfig | null>(null);
+  
+  const [view, setView] = useState<'form' | 'history'>('form');
+  const [historyItems, setHistoryItems] = useState<any[]>([]);
+
+  useEffect(() => {
+    const h = localStorage.getItem('gestao_clc_dfd_history');
+    if (h) setHistoryItems(JSON.parse(h));
+  }, []);
+
+  const deleteHistoryItem = (id: number) => {
+    const newHist = historyItems.filter(h => h.id !== id);
+    setHistoryItems(newHist);
+    localStorage.setItem('gestao_clc_dfd_history', JSON.stringify(newHist));
+  };
+
+  const loadHistoryItem = (item: any) => {
+    setObjectDescription(item.objectDescription);
+    setExpectedDate(item.expectedDate);
+    setNeedInput(item.needInput || '');
+    setResult(item.result);
+    setSiasgSuggestions(item.siasgSuggestions || []);
+    setView('form');
+  };
+
+  useEffect(() => {
+    const initConfig = async () => {
+      const sysConfig = await fetchSystemConfig();
+      setConfig(sysConfig);
+    };
+    initConfig();
+  }, []);
 
   const [expectedDate, setExpectedDate] = useState('');
   const [objectDescription, setObjectDescription] = useState('');
@@ -197,9 +233,25 @@ Retorne EXATAMENTE e APENAS um objeto JSON válido (sem marcadores de markdown c
       const responseText = aiResponse.response.text().trim().replace(/```json/g, '').replace(/```/g, '');
       const parsedResult = JSON.parse(responseText);
 
-      setResult({
+      const finalResult = {
         ...parsedResult,
         expectedDate
+      };
+      setResult(finalResult);
+
+      setHistoryItems(prev => {
+        const item = {
+          id: Date.now(),
+          timestamp: Date.now(),
+          objectDescription,
+          needInput,
+          expectedDate,
+          result: finalResult,
+          siasgSuggestions
+        };
+        const newHist = [item, ...prev].slice(0, 50);
+        localStorage.setItem('gestao_clc_dfd_history', JSON.stringify(newHist));
+        return newHist;
       });
     } catch (err: any) {
       console.error('Erro detalhado do Gemini:', err);
@@ -222,34 +274,116 @@ Retorne EXATAMENTE e APENAS um objeto JSON válido (sem marcadores de markdown c
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 border-t-4 border-emerald-500 font-sans">
+    <div className="min-h-screen border-t-4 border-ifes-green bg-[#f8fafc] font-sans text-slate-800">
+      {/* Standardized Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm print:hidden">
-        <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 h-24 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 shrink-0">
+            <img src={logoIfes} alt="Logo IFES" className="h-12 w-auto object-contain" />
+            <div className="flex flex-col border-l border-slate-100 pl-3">
+              <span className="text-lg font-black text-ifes-green uppercase leading-none tracking-tight">IA Engine de DFD</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                {config?.unidadeGestora.nome || 'Campus Barra de São Francisco'}
+              </span>
+            </div>
+          </div>
+
           <div className="flex items-center gap-4">
             <button
-              onClick={() => navigate('/ferramentas')}
-              className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"
+              onClick={() => setView(view === 'history' ? 'form' : 'history')}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all font-bold text-sm border cursor-pointer ${view === 'history' ? 'bg-ifes-green hover:bg-[#15803d] text-white border-none shadow-lg shadow-ifes-green/20' : 'bg-slate-50 hover:bg-ifes-green/10 text-slate-600 hover:text-ifes-green border-slate-100 hover:border-ifes-green/20'}`}
             >
-              <ArrowLeft size={20} />
+              <History size={18} />
+              <span className="hidden md:inline">{view === 'history' ? 'Novo DFD' : 'Histórico de DFDs'}</span>
             </button>
-            <div className="flex items-center gap-3">
-              <div className="bg-emerald-100 p-2 rounded-lg text-emerald-600">
-                <FileText size={24} />
-              </div>
-              <div className="flex flex-col">
-                <h1 className="text-xl font-black text-slate-800 leading-tight">Módulo de Criação de DFD</h1>
-                <span className="text-xs font-bold text-slate-400">Automatização de Justificativas com IA</span>
-              </div>
-            </div>
+            <div className="w-[1px] h-6 bg-slate-200"></div>
+            <button
+              onClick={() => navigate('/ferramentas')}
+              className="flex items-center gap-2 px-3 py-2 bg-slate-50 hover:bg-red-50 text-slate-600 hover:text-red-600 rounded-xl transition-all font-bold text-sm border border-slate-100 hover:border-red-200 cursor-pointer"
+            >
+              <ArrowLeft size={18} />
+              <span className="hidden md:inline">Voltar</span>
+            </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8 print:p-0 print:max-w-none">
+      <main className="max-w-7xl mx-auto px-4 py-8 md:py-12 print:p-0 print:max-w-none space-y-8">
+        
+        {view === 'history' ? (
+           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-6">
+             <div className="flex items-center justify-between">
+               <div>
+                  <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Histórico de DFDs</h2>
+                  <p className="text-sm font-medium text-slate-500 mt-1">Seus últimos 50 documentos gerados</p>
+               </div>
+             </div>
+             
+             {historyItems.length === 0 ? (
+               <div className="py-24 flex flex-col items-center justify-center bg-white rounded-[2.5rem] border-2 border-dashed border-slate-200 text-slate-300 shadow-sm">
+                  <History size={48} className="mb-6 opacity-20" />
+                  <h3 className="font-black text-sm uppercase tracking-[0.3em]">Nenhum DFD no cache</h3>
+                  <p className="text-xs font-medium mt-2">Dê vida as contatações na engine de DFD.</p>
+               </div>
+             ) : (
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                 <AnimatePresence>
+                   {historyItems.map((item) => (
+                     <motion.div 
+                       initial={{ opacity: 0, scale: 0.95 }} 
+                       animate={{ opacity: 1, scale: 1 }} 
+                       exit={{ opacity: 0, scale: 0.9 }}
+                       key={item.id} className="glass bg-white/70 p-6 rounded-[2.5rem] border border-white/40 shadow-sm hover:shadow-premium hover:border-ifes-green/40 transition-all flex flex-col justify-between group"
+                     >
+                        <div className="flex justify-between items-start mb-4">
+                           <span className="text-[10px] font-black text-white bg-slate-900 px-3 py-1.5 rounded-lg uppercase tracking-widest">
+                              {new Date(item.timestamp).toLocaleString()}
+                           </span>
+                           <button onClick={() => deleteHistoryItem(item.id)} className="w-8 h-8 rounded-full bg-white shadow outline outline-1 outline-slate-100 text-slate-300 flex items-center justify-center hover:bg-red-50 hover:text-red-500 hover:outline-red-100 transition-all opacity-0 group-hover:opacity-100">
+                             <Trash2 size={14} />
+                           </button>
+                        </div>
+                        <h4 className="text-lg font-bold text-slate-800 leading-snug tracking-tight mb-2 line-clamp-2">
+                          {item.objectDescription}
+                        </h4>
+                        <p className="text-sm text-slate-500 line-clamp-3 mb-6">
+                          {item.result?.succinctDescription}
+                        </p>
+                        <button 
+                          onClick={() => loadHistoryItem(item)}
+                          className="w-full py-3 bg-ifes-green/10 text-ifes-green rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-ifes-green hover:text-white transition-colors"
+                        >
+                          Carregar DFD
+                        </button>
+                     </motion.div>
+                   ))}
+                 </AnimatePresence>
+               </div>
+             )}
+           </motion.div>
+        ) : (
+          <>
+        <motion.section 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative print:hidden"
+        >
+          <div className="absolute inset-0 bg-ifes-green/5 rounded-[2.5rem] -rotate-1 scale-105 pointer-events-none"></div>
+          <div className="relative glass bg-white/70 p-8 rounded-[2.5rem] shadow-premium border border-white/40 backdrop-blur-xl flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                <Wand2 className="text-ifes-green" size={28} />
+                Assistente de Formalização
+              </h2>
+              <p className="text-slate-500 font-medium text-sm mt-1">Gere justificativas técnicas e documentos formais instantaneamente com Inteligência Artificial.</p>
+            </div>
+          </div>
+        </motion.section>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 print:block">
           
           {/* Formulário */}
-          <div className="bg-white p-6 md:p-8 rounded-2xl border border-slate-200 shadow-sm print:hidden">
+          <div className="glass bg-white p-6 md:p-8 rounded-[2rem] border border-slate-200 shadow-premium print:hidden">
             <div className="flex items-center gap-2 mb-6">
               <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold">1</div>
               <h2 className="text-lg font-bold text-slate-800">Dados da Contratação</h2>
@@ -267,7 +401,7 @@ Retorne EXATAMENTE e APENAS um objeto JSON válido (sem marcadores de markdown c
                     required
                     value={expectedDate}
                     onChange={(e) => setExpectedDate(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all outline-none"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-ifes-green focus:border-transparent transition-all outline-none text-sm font-medium"
                   />
                 </div>
               </div>
@@ -280,7 +414,7 @@ Retorne EXATAMENTE e APENAS um objeto JSON válido (sem marcadores de markdown c
                   placeholder="Ex: Lápis preto nº 2"
                   value={objectDescription}
                   onChange={(e) => setObjectDescription(e.target.value)}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all outline-none resize-none"
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-ifes-green focus:border-transparent transition-all outline-none resize-none text-sm font-medium"
                 />
               </div>
 
@@ -293,7 +427,7 @@ Retorne EXATAMENTE e APENAS um objeto JSON válido (sem marcadores de markdown c
                     placeholder="Explique brevemente com suas palavras..."
                     value={needInput}
                     onChange={(e) => setNeedInput(e.target.value)}
-                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all outline-none resize-none mb-3"
+                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-ifes-green focus:border-transparent transition-all outline-none resize-none mb-3 text-sm font-medium"
                   />
                   <button
                     type="button"
@@ -460,46 +594,50 @@ Retorne EXATAMENTE e APENAS um objeto JSON válido (sem marcadores de markdown c
                 </div>
               )}
 
-              <button
+              <motion.button
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-xl font-bold transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-3 bg-ifes-green hover:bg-[#15803d] text-white p-4 rounded-xl font-black transition-all disabled:opacity-70 disabled:cursor-not-allowed shadow-lg shadow-ifes-green/20 uppercase tracking-widest text-sm"
               >
                 {loading ? (
                   <>
                     <Loader2 size={20} className="animate-spin" />
-                    <span>Gerando Documento...</span>
+                    <span>Processando Demanda...</span>
                   </>
                 ) : (
                   <>
                     <Wand2 size={20} />
-                    <span>Gerar DFD com Inteligência Artificial</span>
+                    <span>Sintetizar com IA</span>
                   </>
                 )}
-              </button>
+              </motion.button>
             </form>
           </div>
 
           {/* Resultado */}
           <div>
-            <div className="sticky top-28 bg-slate-800 rounded-2xl p-6 md:p-8 shadow-xl text-white print:static print:bg-white print:text-slate-900 print:shadow-none print:p-0 print:border-0">
+            <div className="sticky top-28 bg-[#1f2937] rounded-[2rem] p-6 md:p-8 shadow-premium border border-slate-700 text-white print:static print:bg-white print:text-slate-900 print:shadow-none print:p-0 print:border-0">
               
               {/* Header do Relatório com Melhor Contraste */}
               <div className="flex items-center justify-between mb-8 print:mb-12">
                 <div className="flex items-center gap-3">
-                   <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-white ring-4 ring-slate-800/50 print:hidden font-black">2</div>
+                   <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-white ring-4 ring-[#1f2937] print:hidden font-black">
+                     <FileText size={18} />
+                   </div>
                    <div className="flex flex-col">
-                      <h2 className="text-xl font-black text-white print:text-slate-900">Relatório Consolidado</h2>
-                      <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest print:hidden">Documento Tecnico Digital</span>
+                      <h2 className="text-xl font-black text-white tracking-tight print:text-slate-900">Documento Gerado</h2>
+                      <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest print:hidden">Versão Final</span>
                    </div>
                 </div>
                 {result && (
                    <button 
                     onClick={handleExportPDF}
-                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all print:hidden shadow-lg shadow-emerald-900/20"
+                    className="flex items-center gap-2 bg-ifes-green hover:bg-[#15803d] text-white px-4 py-2 flex-shrink-0 rounded-lg text-[10px] uppercase tracking-widest font-bold transition-all print:hidden shadow-lg shadow-ifes-green/20"
                    >
-                     <FileDown size={18} />
-                     <span>PDF</span>
+                     <FileDown size={16} />
+                     <span>Exportar PDF</span>
                    </button>
                 )}
               </div>
@@ -631,7 +769,9 @@ Retorne EXATAMENTE e APENAS um objeto JSON válido (sem marcadores de markdown c
             </div>
           </div>
 
-        </div>
+          </div>
+        </>
+        )}
       </main>
     </div>
   );

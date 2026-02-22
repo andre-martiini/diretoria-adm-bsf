@@ -9,7 +9,7 @@ import { SIPACImporter } from './components/SIPACImporter';
 import Tools from './components/Tools';
 import CatmatSearch from './components/Catmat/CatmatSearch';
 import DfdTool from './components/DfdTool';
-
+import PriceMapCreator from './components/PriceMapCreator';
 
 const App: React.FC = () => {
   return (
@@ -24,6 +24,7 @@ const App: React.FC = () => {
         <Route path="/ferramentas" element={<Tools />} />
         <Route path="/catmat" element={<CatmatSearch />} />
         <Route path="/dfd" element={<DfdTool />} />
+        <Route path="/mapa-precos" element={<PriceMapCreator />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
