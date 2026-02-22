@@ -1,0 +1,112 @@
+[
+  {
+    "codigo_catmat": 3,
+    "descricao_resumida": "Fornecimento de Refeições / Lanches / Salgados / Doces",
+    "descricao_detalhada": "Fornecimento de Refeições / Lanches / Salgados / Doces",
+    "unidade_fornecimento": "Unidade",
+    "valor_unitario": 5514.7,
+    "uasg_nome": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+    "ano_compra": 2024,
+    "numero_compra": "90010",
+    "data_compra": "2024-06-18T18:14:05"
+  },
+  {
+    "codigo_catmat": 3,
+    "descricao_resumida": "Fornecimento de Refeições / Lanches / Salgados / Doces",
+    "descricao_detalhada": "Fornecimento de Refeições / Lanches / Salgados / Doces",
+    "unidade_fornecimento": "Unidade",
+    "valor_unitario": 15.5,
+    "uasg_nome": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+    "ano_compra": 2024,
+    "numero_compra": "90010",
+    "data_compra": "2024-06-18T18:14:05"
+  },
+  {
+    "codigo_catmat": 3,
+    "descricao_resumida": "Fusível Limitador Corrente",
+    "descricao_detalhada": "Fusível Limitador Corrente",
+    "unidade_fornecimento": "Unidade",
+    "valor_unitario": 384.95,
+    "uasg_nome": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+    "ano_compra": 2025,
+    "numero_compra": "90001",
+    "data_compra": "2025-04-14T17:45:59"
+  },
+  {
+    "codigo_catmat": 3,
+    "descricao_resumida": "Gerador Energia",
+    "descricao_detalhada": "Gerador Energia",
+    "unidade_fornecimento": "Unidade",
+    "valor_unitario": 7887.25,
+    "uasg_nome": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+    "ano_compra": 2025,
+    "numero_compra": "90001",
+    "data_compra": "2025-04-14T17:45:59"
+  },
+  {
+    "codigo_catmat": 3,
+    "descricao_resumida": "Detector Ausencia Tensão",
+    "descricao_detalhada": "Detector Ausencia Tensão",
+    "unidade_fornecimento": "Unidade",
+    "valor_unitario": 639.9,
+    "uasg_nome": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+    "ano_compra": 2025,
+    "numero_compra": "90001",
+    "data_compra": "2025-04-14T17:45:59"
+  },
+  {
+    "codigo_catmat": 3,
+    "descricao_resumida": "Motor Elétrico",
+    "descricao_detalhada": "Motor Elétrico",
+    "unidade_fornecimento": "Unidade",
+    "valor_unitario": 2553.72,
+    "uasg_nome": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+    "ano_compra": 2025,
+    "numero_compra": "90001",
+    "data_compra": "2025-04-14T17:45:59"
+  },
+  {
+    "codigo_catmat": 3,
+    "descricao_resumida": "Máquina Solda Portátil",
+    "descricao_detalhada": "Máquina Solda Portátil",
+    "unidade_fornecimento": "Unidade",
+    "valor_unitario": 937.01,
+    "uasg_nome": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+    "ano_compra": 2025,
+    "numero_compra": "90001",
+    "data_compra": "2025-04-14T17:45:59"
+  },
+  {
+    "codigo_catmat": 3,
+    "descricao_resumida": "Compressor De Ar",
+    "descricao_detalhada": "Compressor De Ar",
+    "unidade_fornecimento": "Unidade",
+    "valor_unitario": 1384.8,
+    "uasg_nome": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+    "ano_compra": 2025,
+    "numero_compra": "90001",
+    "data_compra": "2025-04-14T17:45:59"
+  },
+  {
+    "codigo_catmat": 3,
+    "descricao_resumida": "Soprador",
+    "descricao_detalhada": "Soprador",
+    "unidade_fornecimento": "Unidade",
+    "valor_unitario": 1446.55,
+    "uasg_nome": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+    "ano_compra": 2025,
+    "numero_compra": "90001",
+    "data_compra": "2025-04-14T17:45:59"
+  },
+  {
+    "codigo_catmat": 3,
+    "descricao_resumida": "Forno Microondas",
+    "descricao_detalhada": "Forno Microondas",
+    "unidade_fornecimento": "Unidade",
+    "valor_unitario": 589.79,
+    "uasg_nome": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+    "ano_compra": 2025,
+    "numero_compra": "90001",
+    "data_compra": "2025-04-14T17:45:59"
+  }
+]

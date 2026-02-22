@@ -6,6 +6,9 @@ import AnnualHiringPlan from './components/AnnualHiringPlan';
 import PublicDashboard from './components/PublicDashboard';
 import BudgetManagement from './components/BudgetManagement';
 import { SIPACImporter } from './components/SIPACImporter';
+import Tools from './components/Tools';
+import CatmatSearch from './components/Catmat/CatmatSearch';
+import DfdTool from './components/DfdTool';
 
 
 const App: React.FC = () => {
@@ -18,6 +21,9 @@ const App: React.FC = () => {
         <Route path="/transparencia" element={<PublicDashboard />} />
         <Route path="/gestao-orcamentaria" element={<BudgetManagement />} />
         <Route path="/sipac" element={<SIPACImporter />} />
+        <Route path="/ferramentas" element={<Tools />} />
+        <Route path="/catmat" element={<CatmatSearch />} />
+        <Route path="/dfd" element={<DfdTool />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

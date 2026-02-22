@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import logoIfes from '../logo-ifes.png';
-import { FileText, Wallet, LogOut, ArrowRight, TrendingUp, Search } from 'lucide-react';
+import { FileText, Wallet, LogOut, ArrowRight, TrendingUp, Search, Wrench } from 'lucide-react';
 
 
 const Dashboard: React.FC = () => {
@@ -85,6 +85,25 @@ const Dashboard: React.FC = () => {
                         </div>
 
                         <div className="flex items-center text-emerald-500 text-sm font-bold mt-4">
+                            <span>Acessar</span>
+                            <ArrowRight size={16} className="ml-2 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                    </div>
+
+                    {/* Card 4: Ferramentas */}
+                    <div
+                        onClick={() => navigate('/ferramentas')}
+                        className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-orange-500 transition-all cursor-pointer group flex flex-col justify-between h-48"
+                    >
+                        <div>
+                            <div className="bg-orange-50 w-12 h-12 rounded-xl flex items-center justify-center text-orange-500 mb-4 group-hover:bg-orange-500 group-hover:text-white transition-colors">
+                                <Wrench size={24} />
+                            </div>
+                            <h3 className="text-lg font-black text-slate-800 group-hover:text-orange-500 transition-colors">Ferramentas</h3>
+                            <p className="text-xs text-slate-400 font-medium mt-1">Utilitários para importação de dados e conversão de arquivos.</p>
+                        </div>
+
+                        <div className="flex items-center text-orange-500 text-sm font-bold mt-4">
                             <span>Acessar</span>
                             <ArrowRight size={16} className="ml-2 group-hover:translate-x-1 transition-transform" />
                         </div>

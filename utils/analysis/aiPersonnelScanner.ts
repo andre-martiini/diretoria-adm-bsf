@@ -20,15 +20,16 @@ TEXTO DA PORTARIA:
 `;
 
 export const extractPlanningTeam = async (text: string): Promise<string[]> => {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) {
+    const rawApiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!rawApiKey) {
         console.error("Gemini API Key missing");
         return [];
     }
 
     try {
+        const apiKey = rawApiKey.trim();
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         const result = await model.generateContent(PERSONNEL_PROMPT + text);
         const responseText = result.response.text();

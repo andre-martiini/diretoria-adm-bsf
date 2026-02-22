@@ -35,8 +35,8 @@ export const analyzeDocumentsWithAI = async (
 
     try {
         const genAI = new GoogleGenerativeAI(apiKey.trim());
-        // Com o SDK atualizado, o 2.0 Flash Lite é a melhor opção custo-benefício
-        const modelName = "gemini-2.0-flash-lite";
+        // Gemini 2.5 Flash - Equilíbrio ideal entre inteligência e escala
+        const modelName = "gemini-2.5-flash";
 
         let model = genAI.getGenerativeModel({ model: modelName });
         const combinedContext = documents.map(d => `[DOCUMENTO: ${d.title}]\n${d.text}`).join('\n\n---\n\n');
