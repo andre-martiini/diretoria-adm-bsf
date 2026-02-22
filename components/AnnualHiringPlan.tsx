@@ -439,7 +439,8 @@ const AnnualHiringPlan: React.FC = () => {
 
   // Trigger para busca no PNCP quando visualiza o processo
   useEffect(() => {
-    if (isDetailsModalOpen && viewingItem?.protocoloSIPAC) {
+    const protocolo = viewingItem?.protocoloSIPAC;
+    if (isDetailsModalOpen && protocolo) {
       const fetchDataPncp = async () => {
         setIsLoadingPncp(true);
         // Não limpamos o match imediatamente para evitar flicker se for o mesmo, 
@@ -449,7 +450,7 @@ const AnnualHiringPlan: React.FC = () => {
 
         try {
           // Usa a versão em cache que é MUITO mais rápida
-          const match = await findPncpPurchaseByProcessCached(viewingItem.protocoloSIPAC!);
+          const match = await findPncpPurchaseByProcessCached(protocolo);
           if (match) {
             setPncpMatch(match);
             // Se a compra já tem itens no cache, usa eles
@@ -472,7 +473,7 @@ const AnnualHiringPlan: React.FC = () => {
       setPncpMatch(null);
       setPncpItems([]);
     }
-  }, [isDetailsModalOpen, viewingItem, selectedYear]);
+  }, [isDetailsModalOpen, viewingItem?.protocoloSIPAC, selectedYear]);
 
   // Clean up selected document when modal closes
   useEffect(() => {
@@ -761,6 +762,62 @@ const AnnualHiringPlan: React.FC = () => {
 
   const handleFetchSIPAC = () => {
     if (editingItem) handleUpdateSIPACItem(editingItem);
+  };
+
+  const handleOpenProcessDetails = async (item: ContractItem) => {
+    setActiveTab('planning');
+
+    if (!item.protocoloSIPAC) {
+      setToast({ message: "Item sem protocolo SIPAC vinculado.", type: "error" });
+      return;
+    }
+
+    if (item.dadosSIPAC) {
+      setViewingItem(item);
+      setIsDetailsModalOpen(true);
+      return;
+    }
+
+    setIsFetchingSIPAC(true);
+    try {
+      const response = await fetch(`${API_SERVER_URL}/api/sipac/processo?protocolo=${item.protocoloSIPAC}`);
+      if (!response.ok) throw new Error('Falha ao buscar dados no SIPAC');
+      const sipacData = await response.json();
+
+      const hydrated = {
+        ...item,
+        dadosSIPAC: { ...sipacData, ultimaAtualizacao: new Date().toLocaleString() }
+      };
+
+      if (sipacData.scraping_last_error) {
+        setViewingItem(hydrated);
+        setToast({ message: `Erro no SIPAC: ${sipacData.scraping_last_error}`, type: "error" });
+        return;
+      }
+
+      const metrics = calculateHealthScore(
+        hydrated.dadosSIPAC!.movimentacoes?.[0]?.data || hydrated.dadosSIPAC!.dataAutuacion
+      );
+      const enhancedSipacData = {
+        ...hydrated.dadosSIPAC!,
+        fase_interna_status: deriveInternalPhase(hydrated.dadosSIPAC!.unidadeAtual || ''),
+        health_score: metrics.score,
+        dias_sem_movimentacao: metrics.daysIdle
+      };
+      const finalItem = { ...hydrated, dadosSIPAC: enhancedSipacData };
+
+      setData(prev => prev.map(i => String(i.id) === String(item.id) ? finalItem : i));
+      setViewingItem(finalItem);
+      setIsDetailsModalOpen(true);
+
+      const targetIds = item.isGroup && item.childItems ? item.childItems.map(c => String(c.id)) : [String(item.id)];
+      await linkItemsToProcess(item.protocoloSIPAC, targetIds, finalItem.dadosSIPAC!, item.ano || selectedYear);
+    } catch (err) {
+      console.error("Erro ao abrir detalhes do processo:", err);
+      setToast({ message: "Erro ao sincronizar processo no SIPAC.", type: "error" });
+    } finally {
+      setIsFetchingSIPAC(false);
+    }
   };
 
   const formatProtocolo = (val: string) => {
@@ -1147,7 +1204,7 @@ const AnnualHiringPlan: React.FC = () => {
               onToggleSelection={(id) => { setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]); }}
               onToggleAll={() => { const allIds = pagedData.map(i => String(i.id)); if (allIds.every(id => selectedIds.includes(id))) { setSelectedIds(prev => prev.filter(id => !allIds.includes(id))); } else { setSelectedIds(prev => [...prev, ...allIds]); } }}
               onEdit={(item) => { setEditingItem(item); setIsEditModalOpen(true); }}
-              onViewDetails={(item) => { setViewingItem(item); setActiveTab('planning'); setIsDetailsModalOpen(true); }}
+              onViewDetails={handleOpenProcessDetails}
               onViewPcaDetails={(item) => { setViewingItem(item); setIsPcaModalOpen(true); }}
               onViewSummary={(item) => { setViewingItem(item); setIsFlashModalOpen(true); }}
             />

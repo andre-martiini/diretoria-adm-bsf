@@ -112,8 +112,13 @@ export const linkItemsToProcess = async (protocolo: string, itemIds: (string | n
             status_item: 'Em Processo',
             protocoloSIPAC: protocolo,
             ano: itemYear, // Garante que o campo ano exista para queries
-            "dadosSIPAC.unidadeAtual": sipacData.unidadeAtual,
-            "dadosSIPAC.fase_interna_status": processData.fase_interna_status,
+            dadosSIPAC: {
+                ...sipacData,
+                fase_interna_status: processData.fase_interna_status,
+                health_score: score,
+                dias_sem_movimentacao: daysIdle,
+                ultimaAtualizacao: new Date().toLocaleString('pt-BR')
+            },
             updatedAt: Timestamp.now()
         };
 

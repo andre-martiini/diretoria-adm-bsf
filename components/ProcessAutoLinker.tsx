@@ -36,8 +36,19 @@ const ProcessAutoLinker: React.FC<ProcessAutoLinkerProps> = ({ pcaItems, onSucce
             });
 
             if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.error || 'Erro na análise do processo');
+                const rawError = await response.text();
+                let errorMessage = `Erro na análise do processo (HTTP ${response.status})`;
+                if (rawError) {
+                    try {
+                        const parsed = JSON.parse(rawError);
+                        errorMessage = parsed.error || parsed.message || errorMessage;
+                    } catch {
+                        errorMessage = rawError;
+                    }
+                } else if (response.status >= 500) {
+                    errorMessage = 'Falha interna do servidor ao analisar o processo. Verifique se o backend está ativo.';
+                }
+                throw new Error(errorMessage);
             }
 
             const result = await response.json();

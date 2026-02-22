@@ -253,15 +253,15 @@ app.get('/api/pncp/consulta/itens', async (req, res) => {
 
 // Endpoint para Análise Automática de DFD (Auto Linker)
 app.post('/api/sipac/analyze-dfd', async (req, res) => {
-  const { processId } = req.body;
-  if (!processId) return res.status(400).json({ error: 'ID do processo é obrigatório' });
-
   try {
+    const processId = req.body?.processId;
+    if (!processId) return res.status(400).json({ error: 'ID do processo é obrigatório' });
+
     const result = await analyzeProcessDFD(processId);
     res.json(result);
   } catch (error) {
     console.error('[DFD ANALYZE ERROR]', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error?.message || 'Falha interna na análise do DFD' });
   }
 });
 
