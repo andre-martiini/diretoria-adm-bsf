@@ -38,7 +38,8 @@ import {
   User,
   Clock,
   MapPin,
-  Calendar
+  Calendar,
+  CheckSquare
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
@@ -102,6 +103,7 @@ import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { findPncpPurchaseByProcess, findPncpPurchaseByProcessCached, fetchPncpPurchaseItems, PNCPPurchase, PNCPItem } from '../services/pncpService';
 import { getFinancialStatusByProcess, ProcurementHistory } from '../services/procurementService';
 import { ShoppingSearch } from './ShoppingSearch';
+import PlanningChecklist from './PlanningChecklist';
 
 // Configuração do Worker do PDF.js localmente
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
@@ -161,7 +163,7 @@ const AnnualHiringPlan: React.FC = () => {
     incidentes: false,
     resumoIA: true
   });
-  const [activeTab, setActiveTab] = useState<'planning' | 'users' | 'documents' | 'history' | 'indicators' | 'pncp' | 'financial'>('planning');
+  const [activeTab, setActiveTab] = useState<'planning' | 'users' | 'documents' | 'history' | 'indicators' | 'pncp' | 'financial' | 'checklist'>('planning');
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
   const [isDocLoading, setIsDocLoading] = useState(false);
   const [isChartsVisible, setIsChartsVisible] = useState<boolean>(true);
@@ -727,6 +729,33 @@ const AnnualHiringPlan: React.FC = () => {
       setToast({ message: "Erro ao buscar dados no SIPAC.", type: "error" });
     } finally {
       setIsFetchingSIPAC(false);
+    }
+  };
+
+  const handleToggleARP = async (isARP: boolean) => {
+    if (!viewingItem || !viewingItem.dadosSIPAC) return;
+
+    // Update viewingItem (local state)
+    const updatedSIPAC = { ...viewingItem.dadosSIPAC, isARP };
+    const updatedItem = { ...viewingItem, dadosSIPAC: updatedSIPAC };
+    setViewingItem(updatedItem);
+
+    // Update data list (local cache)
+    setData(prev => prev.map(i => String(i.id) === String(updatedItem.id) ? updatedItem : i));
+
+    // Persist to Firestore
+    try {
+      const docId = viewingItem.isManual ? String(viewingItem.id) : `${selectedYear}-${viewingItem.id}`;
+      const safeDocId = docId.replace(/\//g, '-');
+      const docRef = doc(db, "pca_data", safeDocId);
+
+      await updateDoc(docRef, {
+        "dadosSIPAC.isARP": isARP,
+        updatedAt: Timestamp.now()
+      });
+    } catch (err) {
+      console.error("Erro ao salvar estado ARP:", err);
+      setToast({ message: "Erro ao salvar estado do checklist.", type: "error" });
     }
   };
 
@@ -1454,6 +1483,15 @@ const AnnualHiringPlan: React.FC = () => {
                 </button>
 
                 <button
+                  onClick={() => setActiveTab('checklist')}
+                  className={`flex items-center gap-2 py-4 border-b-2 text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap
+                        ${activeTab === 'checklist' ? 'border-teal-500 text-teal-600' : 'border-transparent text-slate-400 hover:text-slate-600'}
+                      `}
+                >
+                  <CheckSquare size={14} /> Checklist
+                </button>
+
+                <button
                   onClick={() => setActiveTab('documents')}
                   className={`flex items-center gap-2 py-4 border-b-2 text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap
                         ${activeTab === 'documents' ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}
@@ -1520,6 +1558,14 @@ const AnnualHiringPlan: React.FC = () => {
               </nav>
 
               <main className="flex-1 overflow-y-auto bg-slate-50/50 p-8 scroll-smooth">
+                {activeTab === 'checklist' && (
+                   <PlanningChecklist
+                      documents={viewingItem.dadosSIPAC.documentos || []}
+                      initialIsARP={viewingItem.dadosSIPAC.isARP}
+                      onToggleARP={handleToggleARP}
+                   />
+                )}
+
                 {activeTab === 'planning' && (
                   <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 max-w-4xl mx-auto space-y-6">
                     {/* 1. Planning Overview Header - Highlight Financials */}

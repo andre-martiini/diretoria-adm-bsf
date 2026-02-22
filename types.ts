@@ -160,6 +160,23 @@ export interface AIStructuredAnalysis {
   pendencias_detectadas: string[];
 }
 
+export interface DocumentRule {
+  id: string;
+  nome: string;
+  obrigatoriedade: 'Obrigatório' | 'Obrigatório com exceções' | 'Sempre Obrigatório';
+  hipotesesDispensa?: string;
+  elementosObrigatorios: string[]; // Checklist items
+  keywords: string[]; // Keywords to match against document type/title
+}
+
+export type ValidationStatus = 'Presente' | 'Pendente' | 'Dispensado' | 'Opcional';
+
+export interface ChecklistItemResult {
+  rule: DocumentRule;
+  status: ValidationStatus;
+  foundDocument?: SIPACDocument;
+}
+
 export interface SIPACProcess {
   // Cabeçalho e Identificação
   numeroProcesso: string;
@@ -203,6 +220,8 @@ export interface SIPACProcess {
   analise_ia_estruturada?: AIStructuredAnalysis;
   equipePlanejamento?: string[];
   equipeIdentificada?: boolean;
+  checklist?: ChecklistItemResult[];
+  isARP?: boolean;
 }
 
 export interface ProcessoAquisicao {
