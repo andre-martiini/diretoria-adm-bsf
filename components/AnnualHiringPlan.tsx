@@ -152,7 +152,7 @@ const AnnualHiringPlan: React.FC = () => {
   const [despachosContent, setDespachosContent] = useState<{ tipo: string, data: string, texto: string, ordem: string }[]>([]);
   const [isLoadingDespachos, setIsLoadingDespachos] = useState<boolean>(false);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState<boolean>(false);
-  const [dashboardView, setDashboardView] = useState<'planning' | 'status' | 'shopping'>('shopping');
+  const [dashboardView, setDashboardView] = useState<'planning' | 'status'>('planning');
   const [viewingItem, setViewingItem] = useState<ContractItem | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [chartsReady, setChartsReady] = useState(false);
@@ -913,7 +913,6 @@ const AnnualHiringPlan: React.FC = () => {
             </div>
             <div className="border-l border-slate-100 pl-3 ml-3 md:pl-6 md:ml-6">
               <div className="flex bg-slate-100 p-1 rounded-xl">
-                <button onClick={() => setDashboardView('shopping')} className={`px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-black transition-all ${dashboardView === 'shopping' ? 'bg-ifes-green text-white shadow-lg shadow-ifes-green/20 ring-1 ring-ifes-green' : 'text-slate-400 hover:text-slate-600'}`}>Consulta de Catálogo</button>
                 <button onClick={() => setDashboardView('planning')} className={`px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-black transition-all ${dashboardView === 'planning' ? 'bg-ifes-green text-white shadow-lg shadow-ifes-green/20 ring-1 ring-ifes-green' : 'text-slate-400 hover:text-slate-600'}`}>PCA (PNCP)</button>
                 <button onClick={() => setDashboardView('status')} className={`px-2 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-black transition-all ${dashboardView === 'status' ? 'bg-ifes-green text-white shadow-lg shadow-ifes-green/20 ring-1 ring-ifes-green' : 'text-slate-400 hover:text-slate-600'}`}>Processos SIPAC</button>
               </div>
@@ -932,10 +931,6 @@ const AnnualHiringPlan: React.FC = () => {
       </header>
 
       <main className="w-full max-w-[1920px] px-6 mx-auto py-8 space-y-8">
-        {dashboardView === 'shopping' && (
-          <ShoppingSearch />
-        )}
-
         {dashboardView === 'planning' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -1096,8 +1091,7 @@ const AnnualHiringPlan: React.FC = () => {
         )}
 
         {/* 2. Tabela de Processos em Andamento / Detalhamento do Plano */}
-        {dashboardView !== 'shopping' && (
-          <div className={`bg-white rounded-2xl border ${dashboardView === 'planning' ? 'border-slate-200' : 'border-blue-100'} shadow-sm overflow-hidden flex flex-col font-sans mb-6`}>
+        <div className={`bg-white rounded-2xl border ${dashboardView === 'planning' ? 'border-slate-200' : 'border-blue-100'} shadow-sm overflow-hidden flex flex-col font-sans mb-6`}>
             <div className={`p-6 border-b ${dashboardView === 'planning' ? 'border-slate-100 bg-slate-50/30' : 'border-blue-100 bg-blue-50/30'} flex flex-col md:flex-row items-center justify-between gap-6`}>
               <div>
                 <h2 className={`text-xl font-black ${dashboardView === 'planning' ? 'text-slate-800' : 'text-blue-900'} tracking-tight`}>
@@ -1118,13 +1112,15 @@ const AnnualHiringPlan: React.FC = () => {
                     onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                   />
                 </div>
-                <button
-                  onClick={() => setIsManualModalOpen(true)}
-                  className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-black hover:bg-slate-700 transition-colors shadow-sm"
-                >
-                  <Plus size={16} />
-                  <span>Nova Demanda</span>
-                </button>
+                {dashboardView === 'status' && (
+                  <button
+                    onClick={() => setIsManualModalOpen(true)}
+                    className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-black hover:bg-slate-700 transition-colors shadow-sm"
+                  >
+                    <Plus size={16} />
+                    <span>Nova Demanda</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1169,7 +1165,6 @@ const AnnualHiringPlan: React.FC = () => {
               </div>
             )}
           </div>
-        )}
 
         {/* 3. Tabela de Grupos de Contratação (DFDs) - Apenas na view 'status' */}
         {dashboardView === 'status' && (

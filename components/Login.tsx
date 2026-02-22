@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import logoIfes from '../logo-ifes.png';
-import { LogIn, ShieldCheck } from 'lucide-react';
+import { LogIn } from 'lucide-react';
 import { motion } from 'motion/react';
 
 const Login: React.FC = () => {
@@ -53,25 +53,12 @@ const Login: React.FC = () => {
                     </motion.button>
 
                     <div className="mt-10 pt-8 border-t border-slate-100/50 flex flex-col items-center gap-4">
-                        <div className="flex items-center gap-2 px-3 py-1 bg-slate-50 rounded-full border border-slate-100">
-                            <ShieldCheck size={12} className="text-emerald-500" />
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Acesso Autenticado</span>
-                        </div>
                         <p className="text-[9px] text-slate-300 font-bold uppercase tracking-tighter">
                             Instituto Federal do Espírito Santo © 2026
                         </p>
                     </div>
                 </div>
 
-                {/* Decorative Bottom Tag */}
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 1 }}
-                    className="mt-6 flex justify-center"
-                >
-                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">Powering Institutional Efficiency</span>
-                </motion.div>
             </motion.div>
         </div>
     );
