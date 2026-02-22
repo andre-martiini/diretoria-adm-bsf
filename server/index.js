@@ -19,6 +19,7 @@ dotenv.config({ path: path.join(__dirname, '..', '.env.local') });
 const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT || path.join(__dirname, '..', 'serviceAccountKey.json');
 
 import { scrapeSIPACProcess, scrapeSIPACDocumentContent, downloadSIPACDocument } from './sipacService.js';
+import { analyzeProcessDFD } from './dfdService.js';
 // Removed aiService imports as requested
 import admin from 'firebase-admin';
 
@@ -246,6 +247,20 @@ app.get('/api/pncp/consulta/itens', async (req, res) => {
     if (error.response) {
       return res.status(error.response.status).json(error.response.data);
     }
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint para Análise Automática de DFD (Auto Linker)
+app.post('/api/sipac/analyze-dfd', async (req, res) => {
+  const { processId } = req.body;
+  if (!processId) return res.status(400).json({ error: 'ID do processo é obrigatório' });
+
+  try {
+    const result = await analyzeProcessDFD(processId);
+    res.json(result);
+  } catch (error) {
+    console.error('[DFD ANALYZE ERROR]', error);
     res.status(500).json({ error: error.message });
   }
 });
