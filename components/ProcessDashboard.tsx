@@ -35,6 +35,7 @@ import { ContractItem } from '../types';
 import { formatCurrency } from '../utils/formatters';
 import { linkItemsToProcess } from '../services/acquisitionService';
 import { API_SERVER_URL } from '../constants';
+import ProcessAutoLinker from './ProcessAutoLinker';
 
 interface ProcessDashboardProps {
     data: ContractItem[];
@@ -47,6 +48,7 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
     const [isMounted, setIsMounted] = useState(false);
     const [isChartsVisible, setIsChartsVisible] = useState(true);
     const [linkModalOpen, setLinkModalOpen] = useState(false);
+    const [autoLinkerOpen, setAutoLinkerOpen] = useState(false);
 
     // State for Item Selection
     const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
@@ -415,6 +417,15 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
                                 />
                             </div>
 
+                            {/* Auto Link Button */}
+                            <button
+                                onClick={() => setAutoLinkerOpen(true)}
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 transition-all shadow-sm"
+                            >
+                                <Activity size={14} />
+                                Vínculo Inteligente
+                            </button>
+
                             {/* Create Process Button */}
                             <button
                                 onClick={() => setLinkModalOpen(true)}
@@ -536,6 +547,15 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
                         </div>
                     )}
                 </div>
+            )}
+
+            {/* Auto Linker Modal */}
+            {autoLinkerOpen && (
+                <ProcessAutoLinker
+                    pcaItems={data}
+                    onClose={() => setAutoLinkerOpen(false)}
+                    onSuccess={() => window.location.reload()}
+                />
             )}
 
             {/* Modal de Vínculo (Agora "Criar Processo") */}
