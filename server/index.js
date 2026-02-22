@@ -500,7 +500,8 @@ import { onRequest } from "firebase-functions/v2/https";
 export const api = onRequest({
   memory: '2GiB',
   timeoutSeconds: 300,
-  region: 'us-central1'
+  region: 'us-central1',
+  invoker: 'public'
 }, app);
 
 // Endpoint para ler dados brutos da integração Compras.gov/PNCP (Legacy - mantido para compatibilidade)

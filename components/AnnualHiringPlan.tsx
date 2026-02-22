@@ -104,6 +104,7 @@ import { findPncpPurchaseByProcess, findPncpPurchaseByProcessCached, fetchPncpPu
 import { getFinancialStatusByProcess, ProcurementHistory } from '../services/procurementService';
 import { ShoppingSearch } from './ShoppingSearch';
 import PlanningChecklist from './PlanningChecklist';
+import ProcessAutoLinker from './ProcessAutoLinker';
 
 // Configuração do Worker do PDF.js localmente
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
@@ -125,6 +126,7 @@ const AnnualHiringPlan: React.FC = () => {
   const [pcaMeta, setPcaMeta] = useState<PCAMetadata | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
+  const [isSmartLinkModalOpen, setIsSmartLinkModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ContractItem | null>(null);
 
   const [config, setConfig] = useState<SystemConfig | null>(null);
@@ -1159,6 +1161,15 @@ const AnnualHiringPlan: React.FC = () => {
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
+                {dashboardView === 'status' && (
+                  <button
+                    onClick={() => setIsSmartLinkModalOpen(true)}
+                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-black hover:bg-blue-700 transition-colors shadow-sm"
+                  >
+                    <Link size={16} />
+                    <span>Vincular processo</span>
+                  </button>
+                )}
                 <div className="relative w-64">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
                   <input
@@ -1169,15 +1180,7 @@ const AnnualHiringPlan: React.FC = () => {
                     onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                   />
                 </div>
-                {dashboardView === 'status' && (
-                  <button
-                    onClick={() => setIsManualModalOpen(true)}
-                    className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-black hover:bg-slate-700 transition-colors shadow-sm"
-                  >
-                    <Plus size={16} />
-                    <span>Nova Demanda</span>
-                  </button>
-                )}
+
               </div>
             </div>
 
@@ -1223,12 +1226,6 @@ const AnnualHiringPlan: React.FC = () => {
             )}
           </div>
 
-        {/* 3. Tabela de Grupos de Contratação (DFDs) - Apenas na view 'status' */}
-        {dashboardView === 'status' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 mb-20">
-            <ProcessDashboard data={processDashboardData} showGraphs={false} />
-          </div>
-        )}
       </main>
 
       {/* MODALS */}
@@ -1286,6 +1283,14 @@ const AnnualHiringPlan: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {isSmartLinkModalOpen && (
+        <ProcessAutoLinker
+          pcaItems={processDashboardData}
+          onClose={() => setIsSmartLinkModalOpen(false)}
+          onSuccess={() => window.location.reload()}
+        />
       )}
 
       <AnimatePresence>
@@ -2872,3 +2877,4 @@ const AnnualHiringPlan: React.FC = () => {
 };
 
 export default AnnualHiringPlan;
+

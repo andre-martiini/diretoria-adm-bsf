@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Search, FileText, ArrowRight, Settings, Wand2, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { FileText, ArrowRight, Settings, Wand2, ArrowLeft } from 'lucide-react';
 import { motion } from 'motion/react';
 import logoIfes from '../logo-ifes.png';
 import { fetchSystemConfig } from '../services/configService';
@@ -19,14 +19,6 @@ const Tools: React.FC = () => {
     }, []);
 
     const tools = [
-        {
-            title: 'Importador SIPAC',
-            description: 'Extração automática de parâmetros de contratação via protocolo SIPAC.',
-            icon: <Search size={22} />,
-            route: '/sipac',
-            color: 'ifes-green',
-            accent: 'bg-ifes-green'
-        },
         {
             title: 'Busca Inteligente SIASG',
             description: 'Pesquisa semântica avançada com IA para catálogos do Governo (CATMAT/CATSER).',
@@ -86,12 +78,7 @@ const Tools: React.FC = () => {
                     animate={{ opacity: 1, y: 0 }}
                     className="mb-12 space-y-2"
                 >
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-ifes-green/10 text-ifes-green rounded-full mb-2">
-                        <ShieldCheck size={12} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Utilitários Autorizados</span>
-                    </div>
-                    <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">Laboratório de Ferramentas</h2>
-                    <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.3em]">IA e Automação para Processos de Contratação</p>
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">Ferramentas</h2>
                 </motion.div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -137,3 +124,5 @@ const Tools: React.FC = () => {
 };
 
 export default Tools;
+
+

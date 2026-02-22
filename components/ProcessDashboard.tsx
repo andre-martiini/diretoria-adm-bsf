@@ -9,13 +9,11 @@ import {
     ChevronUp,
     CheckCircle,
     FileText,
-    Link as LinkIcon,
     X,
     Search,
     ArrowUpDown,
     ArrowUp,
     ArrowDown,
-    PlusCircle,
     Eye
 } from 'lucide-react';
 import {
@@ -416,28 +414,6 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
                                     onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                                 />
                             </div>
-
-                            {/* Auto Link Button */}
-                            <button
-                                onClick={() => setAutoLinkerOpen(true)}
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 transition-all shadow-sm"
-                            >
-                                <Activity size={14} />
-                                Vínculo Inteligente
-                            </button>
-
-                            {/* Create Process Button */}
-                            <button
-                                onClick={() => setLinkModalOpen(true)}
-                                disabled={selectedItemIds.size === 0}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all shadow-md ${selectedItemIds.size > 0
-                                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200'
-                                    : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
-                                    }`}
-                            >
-                                <PlusCircle size={14} />
-                                Criar Processo ({selectedItemIds.size})
-                            </button>
                         </div>
                     </div>
 
@@ -697,3 +673,4 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
 };
 
 export default ProcessDashboard;
+
