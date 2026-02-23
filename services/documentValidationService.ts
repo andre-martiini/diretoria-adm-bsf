@@ -125,10 +125,149 @@ export const STANDARD_DOCUMENT_RULES: DocumentRule[] = [
     }
 ];
 
-export const validateProcessDocuments = (documents: SIPACDocument[], isARP: boolean = false): ChecklistItemResult[] => {
-    // If ARP, we might want to return different rules or statuses.
-    // For now, based on instructions, we default to standard rules but keep the architecture ready.
-    const rules = STANDARD_DOCUMENT_RULES;
+export const ARP_DOCUMENT_RULES: DocumentRule[] = [
+    // Includes some standard ones usually required
+    STANDARD_DOCUMENT_RULES[0], // DFD
+    STANDARD_DOCUMENT_RULES[2], // Riscos
+    {
+        id: 'arp_justificativa',
+        nome: 'Justificativa de Adesão (ARP)',
+        obrigatoriedade: 'Sempre Obrigatório',
+        hipotesesDispensa: 'Não há dispensa.',
+        elementosObrigatorios: [
+            'Demonstração de ganho de eficiência.',
+            'Demonstração de economicidade.',
+            'Estudo comparativo.'
+        ],
+        keywords: ['Justificativa de Adesão', 'Justificativa', 'Estudo de Ganho']
+    },
+    {
+        id: 'arp_pesquisa',
+        nome: 'Pesquisa de Preços (Compatibilidade)',
+        obrigatoriedade: 'Sempre Obrigatório',
+        hipotesesDispensa: 'Não há dispensa.',
+        elementosObrigatorios: [
+            'Comprovação de compatibilidade com o mercado.',
+            'Comparativo com a Ata de Registro de Preços.'
+        ],
+        keywords: ['Pesquisa de Preços', 'Compatibilidade de Preços']
+    },
+    {
+        id: 'arp_aceite',
+        nome: 'Documento de Aceite do Fornecedor',
+        obrigatoriedade: 'Sempre Obrigatório',
+        hipotesesDispensa: 'Não há dispensa.',
+        elementosObrigatorios: [
+            'Aceite formal do fornecedor quanto aos quantitativos e prazos.',
+            'Concordância com o fornecimento na condição de carona.'
+        ],
+        keywords: ['Aceite', 'Carta de Aceite', 'Declaração de Aceite', 'Manifestação do Fornecedor']
+    },
+    {
+        id: 'arp_anuencia',
+        nome: 'Anuência do Órgão Gerenciador',
+        obrigatoriedade: 'Sempre Obrigatório',
+        hipotesesDispensa: 'Não há dispensa.',
+        elementosObrigatorios: [
+            'Autorização do órgão gerenciador da ata.',
+            'Controle do saldo de adesões (limite de 50% ou dobro).'
+        ],
+        keywords: ['Anuência', 'Autorização do Gerenciador', 'Ofício de Anuência']
+    },
+    {
+        id: 'arp_certame_copias',
+        nome: 'Cópias do Certame Original',
+        obrigatoriedade: 'Sempre Obrigatório',
+        hipotesesDispensa: 'Não há dispensa.',
+        elementosObrigatorios: [
+            'Ata de Registro de Preços assinada.',
+            'Edital e Termo de Referência originais.',
+            'Termo de Homologação.',
+            'Parecer Jurídico original.'
+        ],
+        keywords: ['Cópia do Certame', 'Ata Original', 'Edital Original', 'Homologação']
+    },
+    {
+        id: 'arp_regularidade',
+        nome: 'Comprovantes de Regularidade (Empresa)',
+        obrigatoriedade: 'Sempre Obrigatório',
+        hipotesesDispensa: 'Não há dispensa.',
+        elementosObrigatorios: [
+            'SICAF.',
+            'Consulta CADIN.',
+            'Consulta TCU (Inidôneos e Inabilitados).'
+        ],
+        keywords: ['Regularidade', 'SICAF', 'CADIN', 'Certidões']
+    },
+    STANDARD_DOCUMENT_RULES[5], // Adequação Orçamentária
+    STANDARD_DOCUMENT_RULES[7], // Parecer Jurídico (Local)
+    STANDARD_DOCUMENT_RULES[8], // Autorização
+];
+
+export const IRP_DOCUMENT_RULES: DocumentRule[] = [
+    ...STANDARD_DOCUMENT_RULES,
+    {
+        id: 'irp_formulario',
+        nome: 'Formulário de Participação na IRP',
+        obrigatoriedade: 'Sempre Obrigatório',
+        hipotesesDispensa: 'Não há dispensa.',
+        elementosObrigatorios: [
+            'Preenchimento completo dos itens de interesse.',
+            'Indicação dos quantitativos.'
+        ],
+        keywords: ['Formulário IRP', 'Participação IRP']
+    },
+    {
+        id: 'irp_declaracao',
+        nome: 'Declaração de Participação',
+        obrigatoriedade: 'Sempre Obrigatório',
+        hipotesesDispensa: 'Não há dispensa.',
+        elementosObrigatorios: [
+            'Justificativas para a participação.',
+            'Autorizações internas.',
+            'Previsão no PAC (Plano Anual de Contratações).'
+        ],
+        keywords: ['Declaração de Participação', 'Manifestação de Interesse']
+    },
+    {
+        id: 'irp_comprovantes',
+        nome: 'Comprovantes de Lançamento (Prints)',
+        obrigatoriedade: 'Sempre Obrigatório',
+        hipotesesDispensa: 'Não há dispensa.',
+        elementosObrigatorios: [
+            'Print da tela de lançamento da IRP.',
+            'Confirmação da manifestação dentro do prazo.'
+        ],
+        keywords: ['Print', 'Comprovante de Lançamento', 'Tela do Sistema']
+    },
+    {
+        id: 'irp_certame_gerenciador',
+        nome: 'Cópias do Certame do Gerenciador',
+        obrigatoriedade: 'Sempre Obrigatório',
+        hipotesesDispensa: 'Não há dispensa.',
+        elementosObrigatorios: [
+            'Minuta da ARP.',
+            'Minuta do Edital e TR do órgão gerenciador.'
+        ],
+        keywords: ['Certame Gerenciador', 'Minuta ARP', 'Edital Gerenciador']
+    }
+];
+
+export const validateProcessDocuments = (
+    documents: SIPACDocument[],
+    modeOrIsARP: boolean | 'standard' | 'arp' | 'irp' = 'standard'
+): ChecklistItemResult[] => {
+
+    let mode: 'standard' | 'arp' | 'irp';
+    if (typeof modeOrIsARP === 'boolean') {
+        mode = modeOrIsARP ? 'arp' : 'standard';
+    } else {
+        mode = modeOrIsARP;
+    }
+
+    let rules = STANDARD_DOCUMENT_RULES;
+    if (mode === 'arp') rules = ARP_DOCUMENT_RULES;
+    if (mode === 'irp') rules = IRP_DOCUMENT_RULES;
 
     return rules.map(rule => {
         // Find a matching document
@@ -142,9 +281,6 @@ export const validateProcessDocuments = (documents: SIPACDocument[], isARP: bool
         });
 
         let status: ValidationStatus = found ? 'Presente' : 'Pendente';
-
-        // Custom logic for ARP could be added here
-        // e.g. if (isARP && rule.id === 'etp') status = 'Dispensado';
 
         return {
             rule,
