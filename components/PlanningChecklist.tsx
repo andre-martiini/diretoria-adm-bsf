@@ -11,7 +11,14 @@ interface PlanningChecklistProps {
   estimatedValue?: number | null;
 }
 
-const PlanningChecklist: React.FC<PlanningChecklistProps> = ({ documents, initialIsARP = false, onToggleARP, estimatedValue }) => {
+
+const PlanningChecklist: React.FC<PlanningChecklistProps> = ({
+  documents,
+  initialIsARP = false,
+  onToggleARP,
+  checklistAssociations,
+  onAssociateDocument
+}) => {
   const [isARP, setIsARP] = useState(initialIsARP);
   const [expandedRuleId, setExpandedRuleId] = useState<string | null>(null);
 
@@ -148,6 +155,28 @@ const PlanningChecklist: React.FC<PlanningChecklistProps> = ({ documents, initia
                                         </span>
                                     </div>
                                 )}
+
+                                {/* Seção de Vínculo Manual */}
+                                <div className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                                        Vínculo Manual de Documento
+                                    </label>
+                                    <select
+                                        className="w-full text-xs p-2 rounded border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-medium text-slate-700"
+                                        value={checklistAssociations?.[item.rule.id] || (item.foundDocument?.ordem || "")}
+                                        onChange={(e) => onAssociateDocument && onAssociateDocument(item.rule.id, e.target.value)}
+                                    >
+                                        <option value="">-- Seleção Automática / Nenhum --</option>
+                                        {documents.map(doc => (
+                                            <option key={doc.ordem} value={doc.ordem}>
+                                                {doc.ordem} - {doc.tipo} ({doc.data})
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="text-[9px] text-slate-400 mt-1 italic">
+                                        Selecione um documento da lista para forçar o vínculo com este item do checklist.
+                                    </p>
+                                </div>
 
                                 {item.rule.hipotesesDispensa && (
                                     <div>

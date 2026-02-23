@@ -875,6 +875,41 @@ const AnnualHiringPlan: React.FC = () => {
     }
   };
 
+  const handleAssociateDocument = async (ruleId: string, docOrder: string) => {
+    if (!viewingItem || !viewingItem.dadosSIPAC) return;
+
+    // Update local state
+    const currentAssociations = viewingItem.dadosSIPAC.checklistAssociations || {};
+    const newAssociations = { ...currentAssociations };
+
+    if (docOrder === "") {
+      delete newAssociations[ruleId];
+    } else {
+      newAssociations[ruleId] = docOrder;
+    }
+
+    const updatedSIPAC = { ...viewingItem.dadosSIPAC, checklistAssociations: newAssociations };
+    const updatedItem = { ...viewingItem, dadosSIPAC: updatedSIPAC };
+
+    setViewingItem(updatedItem);
+    setData(prev => prev.map(i => String(i.id) === String(updatedItem.id) ? updatedItem : i));
+
+    // Persist to Firestore
+    try {
+      const docId = viewingItem.isManual ? String(viewingItem.id) : `${selectedYear}-${viewingItem.id}`;
+      const safeDocId = docId.replace(/\//g, '-');
+      const docRef = doc(db, "pca_data", safeDocId);
+
+      await updateDoc(docRef, {
+        "dadosSIPAC.checklistAssociations": newAssociations,
+        updatedAt: Timestamp.now()
+      });
+    } catch (err) {
+      console.error("Erro ao salvar associação de checklist:", err);
+      setToast({ message: "Erro ao salvar vínculo.", type: "error" });
+    }
+  };
+
   const handleFetchSIPAC = () => {
     if (editingItem) handleUpdateSIPACItem(editingItem);
   };
@@ -1685,14 +1720,14 @@ const AnnualHiringPlan: React.FC = () => {
                   </span>
                 </button>
 
-                <button
+                {/* <button
                   onClick={() => setActiveTab('indicators')}
                   className={`flex items-center gap-2 py-4 border-b-2 text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap
                         ${activeTab === 'indicators' ? 'border-orange-500 text-orange-600' : 'border-transparent text-slate-400 hover:text-slate-600'}
                       `}
                 >
                   <BarChart3 size={14} /> Indicadores
-                </button>
+                </button> */}
 
                 {!isLoadingPncp && pncpMatch && (
                   <button
@@ -1734,6 +1769,8 @@ const AnnualHiringPlan: React.FC = () => {
                       initialIsARP={viewingItem.dadosSIPAC.isARP}
                       onToggleARP={handleToggleARP}
                       estimatedValue={viewingItem.valorEstimadoPesquisa || viewingItem.dadosSIPAC.valorEstimadoPesquisa || null}
+                      checklistAssociations={viewingItem.dadosSIPAC.checklistAssociations}
+                      onAssociateDocument={handleAssociateDocument}
                    />
                 )}
 

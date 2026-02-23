@@ -226,6 +226,7 @@ export interface SIPACProcess {
   valorEstimadoPesquisa?: number | null;
   valorEstimadoIdentificado?: boolean;
   checklist?: ChecklistItemResult[];
+  checklistAssociations?: Record<string, string>; // RuleID -> Document Order
   isARP?: boolean;
 }
 
