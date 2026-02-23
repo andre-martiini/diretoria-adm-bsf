@@ -1,15 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import { SIPACDocument } from '../types';
 import { validateProcessDocuments } from '../services/documentValidationService';
-import { CheckCircle2, AlertTriangle, XCircle, Info, ChevronDown, ChevronUp, FileText } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, XCircle, Info, ChevronDown, ChevronUp, FileText, DollarSign } from 'lucide-react';
+import { formatCurrency } from '../utils/formatters';
 
 interface PlanningChecklistProps {
   documents: SIPACDocument[];
   initialIsARP?: boolean;
   onToggleARP?: (isARP: boolean) => void;
-  checklistAssociations?: Record<string, string>;
-  onAssociateDocument?: (ruleId: string, docOrder: string) => void;
+  estimatedValue?: number | null;
 }
+
 
 const PlanningChecklist: React.FC<PlanningChecklistProps> = ({
   documents,
@@ -26,8 +27,8 @@ const PlanningChecklist: React.FC<PlanningChecklistProps> = ({
   }, [initialIsARP]);
 
   const checklist = useMemo(() => {
-    return validateProcessDocuments(documents, isARP, checklistAssociations);
-  }, [documents, isARP, checklistAssociations]);
+    return validateProcessDocuments(documents, isARP, estimatedValue || undefined);
+  }, [documents, isARP, estimatedValue]);
 
   const toggleARP = () => {
     const newState = !isARP;
@@ -67,20 +68,32 @@ const PlanningChecklist: React.FC<PlanningChecklistProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-xl border border-slate-100">
-          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2">Tipo de Processo:</span>
-          <button
-            onClick={() => { if (isARP) toggleARP(); }}
-            className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${!isARP ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
-          >
-            Padrão
-          </button>
-          <button
-            onClick={() => { if (!isARP) toggleARP(); }}
-            className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${isARP ? 'bg-white text-blue-600 shadow-sm ring-1 ring-blue-200' : 'text-slate-400 hover:text-slate-600'}`}
-          >
-            Adesão ARP / Carona
-          </button>
+        <div className="flex flex-col md:flex-row items-end md:items-center gap-4">
+            {estimatedValue && (
+                <div className="px-4 py-2 bg-emerald-50 border border-emerald-100 rounded-lg flex items-center gap-2">
+                    <DollarSign size={16} className="text-emerald-600" />
+                    <div className="flex flex-col">
+                        <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Valor Estimado Identificado</span>
+                        <span className="text-xs font-black text-emerald-800">{formatCurrency(estimatedValue)}</span>
+                    </div>
+                </div>
+            )}
+
+            <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-xl border border-slate-100">
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2">Tipo de Processo:</span>
+            <button
+                onClick={() => { if (isARP) toggleARP(); }}
+                className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${!isARP ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+                Padrão
+            </button>
+            <button
+                onClick={() => { if (!isARP) toggleARP(); }}
+                className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${isARP ? 'bg-white text-blue-600 shadow-sm ring-1 ring-blue-200' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+                Adesão ARP / Carona
+            </button>
+            </div>
         </div>
       </div>
 
@@ -125,6 +138,15 @@ const PlanningChecklist: React.FC<PlanningChecklistProps> = ({
                     {isExpanded && (
                         <div className="px-4 md:px-16 pb-6 pt-0 animate-in slide-in-from-top-2 duration-200">
                             <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-4 cursor-default">
+                                {item.note && (
+                                    <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                                        <Info size={14} className="text-blue-600" />
+                                        <span className="text-xs font-bold text-blue-800">
+                                            {item.note}
+                                        </span>
+                                    </div>
+                                )}
+
                                 {item.foundDocument && (
                                     <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-100 rounded-lg">
                                         <CheckCircle2 size={14} className="text-emerald-600" />
