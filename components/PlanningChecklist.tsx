@@ -1,16 +1,25 @@
 import React, { useMemo, useState } from 'react';
 import { SIPACDocument } from '../types';
 import { validateProcessDocuments } from '../services/documentValidationService';
-import { CheckCircle2, AlertTriangle, XCircle, Info, ChevronDown, ChevronUp, FileText } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, XCircle, Info, ChevronDown, ChevronUp, FileText, DollarSign } from 'lucide-react';
+import { formatCurrency } from '../utils/formatters';
 
 interface PlanningChecklistProps {
   documents: SIPACDocument[];
   initialIsARP?: boolean;
   onToggleARP?: (isARP: boolean) => void;
+  estimatedValue?: number | null;
 }
 
-const PlanningChecklist: React.FC<PlanningChecklistProps> = ({ documents, initialIsARP = false, onToggleARP }) => {
-  const [mode, setMode] = useState<'standard' | 'arp' | 'irp'>(initialIsARP ? 'arp' : 'standard');
+
+const PlanningChecklist: React.FC<PlanningChecklistProps> = ({
+  documents,
+  initialIsARP = false,
+  onToggleARP,
+  checklistAssociations,
+  onAssociateDocument
+}) => {
+  const [isARP, setIsARP] = useState(initialIsARP);
   const [expandedRuleId, setExpandedRuleId] = useState<string | null>(null);
 
   React.useEffect(() => {
@@ -129,6 +138,15 @@ const PlanningChecklist: React.FC<PlanningChecklistProps> = ({ documents, initia
                     {isExpanded && (
                         <div className="px-4 md:px-16 pb-6 pt-0 animate-in slide-in-from-top-2 duration-200">
                             <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-4 cursor-default">
+                                {item.note && (
+                                    <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                                        <Info size={14} className="text-blue-600" />
+                                        <span className="text-xs font-bold text-blue-800">
+                                            {item.note}
+                                        </span>
+                                    </div>
+                                )}
+
                                 {item.foundDocument && (
                                     <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-100 rounded-lg">
                                         <CheckCircle2 size={14} className="text-emerald-600" />
@@ -137,6 +155,28 @@ const PlanningChecklist: React.FC<PlanningChecklistProps> = ({ documents, initia
                                         </span>
                                     </div>
                                 )}
+
+                                {/* Seção de Vínculo Manual */}
+                                <div className="p-3 bg-white border border-slate-200 rounded-lg shadow-sm">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                                        Vínculo Manual de Documento
+                                    </label>
+                                    <select
+                                        className="w-full text-xs p-2 rounded border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-medium text-slate-700"
+                                        value={checklistAssociations?.[item.rule.id] || (item.foundDocument?.ordem || "")}
+                                        onChange={(e) => onAssociateDocument && onAssociateDocument(item.rule.id, e.target.value)}
+                                    >
+                                        <option value="">-- Seleção Automática / Nenhum --</option>
+                                        {documents.map(doc => (
+                                            <option key={doc.ordem} value={doc.ordem}>
+                                                {doc.ordem} - {doc.tipo} ({doc.data})
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="text-[9px] text-slate-400 mt-1 italic">
+                                        Selecione um documento da lista para forçar o vínculo com este item do checklist.
+                                    </p>
+                                </div>
 
                                 {item.rule.hipotesesDispensa && (
                                     <div>

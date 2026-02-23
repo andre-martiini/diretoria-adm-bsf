@@ -120,6 +120,8 @@ export interface ContractItem {
   dataDesejada?: string;
   equipePlanejamento?: string[];
   equipeIdentificada?: boolean;
+  valorEstimadoPesquisa?: number | null;
+  valorEstimadoIdentificado?: boolean;
 }
 
 export interface PCAMetadata {
@@ -175,6 +177,7 @@ export interface ChecklistItemResult {
   rule: DocumentRule;
   status: ValidationStatus;
   foundDocument?: SIPACDocument;
+  note?: string;
 }
 
 export interface SIPACProcess {
@@ -220,7 +223,10 @@ export interface SIPACProcess {
   analise_ia_estruturada?: AIStructuredAnalysis;
   equipePlanejamento?: string[];
   equipeIdentificada?: boolean;
+  valorEstimadoPesquisa?: number | null;
+  valorEstimadoIdentificado?: boolean;
   checklist?: ChecklistItemResult[];
+  checklistAssociations?: Record<string, string>; // RuleID -> Document Order
   isARP?: boolean;
 }
 

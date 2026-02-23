@@ -13,6 +13,10 @@ export const PCA_YEARS_MAP: Record<string, string> = {
 
 export const DEFAULT_YEAR = '2026';
 
+// Threshold for Dispensa (generic value for Goods/Services - Law 14.133, Art 75, II + updates)
+// Using ~59k as a safe reference for 2024/2025.
+export const DISPENSA_LICITACAO_LIMIT = 59000;
+
 export const API_SERVER_URL = import.meta.env.VITE_API_URL || '';
 
 // A URL base agora será construída dinamicamente no App.tsx

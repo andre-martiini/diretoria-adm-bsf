@@ -1,4 +1,5 @@
 import { SIPACDocument, DocumentRule, ChecklistItemResult, ValidationStatus } from '../types';
+import { DISPENSA_LICITACAO_LIMIT } from '../constants';
 
 export const STANDARD_DOCUMENT_RULES: DocumentRule[] = [
     {
@@ -270,22 +271,51 @@ export const validateProcessDocuments = (
     if (mode === 'irp') rules = IRP_DOCUMENT_RULES;
 
     return rules.map(rule => {
-        // Find a matching document
-        const found = documents.find(doc => {
-            const docType = doc.tipo.toLowerCase();
-            return rule.keywords.some(keyword => {
-                // Check if keyword is contained in document type
-                // We use word boundary checks or simple includes depending on specificity
-                return docType.includes(keyword.toLowerCase());
+        let found: SIPACDocument | undefined;
+
+        // 1. Check manual association first
+        if (manualAssociations && manualAssociations[rule.id]) {
+            const associatedDocOrder = manualAssociations[rule.id];
+            found = documents.find(d => String(d.ordem) === String(associatedDocOrder));
+        }
+
+        // 2. If not found manually, try auto-detection
+        if (!found) {
+            found = documents.find(doc => {
+                const docType = doc.tipo.toLowerCase();
+                return rule.keywords.some(keyword => {
+                    // Check if keyword is contained in document type
+                    // We use word boundary checks or simple includes depending on specificity
+                    return docType.includes(keyword.toLowerCase());
+                });
             });
-        });
+        }
 
         let status: ValidationStatus = found ? 'Presente' : 'Pendente';
+        let note: string | undefined = undefined;
+
+        // Custom logic for ETP
+        if (rule.id === 'etp') {
+            if (estimatedValue && estimatedValue < DISPENSA_LICITACAO_LIMIT) {
+                if (status === 'Pendente') {
+                    status = 'Dispensado';
+                    note = `Dispensado por baixo valor (Estimado: R$ ${estimatedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`;
+                } else {
+                    note = `Valor (R$ ${estimatedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) permite dispensa de ETP, mas documento foi encontrado.`;
+                }
+            }
+        }
+
+        // Custom logic for Price Survey to show the value
+        if (rule.id === 'pesquisa_precos' && estimatedValue) {
+            note = `Valor Estimado Identificado: R$ ${estimatedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        }
 
         return {
             rule,
             status,
-            foundDocument: found
+            foundDocument: found,
+            note
         };
     });
 };
