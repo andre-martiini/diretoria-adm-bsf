@@ -14,7 +14,8 @@ import {
     ArrowUpDown,
     ArrowUp,
     ArrowDown,
-    Eye
+    Eye,
+    AlertTriangle
 } from 'lucide-react';
 import {
     ResponsiveContainer,
@@ -32,7 +33,7 @@ import {
 import { ContractItem } from '../types';
 import { formatCurrency } from '../utils/formatters';
 import { linkItemsToProcess } from '../services/acquisitionService';
-import { API_SERVER_URL } from '../constants';
+import { API_SERVER_URL, DEFAULT_YEAR } from '../constants';
 import ProcessAutoLinker from './ProcessAutoLinker';
 
 interface ProcessDashboardProps {
@@ -47,6 +48,8 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
     const [isChartsVisible, setIsChartsVisible] = useState(true);
     const [linkModalOpen, setLinkModalOpen] = useState(false);
     const [autoLinkerOpen, setAutoLinkerOpen] = useState(false);
+    const [yearMismatchModalOpen, setYearMismatchModalOpen] = useState(false);
+    const [mismatchYear, setMismatchYear] = useState<string | null>(null);
 
     // State for Item Selection
     const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
@@ -149,7 +152,7 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
         });
     };
 
-    const handleLinkProcess = async () => {
+    const performLinking = async () => {
         if (selectedItemIds.size === 0 || !sipacProtocolInput) return;
         setIsLinking(true);
         try {
@@ -174,6 +177,7 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
 
             alert('Processo criado e itens vinculados com sucesso!');
             setLinkModalOpen(false);
+            setYearMismatchModalOpen(false); // Close mismatch modal if open
             setSipacProtocolInput('');
             setSelectedItemIds(new Set());
             window.location.reload();
@@ -184,6 +188,25 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
         } finally {
             setIsLinking(false);
         }
+    };
+
+    const handleLinkProcess = () => {
+        if (selectedItemIds.size === 0 || !sipacProtocolInput) return;
+
+        const itemIds = Array.from(selectedItemIds);
+        const firstItem = data.find(i => String(i.id) === itemIds[0]);
+        const year = firstItem?.ano;
+
+        if (year && DEFAULT_YEAR && parseInt(year) < parseInt(DEFAULT_YEAR)) {
+            setMismatchYear(year);
+            setYearMismatchModalOpen(true);
+            // Hide the link modal temporarily to show the mismatch one clearly?
+            // Or just overlay it (z-index).
+            setLinkModalOpen(false);
+            return;
+        }
+
+        performLinking();
     };
 
     // --- KPI & Charts Logic (Existing) ---
@@ -575,6 +598,48 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
                                 className="px-6 py-3 bg-blue-600 text-white rounded-xl text-xs font-black hover:bg-blue-700 disabled:opacity-50 transition-all shadow-lg shadow-blue-200"
                             >
                                 {isLinking ? 'Autuando...' : 'Confirmar e Autuar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Alerta de Ano DFD vs PCA */}
+            {yearMismatchModalOpen && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-amber-200 overflow-hidden font-sans">
+                        <div className="px-6 py-4 border-b border-amber-100 flex justify-between items-center bg-amber-50">
+                            <h3 className="text-sm font-black text-amber-800 flex items-center gap-2">
+                                <AlertTriangle size={18} /> Atenção: Divergência de Ano
+                            </h3>
+                            <button
+                                onClick={() => { setYearMismatchModalOpen(false); setLinkModalOpen(true); }}
+                                className="text-amber-400 hover:text-amber-600 transition-colors"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            <p className="text-sm text-slate-600 font-medium leading-relaxed">
+                                Este processo possui um DFD do ano <strong>{mismatchYear}</strong>, o vínculo será feito para o ano <strong>{DEFAULT_YEAR}</strong>.
+                            </p>
+                            <p className="text-sm text-slate-600 font-medium leading-relaxed mt-2">
+                                Deseja continuar?
+                            </p>
+                        </div>
+                        <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                            <button
+                                onClick={() => { setYearMismatchModalOpen(false); setLinkModalOpen(true); }}
+                                className="px-4 py-3 bg-white border border-slate-200 text-slate-500 rounded-xl text-xs font-black hover:bg-slate-100 transition-all"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={performLinking}
+                                disabled={isLinking}
+                                className="px-6 py-3 bg-amber-500 text-white rounded-xl text-xs font-black hover:bg-amber-600 disabled:opacity-50 transition-all shadow-lg shadow-amber-200"
+                            >
+                                {isLinking ? 'Processando...' : 'Sim, Continuar'}
                             </button>
                         </div>
                     </div>

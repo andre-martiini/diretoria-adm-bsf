@@ -445,6 +445,7 @@ const AnnualHiringPlan: React.FC = () => {
   const [isItemsListModalOpen, setIsItemsListModalOpen] = useState(false);
   const [isPcaModalOpen, setIsPcaModalOpen] = useState(false);
   const [isUnlinkModalOpen, setIsUnlinkModalOpen] = useState(false);
+  const [isYearMismatchModalOpen, setIsYearMismatchModalOpen] = useState(false);
   const [itemToUnlink, setItemToUnlink] = useState<ContractItem | null>(null);
   const [toast, setToast] = useState<{ message: string, type: ToastType } | null>(null);
 
@@ -669,7 +670,7 @@ const AnnualHiringPlan: React.FC = () => {
     };
   }, [processedData]);
 
-  const handleSaveValues = async () => {
+  const executeSaveValues = async () => {
     if (!editingItem) return;
     setSaving(true);
     setToast(null);
@@ -722,12 +723,40 @@ const AnnualHiringPlan: React.FC = () => {
         setToast({ message: "Item atualizado.", type: "success" });
       }
       setIsEditModalOpen(false);
+      setIsYearMismatchModalOpen(false);
     } catch (err) {
       console.error("Erro ao salvar:", err);
       setToast({ message: `Erro ao salvar: ${err instanceof Error ? err.message : String(err)}`, type: "error" });
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSaveValues = async () => {
+    if (!editingItem) return;
+
+    // Year Validation
+    const itemYear = editingItem.ano ? parseInt(editingItem.ano) : null;
+    // For bulk, we might check the first selected item, but editingItem.ano might not be set.
+    // Assuming editingItem (the dummy one) doesn't have the correct year, but selected items do.
+
+    let yearToCheck = itemYear;
+    if (editingItem.id === 'bulk-selection') {
+        const firstSelected = data.find(i => selectedIds.includes(String(i.id)));
+        if (firstSelected && firstSelected.ano) {
+            yearToCheck = parseInt(firstSelected.ano);
+        }
+    }
+
+    // Default to current selected year if we can't find item year, but that defeats the purpose.
+    // If item comes from 'data', it should have 'ano'.
+
+    if (yearToCheck && DEFAULT_YEAR && yearToCheck < parseInt(DEFAULT_YEAR)) {
+        setIsYearMismatchModalOpen(true);
+        return;
+    }
+
+    executeSaveValues();
   };
 
   const handleBulkLink = () => {
@@ -2988,6 +3017,50 @@ const AnnualHiringPlan: React.FC = () => {
           </div>
         )
       }
+      {/* Modal de Alerta de Ano DFD vs PCA */}
+      {
+        isYearMismatchModalOpen && editingItem && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-amber-200 overflow-hidden font-sans">
+              <div className="px-6 py-4 border-b border-amber-100 flex justify-between items-center bg-amber-50">
+                <h3 className="text-sm font-black text-amber-800 flex items-center gap-2">
+                  <AlertTriangle size={18} /> Atenção: Divergência de Ano
+                </h3>
+                <button
+                  onClick={() => setIsYearMismatchModalOpen(false)}
+                  className="text-amber-400 hover:text-amber-600 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="p-6">
+                <p className="text-sm text-slate-600 font-medium leading-relaxed">
+                  Este processo possui um DFD do ano <strong>{editingItem.ano || 'Anterior'}</strong>, o vínculo será feito para o ano <strong>{DEFAULT_YEAR}</strong>.
+                </p>
+                <p className="text-sm text-slate-600 font-medium leading-relaxed mt-2">
+                  Deseja continuar?
+                </p>
+              </div>
+              <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                <button
+                  onClick={() => setIsYearMismatchModalOpen(false)}
+                  className="px-4 py-3 bg-white border border-slate-200 text-slate-500 rounded-xl text-xs font-black hover:bg-slate-100 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={executeSaveValues}
+                  disabled={saving}
+                  className="px-6 py-3 bg-amber-500 text-white rounded-xl text-xs font-black hover:bg-amber-600 disabled:opacity-50 transition-all shadow-lg shadow-amber-200"
+                >
+                  {saving ? 'Processando...' : 'Sim, Continuar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
       {/* Modal de Confirmação de Desvínculo */}
       {
         isUnlinkModalOpen && (

@@ -23,17 +23,20 @@ const PlanningChecklist: React.FC<PlanningChecklistProps> = ({
   const [expandedRuleId, setExpandedRuleId] = useState<string | null>(null);
 
   React.useEffect(() => {
-    setIsARP(initialIsARP);
+    // Sync if prop changes (though local selection overrides usually)
+    if (initialIsARP && mode === 'standard') setMode('arp');
   }, [initialIsARP]);
 
   const checklist = useMemo(() => {
-    return validateProcessDocuments(documents, isARP, estimatedValue || undefined);
-  }, [documents, isARP, estimatedValue]);
+    return validateProcessDocuments(documents, mode);
+  }, [documents, mode]);
 
-  const toggleARP = () => {
-    const newState = !isARP;
-    setIsARP(newState);
-    if (onToggleARP) onToggleARP(newState);
+  const handleModeChange = (newMode: 'standard' | 'arp' | 'irp') => {
+    setMode(newMode);
+    // Maintain compatibility with parent expecting boolean toggle for ARP
+    if (onToggleARP) {
+        onToggleARP(newMode === 'arp');
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -68,32 +71,29 @@ const PlanningChecklist: React.FC<PlanningChecklistProps> = ({
           </p>
         </div>
 
-        <div className="flex flex-col md:flex-row items-end md:items-center gap-4">
-            {estimatedValue && (
-                <div className="px-4 py-2 bg-emerald-50 border border-emerald-100 rounded-lg flex items-center gap-2">
-                    <DollarSign size={16} className="text-emerald-600" />
-                    <div className="flex flex-col">
-                        <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Valor Estimado Identificado</span>
-                        <span className="text-xs font-black text-emerald-800">{formatCurrency(estimatedValue)}</span>
-                    </div>
-                </div>
-            )}
+        <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-100 overflow-x-auto">
+          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2 whitespace-nowrap">Tipo de Processo:</span>
 
-            <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-xl border border-slate-100">
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2">Tipo de Processo:</span>
-            <button
-                onClick={() => { if (isARP) toggleARP(); }}
-                className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${!isARP ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
-            >
-                Padrão
-            </button>
-            <button
-                onClick={() => { if (!isARP) toggleARP(); }}
-                className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${isARP ? 'bg-white text-blue-600 shadow-sm ring-1 ring-blue-200' : 'text-slate-400 hover:text-slate-600'}`}
-            >
-                Adesão ARP / Carona
-            </button>
-            </div>
+          <button
+            onClick={() => handleModeChange('standard')}
+            className={`px-4 py-2 rounded-lg text-xs font-black transition-all whitespace-nowrap ${mode === 'standard' ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            Padrão
+          </button>
+
+          <button
+            onClick={() => handleModeChange('arp')}
+            className={`px-4 py-2 rounded-lg text-xs font-black transition-all whitespace-nowrap ${mode === 'arp' ? 'bg-white text-blue-600 shadow-sm ring-1 ring-blue-200' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            Adesão ARP / Carona
+          </button>
+
+          <button
+            onClick={() => handleModeChange('irp')}
+            className={`px-4 py-2 rounded-lg text-xs font-black transition-all whitespace-nowrap ${mode === 'irp' ? 'bg-white text-purple-600 shadow-sm ring-1 ring-purple-200' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            IRP (Registro de Preços)
+          </button>
         </div>
       </div>
 
