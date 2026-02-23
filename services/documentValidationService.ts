@@ -125,21 +125,31 @@ export const STANDARD_DOCUMENT_RULES: DocumentRule[] = [
     }
 ];
 
-export const validateProcessDocuments = (documents: SIPACDocument[], isARP: boolean = false): ChecklistItemResult[] => {
+export const validateProcessDocuments = (documents: SIPACDocument[], isARP: boolean = false, manualAssociations?: Record<string, string>): ChecklistItemResult[] => {
     // If ARP, we might want to return different rules or statuses.
     // For now, based on instructions, we default to standard rules but keep the architecture ready.
     const rules = STANDARD_DOCUMENT_RULES;
 
     return rules.map(rule => {
-        // Find a matching document
-        const found = documents.find(doc => {
-            const docType = doc.tipo.toLowerCase();
-            return rule.keywords.some(keyword => {
-                // Check if keyword is contained in document type
-                // We use word boundary checks or simple includes depending on specificity
-                return docType.includes(keyword.toLowerCase());
+        let found: SIPACDocument | undefined;
+
+        // 1. Check manual association first
+        if (manualAssociations && manualAssociations[rule.id]) {
+            const associatedDocOrder = manualAssociations[rule.id];
+            found = documents.find(d => String(d.ordem) === String(associatedDocOrder));
+        }
+
+        // 2. If not found manually, try auto-detection
+        if (!found) {
+            found = documents.find(doc => {
+                const docType = doc.tipo.toLowerCase();
+                return rule.keywords.some(keyword => {
+                    // Check if keyword is contained in document type
+                    // We use word boundary checks or simple includes depending on specificity
+                    return docType.includes(keyword.toLowerCase());
+                });
             });
-        });
+        }
 
         let status: ValidationStatus = found ? 'Presente' : 'Pendente';
 

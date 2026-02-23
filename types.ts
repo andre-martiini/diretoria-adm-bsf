@@ -221,6 +221,7 @@ export interface SIPACProcess {
   equipePlanejamento?: string[];
   equipeIdentificada?: boolean;
   checklist?: ChecklistItemResult[];
+  checklistAssociations?: Record<string, string>; // RuleID -> Document Order
   isARP?: boolean;
 }
 
