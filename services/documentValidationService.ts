@@ -256,7 +256,9 @@ export const IRP_DOCUMENT_RULES: DocumentRule[] = [
 
 export const validateProcessDocuments = (
     documents: SIPACDocument[],
-    modeOrIsARP: boolean | 'standard' | 'arp' | 'irp' = 'standard'
+    modeOrIsARP: boolean | 'standard' | 'arp' | 'irp' = 'standard',
+    manualAssociations?: Record<string, string>,
+    estimatedValue?: number | null
 ): ChecklistItemResult[] => {
 
     let mode: 'standard' | 'arp' | 'irp';

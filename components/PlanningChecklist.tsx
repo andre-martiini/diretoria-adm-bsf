@@ -20,6 +20,7 @@ const PlanningChecklist: React.FC<PlanningChecklistProps> = ({
   onAssociateDocument
 }) => {
   const [isARP, setIsARP] = useState(initialIsARP);
+  const [mode, setMode] = useState<'standard' | 'arp' | 'irp'>('standard');
   const [expandedRuleId, setExpandedRuleId] = useState<string | null>(null);
 
   React.useEffect(() => {
@@ -28,8 +29,8 @@ const PlanningChecklist: React.FC<PlanningChecklistProps> = ({
   }, [initialIsARP]);
 
   const checklist = useMemo(() => {
-    return validateProcessDocuments(documents, mode);
-  }, [documents, mode]);
+    return validateProcessDocuments(documents, mode, checklistAssociations, estimatedValue);
+  }, [documents, mode, checklistAssociations, estimatedValue]);
 
   const handleModeChange = (newMode: 'standard' | 'arp' | 'irp') => {
     setMode(newMode);
