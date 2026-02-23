@@ -1,4 +1,5 @@
 import { SIPACDocument, DocumentRule, ChecklistItemResult, ValidationStatus } from '../types';
+import { DISPENSA_LICITACAO_LIMIT } from '../constants';
 
 export const STANDARD_DOCUMENT_RULES: DocumentRule[] = [
     {
@@ -125,7 +126,7 @@ export const STANDARD_DOCUMENT_RULES: DocumentRule[] = [
     }
 ];
 
-export const validateProcessDocuments = (documents: SIPACDocument[], isARP: boolean = false): ChecklistItemResult[] => {
+export const validateProcessDocuments = (documents: SIPACDocument[], isARP: boolean = false, estimatedValue?: number | null): ChecklistItemResult[] => {
     // If ARP, we might want to return different rules or statuses.
     // For now, based on instructions, we default to standard rules but keep the architecture ready.
     const rules = STANDARD_DOCUMENT_RULES;
@@ -142,6 +143,24 @@ export const validateProcessDocuments = (documents: SIPACDocument[], isARP: bool
         });
 
         let status: ValidationStatus = found ? 'Presente' : 'Pendente';
+        let note: string | undefined = undefined;
+
+        // Custom logic for ETP
+        if (rule.id === 'etp') {
+            if (estimatedValue && estimatedValue < DISPENSA_LICITACAO_LIMIT) {
+                if (status === 'Pendente') {
+                    status = 'Dispensado';
+                    note = `Dispensado por baixo valor (Estimado: R$ ${estimatedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`;
+                } else {
+                    note = `Valor (R$ ${estimatedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) permite dispensa de ETP, mas documento foi encontrado.`;
+                }
+            }
+        }
+
+        // Custom logic for Price Survey to show the value
+        if (rule.id === 'pesquisa_precos' && estimatedValue) {
+            note = `Valor Estimado Identificado: R$ ${estimatedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        }
 
         // Custom logic for ARP could be added here
         // e.g. if (isARP && rule.id === 'etp') status = 'Dispensado';
@@ -149,7 +168,8 @@ export const validateProcessDocuments = (documents: SIPACDocument[], isARP: bool
         return {
             rule,
             status,
-            foundDocument: found
+            foundDocument: found,
+            note
         };
     });
 };

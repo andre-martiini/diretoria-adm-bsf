@@ -96,6 +96,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { calculateHealthScore, deriveInternalPhase, linkItemsToProcess } from '../services/acquisitionService';
 import { extractPlanningTeam } from '../utils/analysis/aiPersonnelScanner';
+import { extractEstimatedValue } from '../utils/analysis/aiValueScanner';
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import * as pdfjsLib from 'pdfjs-dist';
@@ -185,20 +186,27 @@ const AnnualHiringPlan: React.FC = () => {
   const [isIdentifyingTeam, setIsIdentifyingTeam] = useState(false);
   const [teamIdentificationAttempted, setTeamIdentificationAttempted] = useState(false);
 
+  // AI Value Identification State
+  const [isIdentifyingValue, setIsIdentifyingValue] = useState(false);
+  const [valueIdentificationAttempted, setValueIdentificationAttempted] = useState(false);
+
   // Procurement History States
   const [procurementHistory, setProcurementHistory] = useState<ProcurementHistory | null>(null);
   const [isLoadingProcurement, setIsLoadingProcurement] = useState(false);
 
-  // Initialize team state when item changes
+  // Initialize team/value state when item changes
   useEffect(() => {
     if (viewingItem) {
       setPlanningTeam(viewingItem.equipePlanejamento || viewingItem.dadosSIPAC?.equipePlanejamento || []);
       setTeamIdentificationAttempted(viewingItem.equipeIdentificada || viewingItem.dadosSIPAC?.equipeIdentificada || false);
+      setValueIdentificationAttempted(viewingItem.valorEstimadoIdentificado || viewingItem.dadosSIPAC?.valorEstimadoIdentificado || false);
     } else {
       setPlanningTeam([]);
       setTeamIdentificationAttempted(false);
+      setValueIdentificationAttempted(false);
     }
     setIsIdentifyingTeam(false);
+    setIsIdentifyingValue(false);
   }, [viewingItem]);
 
   const handleIdentifyTeam = useCallback(async () => {
@@ -259,6 +267,21 @@ const AnnualHiringPlan: React.FC = () => {
             equipeIdentificada: true
           });
 
+           // Update local state immediately to avoid re-runs
+          const updatedItem = {
+            ...viewingItem,
+            equipePlanejamento: team,
+            equipeIdentificada: true,
+            dadosSIPAC: {
+              ...viewingItem.dadosSIPAC,
+              equipePlanejamento: team,
+              equipeIdentificada: true
+            }
+          } as ContractItem;
+
+          setViewingItem(updatedItem);
+          setData(prev => prev.map(i => String(i.id) === String(viewingItem.id) ? updatedItem : i));
+
           console.log(`[Team Analysis] ✅ Equipe salva para o item ${viewingItem.id}`);
         } catch (saveErr) {
           console.error("Erro ao salvar equipe no Firestore:", saveErr);
@@ -273,15 +296,105 @@ const AnnualHiringPlan: React.FC = () => {
     }
   }, [viewingItem]);
 
+  const handleExtractEstimatedValue = useCallback(async () => {
+    if (!viewingItem?.dadosSIPAC?.documentos) return;
+    if (viewingItem.valorEstimadoIdentificado || viewingItem.dadosSIPAC.valorEstimadoIdentificado) {
+        setValueIdentificationAttempted(true);
+        return;
+    }
+
+    // Find "Pesquisa de Preços" document
+    const priceDoc = viewingItem.dadosSIPAC.documentos.find(d =>
+        d.tipo.toLowerCase().includes('pesquisa de preço') ||
+        d.tipo.toLowerCase().includes('mapa comparativo') ||
+        d.tipo.toLowerCase().includes('estimativa de despesa')
+    );
+
+    if (!priceDoc || !priceDoc.url) {
+        setValueIdentificationAttempted(true);
+        return;
+    }
+
+    try {
+        setIsIdentifyingValue(true);
+        const url = `${API_SERVER_URL}/api/proxy/pdf?url=${encodeURIComponent(priceDoc.url)}`;
+        const loadingTask = pdfjsLib.getDocument(url);
+        const pdf = await loadingTask.promise;
+
+        let fullText = '';
+        // Read first few pages usually enough for total value
+        const pagesToRead = Math.min(pdf.numPages, 5);
+        for (let i = 1; i <= pagesToRead; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map((item: any) => item.str).join(' ');
+            fullText += pageText + '\n\n';
+        }
+
+        const result = await extractEstimatedValue(fullText);
+
+        if (result.valor !== null) {
+             if (viewingItem?.id && viewingItem?.ano) {
+                const docId = `${viewingItem.ano}-${viewingItem.id}`.replace(/\//g, '-');
+                const itemRef = doc(db, 'pca_data', docId);
+
+                const updateData = {
+                    officialId: String(viewingItem.id),
+                    valorEstimadoPesquisa: result.valor,
+                    valorEstimadoIdentificado: true,
+                    "dadosSIPAC.valorEstimadoPesquisa": result.valor,
+                    "dadosSIPAC.valorEstimadoIdentificado": true,
+                    updatedAt: Timestamp.now()
+                };
+
+                await setDoc(itemRef, updateData, { merge: true });
+
+                updatePcaCache(viewingItem.ano, viewingItem.id, {
+                    valorEstimadoPesquisa: result.valor,
+                    valorEstimadoIdentificado: true
+                });
+
+                const updatedItem = {
+                    ...viewingItem,
+                    valorEstimadoPesquisa: result.valor,
+                    valorEstimadoIdentificado: true,
+                    dadosSIPAC: {
+                        ...viewingItem.dadosSIPAC,
+                        valorEstimadoPesquisa: result.valor,
+                        valorEstimadoIdentificado: true
+                    }
+                } as ContractItem;
+
+                setViewingItem(updatedItem);
+                setData(prev => prev.map(i => String(i.id) === String(viewingItem.id) ? updatedItem : i));
+                setToast({ message: `Valor estimado identificado: ${formatCurrency(result.valor)}`, type: 'success' });
+             }
+        }
+
+    } catch (error) {
+        console.error("Value extraction error:", error);
+    } finally {
+        setIsIdentifyingValue(false);
+        setValueIdentificationAttempted(true);
+    }
+  }, [viewingItem]);
+
   // Trigger when tab activates
   useEffect(() => {
+    // Team identification
     const hasTeam = planningTeam.length > 0;
-    const alreadyIdentified = teamIdentificationAttempted || viewingItem?.equipeIdentificada || viewingItem?.dadosSIPAC?.equipeIdentificada;
+    const alreadyIdentifiedTeam = teamIdentificationAttempted || viewingItem?.equipeIdentificada || viewingItem?.dadosSIPAC?.equipeIdentificada;
 
-    if (activeTab === 'users' && !alreadyIdentified && !isIdentifyingTeam && !hasTeam) {
+    if (activeTab === 'users' && !alreadyIdentifiedTeam && !isIdentifyingTeam && !hasTeam) {
       handleIdentifyTeam();
     }
-  }, [activeTab, teamIdentificationAttempted, isIdentifyingTeam, planningTeam, handleIdentifyTeam, viewingItem]);
+
+    // Value identification
+    const alreadyIdentifiedValue = valueIdentificationAttempted || viewingItem?.valorEstimadoIdentificado || viewingItem?.dadosSIPAC?.valorEstimadoIdentificado;
+    if ((activeTab === 'checklist' || activeTab === 'documents') && !alreadyIdentifiedValue && !isIdentifyingValue) {
+        handleExtractEstimatedValue();
+    }
+  }, [activeTab, teamIdentificationAttempted, isIdentifyingTeam, planningTeam, handleIdentifyTeam, viewingItem, valueIdentificationAttempted, isIdentifyingValue, handleExtractEstimatedValue]);
 
   const extractPdfContent = async (docUrl: string) => {
     try {
@@ -1620,6 +1733,7 @@ const AnnualHiringPlan: React.FC = () => {
                       documents={viewingItem.dadosSIPAC.documentos || []}
                       initialIsARP={viewingItem.dadosSIPAC.isARP}
                       onToggleARP={handleToggleARP}
+                      estimatedValue={viewingItem.valorEstimadoPesquisa || viewingItem.dadosSIPAC.valorEstimadoPesquisa || null}
                    />
                 )}
 
