@@ -1,4 +1,3 @@
-
 import { db } from '../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { SystemConfig } from '../types';
@@ -8,8 +7,24 @@ const CONFIG_DOC_PATH = 'system_config/pncp_config';
 
 let cachedConfig: SystemConfig | null = null;
 
+const fallbackConfig: SystemConfig = {
+    unidadeGestora: {
+        cnpj: CNPJ_IFES_BSF,
+        uasg: '158434',
+        nome: 'Campus Sao Mateus'
+    },
+    pcaYearsMap: PCA_YEARS_MAP,
+    defaultYear: DEFAULT_YEAR
+};
+
 export const fetchSystemConfig = async (forceRefresh = false): Promise<SystemConfig> => {
     if (cachedConfig && !forceRefresh) return cachedConfig;
+
+    if (!db) {
+        cachedConfig = fallbackConfig;
+        console.warn('[ConfigService] Firestore indisponivel. Usando configuracao padrao em memoria.');
+        return fallbackConfig;
+    }
 
     try {
         const docRef = doc(db, CONFIG_DOC_PATH);
@@ -17,44 +32,25 @@ export const fetchSystemConfig = async (forceRefresh = false): Promise<SystemCon
 
         if (docSnap.exists()) {
             cachedConfig = docSnap.data() as SystemConfig;
-            console.log('[ConfigService] Configuração carregada do Firestore:', cachedConfig);
-            return cachedConfig;
-        } else {
-            // Se não existir, cria com os valores padrão (fallback)
-            const defaultConfig: SystemConfig = {
-                unidadeGestora: {
-                    cnpj: CNPJ_IFES_BSF,
-                    uasg: '158434', // UASG padrão do Campus BSF (exemplo)
-                    nome: 'Campus São Mateus'
-                },
-                pcaYearsMap: PCA_YEARS_MAP,
-                defaultYear: DEFAULT_YEAR
-            };
-
-            await setDoc(docRef, defaultConfig);
-            cachedConfig = defaultConfig;
-            console.log('[ConfigService] Configuração padrão criada no Firestore.');
+            console.log('[ConfigService] Configuracao carregada do Firestore:', cachedConfig);
             return cachedConfig;
         }
+
+        await setDoc(docRef, fallbackConfig);
+        cachedConfig = fallbackConfig;
+        console.log('[ConfigService] Configuracao padrao criada no Firestore.');
+        return cachedConfig;
     } catch (error) {
-        console.error('[ConfigService] Erro ao carregar configuração:', error);
-        // Fallback total se o Firebase falhar
-        return {
-            unidadeGestora: {
-                cnpj: CNPJ_IFES_BSF,
-                uasg: '158434',
-                nome: 'Campus São Mateus'
-            },
-            pcaYearsMap: PCA_YEARS_MAP,
-            defaultYear: DEFAULT_YEAR
-        };
+        console.error('[ConfigService] Erro ao carregar configuracao:', error);
+        cachedConfig = fallbackConfig;
+        return fallbackConfig;
     }
 };
 
 export const getActiveUnidadeGestora = () => cachedConfig?.unidadeGestora || {
     cnpj: CNPJ_IFES_BSF,
     uasg: '158434',
-    nome: 'Campus São Mateus'
+    nome: 'Campus Sao Mateus'
 };
 
 export const getPcaYearsMap = () => cachedConfig?.pcaYearsMap || PCA_YEARS_MAP;

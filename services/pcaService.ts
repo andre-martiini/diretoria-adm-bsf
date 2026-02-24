@@ -161,9 +161,10 @@ export const fetchPcaData = async (
     console.log(`[PCA Service] 🚀 Iniciando carregamento para ${year} (Force: ${forceSync})`);
     report(5);
 
+    const hasFirestore = !!db;
     const yearNum = Number(year);
-    const cacheRef = doc(db, "pca_cache", year);
-    const itemsQuery = query(collection(db, "pca_data"), where("ano", "in", [String(year), Number(year)]));
+    const cacheRef = hasFirestore ? doc(db, "pca_cache", year) : null;
+    const itemsQuery = hasFirestore ? query(collection(db, "pca_data"), where("ano", "in", [String(year), Number(year)])) : null;
 
     let rawOfficialItems: any[] = [];
     let firestoreManualItems: ContractItem[] = [];
@@ -209,12 +210,15 @@ export const fetchPcaData = async (
     console.log(`[PCA Service] ✅ Snapshot local carregado: ${rawOfficialItems.length} itens brutos. ${executionData.length} itens de execução.`);
 
     // 4. Buscar no Firestore
-    try {
-        report(20);
-        const [cacheSnap, suppSnap] = await Promise.all([
-            getDoc(cacheRef).catch(() => null),
-            getDocs(itemsQuery).catch(() => null)
-        ]);
+    if (!hasFirestore || !cacheRef || !itemsQuery) {
+        console.warn("[PCA Service] Firestore indisponivel. Continuando apenas com snapshot local/API.");
+    } else {
+        try {
+            report(20);
+            const [cacheSnap, suppSnap] = await Promise.all([
+                getDoc(cacheRef).catch(() => null),
+                getDocs(itemsQuery).catch(() => null)
+            ]);
 
         if (cacheSnap?.exists()) {
             cacheMetadata = cacheSnap.data();
@@ -254,8 +258,9 @@ export const fetchPcaData = async (
             console.log(`[PCA Service] Nenhum documento retornado na query para o ano ${year}`);
             // Backup: Tentar sem Filtro se for erro de índice/tipo (apenas para debug se necessário, mas vamos confiar na query por agora)
         }
-    } catch (fsErr) {
-        console.error("[PCA Service] Erro ao carregar dados do Firestore:", fsErr);
+        } catch (fsErr) {
+            console.error("[PCA Service] Erro ao carregar dados do Firestore:", fsErr);
+        }
     }
 
     // 5. LIVE SYNC (PNCP)
@@ -291,11 +296,13 @@ export const fetchPcaData = async (
                 }
 
                 // Salva no Firestore
-                setDoc(cacheRef, {
-                    items: rawOfficialItems,
-                    updatedAt: Timestamp.now(),
-                    count: rawOfficialItems.length
-                }).catch(e => console.error("Erro cache:", e));
+                if (cacheRef) {
+                    setDoc(cacheRef, {
+                        items: rawOfficialItems,
+                        updatedAt: Timestamp.now(),
+                        count: rawOfficialItems.length
+                    }).catch(e => console.error("Erro cache:", e));
+                }
             }
         } catch (syncErr) {
             console.error("[PCA Service] Falha na sincronização LIVE:", syncErr);

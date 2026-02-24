@@ -142,6 +142,24 @@ const AnnualHiringPlan: React.FC = () => {
     initConfig();
   }, []);
 
+  useEffect(() => {
+    const triggerGlobalOcrBackfill = async () => {
+      const markerKey = 'sipac_ocr_backfill_triggered_v1';
+      if (typeof window === 'undefined') return;
+      if (window.localStorage.getItem(markerKey) === '1') return;
+      try {
+        await fetch(`${API_SERVER_URL}/api/sipac/ocr/reindex?maxDocs=500`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        window.localStorage.setItem(markerKey, '1');
+      } catch (error) {
+        console.warn('[OCR UI] Nao foi possivel iniciar backfill global de OCR:', error);
+      }
+    };
+    triggerGlobalOcrBackfill();
+  }, []);
+
   const [saving, setSaving] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isFetchingSIPAC, setIsFetchingSIPAC] = useState(false);
@@ -179,6 +197,8 @@ const AnnualHiringPlan: React.FC = () => {
   const [isTextModalOpen, setIsTextModalOpen] = useState(false);
   const [extractedText, setExtractedText] = useState<string>('');
   const [isExtracting, setIsExtracting] = useState(false);
+  const [ocrLoadingDocKey, setOcrLoadingDocKey] = useState<string | null>(null);
+  const [ocrTitle, setOcrTitle] = useState<string>('OCR do documento');
 
   // AI Team Identification State
   const [planningTeam, setPlanningTeam] = useState<string[]>([]);
@@ -207,6 +227,10 @@ const AnnualHiringPlan: React.FC = () => {
     setIsIdentifyingTeam(false);
     setIsIdentifyingValue(false);
   }, [viewingItem]);
+
+  const getDocKey = useCallback((docLike: { ordem?: string | number; tipo?: string }) => {
+    return `${String(docLike?.ordem ?? '')}::${String(docLike?.tipo ?? '')}`;
+  }, []);
 
   const handleIdentifyTeam = useCallback(async () => {
     if (!viewingItem?.dadosSIPAC?.documentos) return;
@@ -246,17 +270,21 @@ const AnnualHiringPlan: React.FC = () => {
       setPlanningTeam(team);
 
       // 4. Salvar permanentemente no Firestore e Cache Local
-      if (viewingItem?.id && viewingItem?.ano) {
+      if (db && viewingItem?.id && viewingItem?.ano) {
         const docId = `${viewingItem.ano}-${viewingItem.id}`.replace(/\//g, '-');
         const itemRef = doc(db, 'pca_data', docId);
+        const dadosSipacAtualizados = {
+          ...(viewingItem.dadosSIPAC || {} as SIPACProcess),
+          equipePlanejamento: team,
+          equipeIdentificada: true
+        };
 
         try {
           await setDoc(itemRef, {
             officialId: String(viewingItem.id),
             equipePlanejamento: team,
             equipeIdentificada: true,
-            "dadosSIPAC.equipePlanejamento": team,
-            "dadosSIPAC.equipeIdentificada": true,
+            dadosSIPAC: dadosSipacAtualizados,
             updatedAt: Timestamp.now()
           }, { merge: true });
 
@@ -333,16 +361,20 @@ const AnnualHiringPlan: React.FC = () => {
         const result = await extractEstimatedValue(fullText);
 
         if (result.valor !== null) {
-             if (viewingItem?.id && viewingItem?.ano) {
+             if (db && viewingItem?.id && viewingItem?.ano) {
                 const docId = `${viewingItem.ano}-${viewingItem.id}`.replace(/\//g, '-');
                 const itemRef = doc(db, 'pca_data', docId);
+                const dadosSipacAtualizados = {
+                    ...(viewingItem.dadosSIPAC || {} as SIPACProcess),
+                    valorEstimadoPesquisa: result.valor,
+                    valorEstimadoIdentificado: true
+                };
 
                 const updateData = {
                     officialId: String(viewingItem.id),
                     valorEstimadoPesquisa: result.valor,
                     valorEstimadoIdentificado: true,
-                    "dadosSIPAC.valorEstimadoPesquisa": result.valor,
-                    "dadosSIPAC.valorEstimadoIdentificado": true,
+                    dadosSIPAC: dadosSipacAtualizados,
                     updatedAt: Timestamp.now()
                 };
 
@@ -395,10 +427,107 @@ const AnnualHiringPlan: React.FC = () => {
     }
   }, [activeTab, teamIdentificationAttempted, isIdentifyingTeam, planningTeam, handleIdentifyTeam, viewingItem, valueIdentificationAttempted, isIdentifyingValue, handleExtractEstimatedValue]);
 
+  // Garante extração e persistência da equipe já no primeiro carregamento do item.
+  useEffect(() => {
+    if (!isDetailsModalOpen || !viewingItem) return;
+    const alreadyIdentifiedTeam = teamIdentificationAttempted || viewingItem?.equipeIdentificada || viewingItem?.dadosSIPAC?.equipeIdentificada;
+    if (!alreadyIdentifiedTeam && !isIdentifyingTeam && planningTeam.length === 0) {
+      handleIdentifyTeam();
+    }
+  }, [isDetailsModalOpen, viewingItem, teamIdentificationAttempted, isIdentifyingTeam, planningTeam, handleIdentifyTeam]);
+
+  useEffect(() => {
+    const loadLakeDocuments = async () => {
+      if (!db || !isDetailsModalOpen || !viewingItem) {
+        setLakeDocuments([]);
+        return;
+      }
+
+      const protocolBase = String(viewingItem.protocoloSIPAC || viewingItem.dadosSIPAC?.numeroProcesso || '').replace(/[^\d]/g, '');
+      if (!protocolBase) {
+        setLakeDocuments([]);
+        return;
+      }
+
+      setLoadingLake(true);
+      try {
+        const snap = await getDocs(collection(db, "contratacoes", protocolBase, "arquivos"));
+        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setLakeDocuments(docs);
+      } catch (err) {
+        console.warn('[OCR UI] Falha ao carregar OCR do Firestore:', err);
+        setLakeDocuments([]);
+      } finally {
+        setLoadingLake(false);
+      }
+    };
+
+    loadLakeDocuments();
+  }, [isDetailsModalOpen, viewingItem]);
+
+  const handleOpenDocumentOCR = useCallback(async (docInfo: any) => {
+    if (!docInfo?.url) {
+      setToast({ message: 'Documento sem URL publica para OCR.', type: 'error' });
+      return;
+    }
+
+    const key = getDocKey(docInfo);
+    const lakeDoc = lakeDocuments.find(ld =>
+      String(ld?.sipacMetadata?.ordem) === String(docInfo?.ordem) &&
+      String(ld?.sipacMetadata?.tipo) === String(docInfo?.tipo)
+    );
+
+    if (lakeDoc?.ocrStatus === 'READY' && typeof lakeDoc?.ocrText === 'string' && lakeDoc.ocrText.length > 0) {
+      setOcrTitle(`OCR - Documento ${docInfo.ordem}`);
+      setExtractedText(lakeDoc.ocrText);
+      setIsTextModalOpen(true);
+      return;
+    }
+
+    try {
+      setOcrLoadingDocKey(key);
+      const protocolo = String(viewingItem?.protocoloSIPAC || viewingItem?.dadosSIPAC?.numeroProcesso || '');
+      const endpoint = `${API_SERVER_URL}/api/sipac/documento/ocr?url=${encodeURIComponent(docInfo.url)}&protocolo=${encodeURIComponent(protocolo)}&ordem=${encodeURIComponent(String(docInfo.ordem || ''))}&tipo=${encodeURIComponent(String(docInfo.tipo || 'DOCUMENTO'))}`;
+      const response = await fetch(endpoint);
+      const result = await response.json();
+
+      if (!response.ok || result?.status === 'ERROR') {
+        throw new Error(result?.error || result?.ocrError || 'Falha ao gerar OCR deste documento.');
+      }
+
+      const text = String(result?.text || '').trim();
+      if (!text) {
+        throw new Error('OCR vazio para este documento.');
+      }
+
+      setLakeDocuments(prev => prev.map(ld => {
+        const same =
+          String(ld?.sipacMetadata?.ordem) === String(docInfo?.ordem) &&
+          String(ld?.sipacMetadata?.tipo) === String(docInfo?.tipo);
+        if (!same) return ld;
+        return {
+          ...ld,
+          ocrStatus: 'READY',
+          ocrText: text,
+          ocrChars: text.length
+        };
+      }));
+
+      setOcrTitle(`OCR - Documento ${docInfo.ordem}`);
+      setExtractedText(text);
+      setIsTextModalOpen(true);
+    } catch (error: any) {
+      setToast({ message: error?.message || 'Erro ao carregar OCR do documento.', type: 'error' });
+    } finally {
+      setOcrLoadingDocKey(null);
+    }
+  }, [getDocKey, lakeDocuments, viewingItem]);
+
   const extractPdfContent = async (docUrl: string) => {
     try {
       setIsExtracting(true);
       setExtractedText('');
+      setOcrTitle('Texto do documento');
 
       // Use the proxy to avoid CORS
       const url = `${API_SERVER_URL}/api/proxy/pdf?url=${encodeURIComponent(docUrl)}`;
@@ -836,9 +965,18 @@ const AnnualHiringPlan: React.FC = () => {
       const response = await fetch(`${API_SERVER_URL}/api/sipac/processo?protocolo=${item.protocoloSIPAC}`);
       if (!response.ok) throw new Error('Falha ao buscar dados no SIPAC');
       const sipacData = await response.json();
+      const preservedTeam = item.equipePlanejamento || item.dadosSIPAC?.equipePlanejamento || [];
+      const preservedTeamFlag = item.equipeIdentificada || item.dadosSIPAC?.equipeIdentificada || false;
       const updatedItem = {
         ...item,
-        dadosSIPAC: { ...sipacData, ultimaAtualizacao: new Date().toLocaleString() }
+        equipePlanejamento: preservedTeam,
+        equipeIdentificada: preservedTeamFlag,
+        dadosSIPAC: {
+          ...sipacData,
+          equipePlanejamento: sipacData.equipePlanejamento || preservedTeam,
+          equipeIdentificada: sipacData.equipeIdentificada || preservedTeamFlag,
+          ultimaAtualizacao: new Date().toLocaleString()
+        }
       };
 
       if (sipacData.scraping_last_error) {
@@ -961,10 +1099,19 @@ const AnnualHiringPlan: React.FC = () => {
       const response = await fetch(`${API_SERVER_URL}/api/sipac/processo?protocolo=${item.protocoloSIPAC}`);
       if (!response.ok) throw new Error('Falha ao buscar dados no SIPAC');
       const sipacData = await response.json();
+      const preservedTeam = item.equipePlanejamento || item.dadosSIPAC?.equipePlanejamento || [];
+      const preservedTeamFlag = item.equipeIdentificada || item.dadosSIPAC?.equipeIdentificada || false;
 
       const hydrated = {
         ...item,
-        dadosSIPAC: { ...sipacData, ultimaAtualizacao: new Date().toLocaleString() }
+        equipePlanejamento: preservedTeam,
+        equipeIdentificada: preservedTeamFlag,
+        dadosSIPAC: {
+          ...sipacData,
+          equipePlanejamento: sipacData.equipePlanejamento || preservedTeam,
+          equipeIdentificada: sipacData.equipeIdentificada || preservedTeamFlag,
+          ultimaAtualizacao: new Date().toLocaleString()
+        }
       };
 
       if (sipacData.scraping_last_error) {
@@ -2081,19 +2228,33 @@ const AnnualHiringPlan: React.FC = () => {
                                           </span>
                                         </div>
                                       )}
-                                      {doc.tipo.toLowerCase().includes('portaria') && doc.url && (
-                                        <div className="mt-1">
+                                      {doc.url && (
+                                        <div className="mt-1 flex items-center gap-1.5">
                                           <button
                                             onClick={(e) => {
                                               e.stopPropagation();
-                                              extractPdfContent(doc.url);
+                                              handleOpenDocumentOCR(doc);
                                             }}
-                                            className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-200 transition-colors text-[9px] font-bold uppercase tracking-wide group/btn"
+                                            className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition-colors text-[9px] font-bold uppercase tracking-wide"
+                                            title="Abrir OCR"
                                           >
                                             <FileText size={10} />
-                                            Ver Texto
-                                            {isExtracting && <RefreshCw size={8} className="animate-spin ml-1" />}
+                                            OCR
+                                            {ocrLoadingDocKey === getDocKey(doc) && <RefreshCw size={8} className="animate-spin ml-1" />}
                                           </button>
+                                          {doc.tipo.toLowerCase().includes('portaria') && (
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                extractPdfContent(doc.url);
+                                              }}
+                                              className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-200 transition-colors text-[9px] font-bold uppercase tracking-wide group/btn"
+                                            >
+                                              <FileText size={10} />
+                                              Ver Texto
+                                              {isExtracting && <RefreshCw size={8} className="animate-spin ml-1" />}
+                                            </button>
+                                          )}
                                         </div>
                                       )}
                                     </div>
@@ -2782,7 +2943,7 @@ const AnnualHiringPlan: React.FC = () => {
                   <div className="p-2 bg-amber-50 rounded-lg text-amber-600">
                     <FileText size={20} />
                   </div>
-                  <h3 className="text-lg font-black text-slate-800 tracking-tight">Texto da Portaria</h3>
+                  <h3 className="text-lg font-black text-slate-800 tracking-tight">{ocrTitle}</h3>
                 </div>
                 <button
                   onClick={() => setIsTextModalOpen(false)}

@@ -7,6 +7,10 @@ export interface SIPACDocument {
   natureza: string;
   statusVisualizacao: string;
   url?: string;
+  ocrText?: string;
+  ocrStatus?: 'PENDING' | 'PROCESSING' | 'READY' | 'ERROR';
+  ocrUpdatedAt?: string;
+  ocrError?: string;
 }
 
 export type FinancialEventType = 'EMPENHO' | 'LIQUIDACAO' | 'PAGAMENTO' | 'ANULACAO';

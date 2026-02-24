@@ -7,6 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import MiniSearch from 'minisearch';
+import pdfParse from 'pdf-parse';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,6 +47,145 @@ const db_admin = admin.apps.length ? admin.firestore() : null;
 /**
  * Função para sincronizar documentos (Apenas Metadados) no Firestore
  */
+const buildSipacDocumentId = (doc) => `${doc.ordem}-${String(doc.tipo || 'DOCUMENTO').replace(/[\/\\]/g, '-')}`;
+
+const stripHtml = (html) => String(html || '')
+  .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+  .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+  .replace(/<[^>]+>/g, ' ')
+  .replace(/&nbsp;/gi, ' ')
+  .replace(/&amp;/gi, '&')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+async function extractDocumentText(url) {
+  const { buffer, contentType, fileName, fileHash, sizeBytes } = await downloadSIPACDocument(url);
+  const lowerName = String(fileName || '').toLowerCase();
+  const lowerType = String(contentType || '').toLowerCase();
+  const isPdf = lowerType.includes('application/pdf') || lowerName.endsWith('.pdf');
+  const isHtml = lowerType.includes('text/html') || lowerName.endsWith('.html') || lowerName.endsWith('.htm');
+
+  let text = '';
+  let sourceKind = 'unknown';
+
+  if (isPdf) {
+    try {
+      const parsed = await pdfParse(buffer);
+      text = String(parsed?.text || '').replace(/\s+\n/g, '\n').trim();
+      sourceKind = 'pdf';
+    } catch (pdfErr) {
+      console.warn(`[OCR] Falha ao extrair texto PDF: ${pdfErr?.message || pdfErr}`);
+    }
+  } else if (isHtml) {
+    text = stripHtml(buffer.toString('utf8'));
+    sourceKind = 'html';
+  } else {
+    text = stripHtml(buffer.toString('utf8'));
+    sourceKind = 'text';
+  }
+
+  if (!text || text.length < 30) {
+    try {
+      const scraped = await scrapeSIPACDocumentContent(url);
+      const fallbackText = String(scraped || '').replace(/\s+/g, ' ').trim();
+      if (fallbackText.length > text.length) {
+        text = fallbackText;
+        sourceKind = sourceKind === 'pdf' ? 'pdf+html-fallback' : 'html-scrape';
+      }
+    } catch (fallbackErr) {
+      console.warn(`[OCR] Fallback HTML falhou: ${fallbackErr?.message || fallbackErr}`);
+    }
+  }
+
+  return {
+    text,
+    sourceKind,
+    contentType: contentType || null,
+    fileName: fileName || null,
+    fileHash: fileHash || null,
+    sizeBytes: Number(sizeBytes || 0)
+  };
+}
+
+async function syncSingleDocumentOcr(cleanProtocol, doc) {
+  if (!db_admin || !doc?.url) return;
+
+  const docId = buildSipacDocumentId(doc);
+  const docRef = db_admin.collection('contratacoes').doc(cleanProtocol).collection('arquivos').doc(docId);
+
+  try {
+    const existingSnap = await docRef.get();
+    const existing = existingSnap.exists ? existingSnap.data() : {};
+
+    if (existing?.ocrStatus === 'READY' && typeof existing?.ocrText === 'string' && existing.ocrText.length > 30) {
+      return;
+    }
+
+    await docRef.set({
+      ocrStatus: 'PROCESSING',
+      ocrError: null,
+      ocrUpdatedAt: admin.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    const extracted = await extractDocumentText(doc.url);
+    const ocrText = String(extracted.text || '').trim();
+
+    await docRef.set({
+      ocrStatus: ocrText.length > 0 ? 'READY' : 'ERROR',
+      ocrText,
+      ocrChars: ocrText.length,
+      ocrSource: extracted.sourceKind,
+      ocrContentType: extracted.contentType,
+      ocrFileName: extracted.fileName,
+      ocrFileHash: extracted.fileHash,
+      ocrFileSizeBytes: extracted.sizeBytes,
+      ocrError: ocrText.length > 0 ? null : 'Texto nao encontrado no documento.',
+      ocrUpdatedAt: admin.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  } catch (error) {
+    await docRef.set({
+      ocrStatus: 'ERROR',
+      ocrError: error?.message || String(error),
+      ocrUpdatedAt: admin.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  }
+}
+
+async function syncProcessDocumentsOCR(protocol, documentos) {
+  if (!db_admin || !Array.isArray(documentos) || documentos.length === 0) return;
+
+  const cleanProtocol = String(protocol || '').replace(/[^\d]/g, '');
+  const validDocs = documentos.filter(d => !!d?.url);
+
+  for (const doc of validDocs) {
+    await syncSingleDocumentOcr(cleanProtocol, doc);
+  }
+}
+
+async function backfillAllDocumentsOCR(maxDocs = 1000) {
+  if (!db_admin) return { processed: 0 };
+
+  let processed = 0;
+  const contractsSnap = await db_admin.collection('contratacoes').get();
+  for (const contractDoc of contractsSnap.docs) {
+    if (processed >= maxDocs) break;
+    const filesSnap = await contractDoc.ref.collection('arquivos').get();
+    for (const fileDoc of filesSnap.docs) {
+      if (processed >= maxDocs) break;
+      const fileData = fileDoc.data();
+      if (!fileData?.originalUrl) continue;
+
+      await syncSingleDocumentOcr(contractDoc.id, {
+        url: fileData.originalUrl,
+        ordem: fileData?.sipacMetadata?.ordem || '0',
+        tipo: fileData?.sipacMetadata?.tipo || fileDoc.id
+      });
+      processed += 1;
+    }
+  }
+  return { processed };
+}
+
 async function syncProcessDocuments(protocol, processId, documentos) {
   if (!db_admin) {
     console.warn(`[DATA SYNC] Firebase not initialized. Skipping document sync for ${protocol}`);
@@ -60,8 +200,7 @@ async function syncProcessDocuments(protocol, processId, documentos) {
     if (!doc.url) continue;
 
     try {
-      // Create a unique ID for the document based on order and type
-      const docId = `${doc.ordem}-${doc.tipo.replace(/\//g, '-')}`;
+      const docId = buildSipacDocumentId(doc);
 
       await db_admin.collection('contratacoes').doc(cleanProtocol).collection('arquivos').doc(docId).set({
         fileName: `Documento ${doc.ordem} - ${doc.tipo}`,
@@ -75,6 +214,7 @@ async function syncProcessDocuments(protocol, processId, documentos) {
         syncedAt: admin.firestore.FieldValue.serverTimestamp(),
         lastSeen: admin.firestore.FieldValue.serverTimestamp(),
         status: "AVAILABLE", // Mark as available for client-side fetch
+        ocrStatus: "PENDING",
       }, { merge: true });
 
       console.log(`[DATA SYNC] ✅ Metadados salvos: #${doc.ordem} - ${doc.tipo}`);
@@ -341,6 +481,84 @@ app.get('/api/sipac/documento/conteudo', async (req, res) => {
   }
 });
 
+// Endpoint para OCR de documento (retorna do Firestore ou gera sob demanda)
+app.get('/api/sipac/documento/ocr', async (req, res) => {
+  const { url, protocolo, ordem, tipo } = req.query;
+  if (!url) return res.status(400).json({ error: 'URL e obrigatoria' });
+  if (!db_admin) return res.status(500).json({ error: 'Firebase Admin nao inicializado' });
+
+  const cleanProtocol = String(protocolo || '').replace(/[^\d]/g, '');
+  const safeDoc = {
+    url: String(url),
+    ordem: String(ordem || '0'),
+    tipo: String(tipo || 'DOCUMENTO')
+  };
+  const docId = buildSipacDocumentId(safeDoc);
+  const docRef = cleanProtocol
+    ? db_admin.collection('contratacoes').doc(cleanProtocol).collection('arquivos').doc(docId)
+    : null;
+
+  try {
+    if (docRef) {
+      const snap = await docRef.get();
+      const existing = snap.exists ? snap.data() : null;
+      if (existing?.ocrStatus === 'READY' && typeof existing?.ocrText === 'string') {
+        return res.json({
+          text: existing.ocrText,
+          status: existing.ocrStatus,
+          chars: Number(existing.ocrChars || existing.ocrText.length || 0),
+          source: existing.ocrSource || null,
+          fromCache: true
+        });
+      }
+    }
+
+    if (docRef) {
+      await syncSingleDocumentOcr(cleanProtocol, safeDoc);
+      const refreshed = await docRef.get();
+      const data = refreshed.exists ? refreshed.data() : null;
+      return res.json({
+        text: data?.ocrText || '',
+        status: data?.ocrStatus || 'ERROR',
+        chars: Number(data?.ocrChars || 0),
+        source: data?.ocrSource || null,
+        fromCache: false,
+        error: data?.ocrError || null
+      });
+    }
+
+    // Fallback sem protocolo: extrai e retorna, sem persistir em coleção de processo.
+    const extracted = await extractDocumentText(String(url));
+    return res.json({
+      text: extracted.text || '',
+      status: extracted.text ? 'READY' : 'ERROR',
+      chars: Number((extracted.text || '').length),
+      source: extracted.sourceKind,
+      fromCache: false
+    });
+  } catch (error) {
+    console.error('[OCR ENDPOINT ERROR]', error);
+    return res.status(500).json({ error: error?.message || String(error) });
+  }
+});
+
+// Endpoint para backfill global de OCR nos documentos já sincronizados.
+app.post('/api/sipac/ocr/reindex', async (req, res) => {
+  const maxDocs = Number(req.body?.maxDocs || req.query?.maxDocs || 1000);
+  if (!db_admin) return res.status(500).json({ error: 'Firebase Admin nao inicializado' });
+
+  backfillAllDocumentsOCR(maxDocs).then((result) => {
+    console.log(`[OCR BACKFILL] Finalizado. Documentos processados: ${result.processed}`);
+  }).catch((error) => {
+    console.error('[OCR BACKFILL] Falha:', error);
+  });
+
+  return res.json({
+    started: true,
+    maxDocs
+  });
+});
+
 
 const CNPJ_IFES_BSF = '10838653000106';
 const PUBLIC_DATA_DIR = fs.existsSync(path.join(__dirname, 'data', 'public_data'))
@@ -357,6 +575,11 @@ function readJsonFileSafely(filePath, context) {
     console.error(`[JSON READ ERROR] ${context}: ${filePath} - ${error.message}`);
     return null;
   }
+
+  // OCR completo em background para todos os documentos do processo.
+  syncProcessDocumentsOCR(protocol, documentos).catch((err) => {
+    console.error(`[OCR SYNC ERROR] ${protocol}:`, err?.message || err);
+  });
 }
 
 /**
