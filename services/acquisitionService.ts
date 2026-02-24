@@ -13,6 +13,7 @@ import {
     Timestamp
 } from 'firebase/firestore';
 import { ProcessoAquisicao, SIPACProcess, ContractItem } from '../types';
+import { API_SERVER_URL } from '../constants';
 
 /**
  * Calcula o Health Score (0-100) baseado no tempo sem movimentação.
@@ -50,6 +51,35 @@ export const deriveInternalPhase = (unidadeAtual: string): string => {
     if (unit.includes('FINANCE') || unit.includes('CONTAB')) return 'Execução Orçamentária';
 
     return unidadeAtual; // Fallback para o nome original
+};
+
+const enqueueLinkedProcessDocumentsOCR = async (protocolo: string, sipacData?: SIPACProcess | null) => {
+    const documentos = Array.isArray(sipacData?.documentos) ? sipacData!.documentos : [];
+    if (!protocolo || documentos.length === 0) return;
+
+    try {
+        const response = await fetch(`${API_SERVER_URL}/api/sipac/ocr/enqueue-linked`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                protocolo,
+                documentos: documentos.map((doc) => ({
+                    ordem: String(doc?.ordem || ''),
+                    tipo: String(doc?.tipo || 'DOCUMENTO'),
+                    data: String(doc?.data || ''),
+                    unidadeOrigem: String(doc?.unidadeOrigem || ''),
+                    url: doc?.url ? String(doc.url) : null
+                }))
+            })
+        });
+
+        if (!response.ok) {
+            const rawError = await response.text();
+            console.warn('[OCR LINK] Falha ao enfileirar OCR do processo vinculado:', response.status, rawError || '');
+        }
+    } catch (error) {
+        console.warn('[OCR LINK] Nao foi possivel enfileirar OCR do processo vinculado:', error);
+    }
 };
 
 /**
@@ -131,6 +161,7 @@ export const linkItemsToProcess = async (protocolo: string, itemIds: (string | n
     }
 
     await batch.commit();
+    await enqueueLinkedProcessDocumentsOCR(protocolo, sipacData);
 }
 
 

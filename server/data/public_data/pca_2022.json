@@ -2,7 +2,6 @@
   "data": [
     {
       "pdmCodigo": "5522",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -27,14 +26,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "5522",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -59,14 +58,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "14825",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -91,14 +90,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "6443",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -123,14 +122,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "19166",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -155,14 +154,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "10293",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -187,14 +186,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "15766",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -219,14 +218,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "15766",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -251,14 +250,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "6661",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -283,14 +282,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8435",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -315,14 +314,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "11852",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -347,14 +346,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "907",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -379,14 +378,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "5522",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -411,14 +410,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "15041",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -443,14 +442,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "18261",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -475,14 +474,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "2875",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -507,14 +506,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-03",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "9597",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -539,14 +538,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-03",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "14302",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -571,14 +570,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-03",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "15545",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -603,14 +602,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-03",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "13687",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -635,14 +634,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-03",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "240",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -667,14 +666,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-03",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8313",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -699,14 +698,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-03",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "7472",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -731,14 +730,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-03",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "10710",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -763,14 +762,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-03",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "14249",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -795,14 +794,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-03",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8766",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -827,14 +826,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-03",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "12582",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -859,14 +858,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-03",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "14785",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -891,14 +890,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-03",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "10710",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -923,14 +922,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-03",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "9732",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -955,14 +954,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-03",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "216",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -987,14 +986,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-03",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "14755",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1019,14 +1018,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-03",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "14960",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1051,14 +1050,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-03",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "915",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1083,14 +1082,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-03",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "10001",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1115,14 +1114,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-03",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1147,14 +1146,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-03",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": "16327",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1179,14 +1178,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-03",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "7225",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1211,14 +1210,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-03",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1243,14 +1242,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1275,14 +1274,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1307,14 +1306,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1339,14 +1338,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1371,14 +1370,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1403,14 +1402,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1435,14 +1434,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1467,14 +1466,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1499,14 +1498,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1531,14 +1530,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1563,14 +1562,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1595,14 +1594,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1627,14 +1626,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1659,14 +1658,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1691,14 +1690,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1723,14 +1722,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1755,14 +1754,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1787,14 +1786,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1819,14 +1818,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1851,14 +1850,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1883,14 +1882,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": "18073",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1915,14 +1914,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1947,14 +1946,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -1979,14 +1978,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 5,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2011,14 +2010,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 2,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2043,14 +2042,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 2,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2075,14 +2074,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 2,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2107,14 +2106,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 2,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2139,14 +2138,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 2,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2171,14 +2170,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 2,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2203,14 +2202,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 2,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2235,14 +2234,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 2,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2267,14 +2266,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 2,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": "21",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2299,14 +2298,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1373",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2331,14 +2330,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "2122",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2363,14 +2362,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "2122",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2395,14 +2394,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "14969",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2427,14 +2426,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "15291",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2459,14 +2458,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8410",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2491,14 +2490,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2523,14 +2522,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2555,14 +2554,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8410",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2587,14 +2586,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8411",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2619,14 +2618,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8414",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2651,14 +2650,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8414",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2683,14 +2682,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8410",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2715,14 +2714,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8410",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2747,14 +2746,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8414",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2779,14 +2778,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8414",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2811,14 +2810,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8416",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2843,14 +2842,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8416",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2875,14 +2874,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8414",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2907,14 +2906,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8411",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2939,14 +2938,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8411",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -2971,14 +2970,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -3003,14 +3002,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -3035,14 +3034,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -3067,14 +3066,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -3099,14 +3098,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8411",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -3131,14 +3130,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8411",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -3163,14 +3162,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8414",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -3195,14 +3194,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8414",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:42",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:42",
@@ -3227,14 +3226,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8414",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -3259,14 +3258,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8416",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -3291,14 +3290,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8416",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -3323,14 +3322,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -3355,14 +3354,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "17384",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -3387,14 +3386,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "17931",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -3419,14 +3418,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1407",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -3451,14 +3450,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8416",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -3483,14 +3482,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -3515,14 +3514,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8414",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -3547,14 +3546,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "10698",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -3579,14 +3578,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8414",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -3611,14 +3610,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8414",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -3643,14 +3642,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8410",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -3675,14 +3674,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8411",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -3707,14 +3706,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8411",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -3739,14 +3738,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -3771,14 +3770,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -3803,14 +3802,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -3835,14 +3834,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -3867,14 +3866,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8410",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -3899,14 +3898,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8410",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -3931,14 +3930,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "10576",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -3963,14 +3962,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "9921",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -3995,14 +3994,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1529",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4027,14 +4026,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4059,14 +4058,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4091,14 +4090,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4123,14 +4122,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1045",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4155,14 +4154,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4187,14 +4186,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "4584",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4219,14 +4218,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4251,14 +4250,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8411",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4283,14 +4282,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8411",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4315,14 +4314,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "10576",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4347,14 +4346,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "14072",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4379,14 +4378,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "15290",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4411,14 +4410,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8914",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4443,14 +4442,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-06-30",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "15666",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4475,14 +4474,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-06-30",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "3776",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4507,14 +4506,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-06-30",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "4009",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4539,14 +4538,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-05-30",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "13115",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4571,14 +4570,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-05-30",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4603,14 +4602,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 2,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4635,14 +4634,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 2,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4667,14 +4666,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 2,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4699,14 +4698,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 2,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4731,14 +4730,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 2,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4763,14 +4762,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 2,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4795,14 +4794,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 2,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4827,14 +4826,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 2,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4859,14 +4858,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 2,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4891,14 +4890,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 2,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4923,14 +4922,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 2,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4955,14 +4954,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 2,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 2,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -4987,14 +4986,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 2,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 2
     },
     {
       "pdmCodigo": "1218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5019,14 +5018,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5051,14 +5050,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "635",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5083,14 +5082,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "11753",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5115,14 +5114,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "9999",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5147,14 +5146,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8533",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5179,14 +5178,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "8556",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5211,14 +5210,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5243,14 +5242,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5275,14 +5274,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5307,14 +5306,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5339,14 +5338,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5371,14 +5370,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5403,14 +5402,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "1218",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5435,14 +5434,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": "14739",
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-05-20T00:54:46",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5467,14 +5466,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-01-01",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-11-03T19:48:10",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5499,14 +5498,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-12-16",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-11-03T19:48:10",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5531,14 +5530,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-12-16",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-11-03T19:48:10",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5563,14 +5562,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-12-16",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-11-03T19:48:10",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5595,14 +5594,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-12-16",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-11-03T19:48:10",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5627,14 +5626,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-12-16",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-11-03T19:48:10",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5659,14 +5658,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-12-30",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-11-03T19:48:10",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5691,14 +5690,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-12-30",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-11-03T19:48:10",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5723,14 +5722,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-12-30",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-11-03T19:48:10",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5755,14 +5754,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-12-30",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-11-03T19:48:10",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5787,14 +5786,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-12-30",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-11-03T19:48:10",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5819,14 +5818,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-12-30",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-11-03T19:48:10",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5851,14 +5850,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-12-30",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-11-03T19:48:10",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5883,14 +5882,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-12-30",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-11-03T19:48:10",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5915,14 +5914,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-12-30",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-11-03T19:48:10",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5947,14 +5946,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-12-30",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-11-03T19:48:10",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -5979,14 +5978,14 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-12-30",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     },
     {
       "pdmCodigo": null,
-      "classificacaoCatalogoId": 1,
       "dataAtualizacao": "2023-11-03T19:48:10",
       "cnpj": "10838653000106",
       "dataInclusao": "2023-05-20T00:54:46",
@@ -6011,11 +6010,12 @@
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2022-12-30",
       "categoriaItemPcaid": 1,
-      "nomeCatalogo": "Catálogo do Compras.gov.br",
       "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "classificacaoCatalogoId": 1
     }
   ],
-  "updatedAt": "2026-02-24T20:46:01.431Z"
+  "updatedAt": "2026-02-24T21:10:25.890Z"
 }

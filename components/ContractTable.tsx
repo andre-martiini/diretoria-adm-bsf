@@ -90,6 +90,10 @@ const ContractTable: React.FC<ContractTableProps> = ({
             data.map((item) => {
               const computedStatus = item.computedStatus || getProcessStatus(item);
               const statusColor = getStatusColor(computedStatus);
+              const processObjectTitle =
+                item.dadosSIPAC?.assuntoDetalhado ||
+                item.dadosSIPAC?.assuntoDescricao ||
+                item.titulo;
 
               let isSelected = false;
               if (item.isGroup && item.childItems) {
@@ -194,8 +198,8 @@ const ContractTable: React.FC<ContractTableProps> = ({
 
                       {/* Objeto */}
                       <td className="p-6">
-                        <span className="text-sm font-bold text-slate-700 leading-tight block max-w-[400px]">
-                          {item.titulo}
+                        <span className="text-sm font-bold text-slate-700 leading-tight block max-w-[400px]" title={processObjectTitle}>
+                          {processObjectTitle}
                         </span>
                       </td>
 

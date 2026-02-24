@@ -12,7 +12,7 @@ import { PDFParse } from 'pdf-parse';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Carrega variáveis de ambiente
+// Carrega variÃ¡veis de ambiente
 dotenv.config({ path: path.join(__dirname, 'deploy.env') });
 dotenv.config({ path: path.join(__dirname, '.env') });
 dotenv.config({ path: path.join(__dirname, '..', '.env.local') });
@@ -45,7 +45,7 @@ const db_admin = admin.apps.length ? admin.firestore() : null;
 // Removed storage bucket reference as we are not using it anymore
 
 /**
- * Função para sincronizar documentos (Apenas Metadados) no Firestore
+ * FunÃ§Ã£o para sincronizar documentos (Apenas Metadados) no Firestore
  */
 const buildSipacDocumentId = (doc) => `${doc.ordem}-${String(doc.tipo || 'DOCUMENTO').replace(/[\/\\]/g, '-')}`;
 
@@ -219,10 +219,10 @@ async function syncProcessDocuments(protocol, processId, documentos) {
         ocrStatus: "PENDING",
       }, { merge: true });
 
-      console.log(`[DATA SYNC] ✅ Metadados salvos: #${doc.ordem} - ${doc.tipo}`);
+      console.log(`[DATA SYNC] âœ… Metadados salvos: #${doc.ordem} - ${doc.tipo}`);
 
     } catch (err) {
-      console.error(`[DATA SYNC] ❌ Erro ao salvar metadados do documento ${doc.ordem}:`, err.message);
+      console.error(`[DATA SYNC] âŒ Erro ao salvar metadados do documento ${doc.ordem}:`, err.message);
     }
   }
 
@@ -232,7 +232,7 @@ async function syncProcessDocuments(protocol, processId, documentos) {
   });
 }
 
-// Prevenção de crash global
+// PrevenÃ§Ã£o de crash global
 process.on('uncaughtException', (err) => {
   console.error('[FATAL ERROR] Uncaught Exception:', err);
 });
@@ -317,9 +317,9 @@ app.get('/api/pncp/pca/:cnpj/:ano', async (req, res) => {
   }
 });
 
-// --- NOVOS ENDPOINTS PROXY PARA CONSULTA PÚBLICA (Resolvendo CORS/User-Agent) ---
+// --- NOVOS ENDPOINTS PROXY PARA CONSULTA PÃšBLICA (Resolvendo CORS/User-Agent) ---
 
-// Proxy para listar compras (Contratações)
+// Proxy para listar compras (ContrataÃ§Ãµes)
 app.get('/api/pncp/consulta/compras', async (req, res) => {
   const { ano, pagina = 1, tamanhoPagina = 100 } = req.query;
   const CNPJ = '10838653000106'; // IFES BSF
@@ -360,31 +360,31 @@ app.get('/api/pncp/consulta/compras', async (req, res) => {
   });
 });
 
-// Proxy para itens de uma compra específica
+// Proxy para itens de uma compra especÃ­fica
 app.get('/api/pncp/consulta/itens', async (req, res) => {
   const { ano, sequencial, pagina = 1, tamanhoPagina = 100 } = req.query;
   const CNPJ = '10838653000106'; // IFES BSF
 
-  if (!ano || !sequencial) return res.status(400).json({ error: 'Ano e Sequencial são obrigatórios' });
+  if (!ano || !sequencial) return res.status(400).json({ error: 'Ano e Sequencial sÃ£o obrigatÃ³rios' });
 
   // Endpoint de itens na API de Consulta:
   // https://pncp.gov.br/api/consulta/v1/orgaos/{cnpj}/compras/{ano}/{sequencial}/itens
-  // Se este endpoint também der 404, significa que a estrutura de itens também é diferente.
-  // Testaremos este primeiro, pois a documentação sugere paridade em sub-recursos ou uso de 'contratacoes/{id}/itens'.
-  // Mas como não temos o ID interno da contratação facilmente, tentaremos o caminho hierárquico se estiver disponível.
-  // SE FALHAR: Vamos tentar buscar pelo ID da contratação que virá na busca anterior.
-  // Por enquanto, mantemos a tentativa hierárquica na consulta, se existir. 
-  // Na verdade, a API de consulta geralmente usa IDs. Vamos assumir que a rota hierárquica padrão
-  // de orgaos/cnpj/compras/ano/seq/itens AINDA É VÁLIDA na consulta ou teremos que mudar a estratégia.
+  // Se este endpoint tambÃ©m der 404, significa que a estrutura de itens tambÃ©m Ã© diferente.
+  // Testaremos este primeiro, pois a documentaÃ§Ã£o sugere paridade em sub-recursos ou uso de 'contratacoes/{id}/itens'.
+  // Mas como nÃ£o temos o ID interno da contrataÃ§Ã£o facilmente, tentaremos o caminho hierÃ¡rquico se estiver disponÃ­vel.
+  // SE FALHAR: Vamos tentar buscar pelo ID da contrataÃ§Ã£o que virÃ¡ na busca anterior.
+  // Por enquanto, mantemos a tentativa hierÃ¡rquica na consulta, se existir. 
+  // Na verdade, a API de consulta geralmente usa IDs. Vamos assumir que a rota hierÃ¡rquica padrÃ£o
+  // de orgaos/cnpj/compras/ano/seq/itens AINDA Ã‰ VÃLIDA na consulta ou teremos que mudar a estratÃ©gia.
   //
-  // CORREÇÃO: A URL pública de itens costuma ser:
-  // https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao/{ano}/{sequencial}/itens?cnpjOrgao=... (Hipótese)
+  // CORREÃ‡ÃƒO: A URL pÃºblica de itens costuma ser:
+  // https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao/{ano}/{sequencial}/itens?cnpjOrgao=... (HipÃ³tese)
   // OU
   // https://pncp.gov.br/api/consulta/v1/orgaos/{cnpj}/compras/{ano}/{sequencial}/itens (que deu 404 antes?)
-  // O erro 404 anterior foi em .../compras (lista). Talvez o item específico funcione?
+  // O erro 404 anterior foi em .../compras (lista). Talvez o item especÃ­fico funcione?
   // Vamos tentar a rota `contratacoes` que parece ser a principal da v1 consulta.
-  // Mas vamos manter a URL antiga neste step e observar o log, pois não tenho certeza absoluta da URL de itens.
-  // Porém, para garantir, vamos usar a URL que o Swagger geralmente aponta para GET /itens.
+  // Mas vamos manter a URL antiga neste step e observar o log, pois nÃ£o tenho certeza absoluta da URL de itens.
+  // PorÃ©m, para garantir, vamos usar a URL que o Swagger geralmente aponta para GET /itens.
 
   const url = `https://pncp.gov.br/api/consulta/v1/orgaos/${CNPJ}/compras/${ano}/${sequencial}/itens?pagina=${pagina}&tamanhoPagina=${tamanhoPagina}`;
 
@@ -401,24 +401,24 @@ app.get('/api/pncp/consulta/itens', async (req, res) => {
   }
 });
 
-// Endpoint para Análise Automática de DFD (Auto Linker)
+// Endpoint para AnÃ¡lise AutomÃ¡tica de DFD (Auto Linker)
 app.post('/api/sipac/analyze-dfd', async (req, res) => {
   try {
     const processId = req.body?.processId;
-    if (!processId) return res.status(400).json({ error: 'ID do processo é obrigatório' });
+    if (!processId) return res.status(400).json({ error: 'ID do processo Ã© obrigatÃ³rio' });
 
     const result = await analyzeProcessDFD(processId);
     res.json(result);
   } catch (error) {
     console.error('[DFD ANALYZE ERROR]', error);
-    res.status(500).json({ error: error?.message || 'Falha interna na análise do DFD' });
+    res.status(500).json({ error: error?.message || 'Falha interna na anÃ¡lise do DFD' });
   }
 });
 
 // Endpoint para SIPAC Scraping
 app.get('/api/sipac/processo', async (req, res) => {
   const protocolo = req.query.protocolo;
-  if (!protocolo) return res.status(400).json({ error: 'Protocolo é obrigatório' });
+  if (!protocolo) return res.status(400).json({ error: 'Protocolo Ã© obrigatÃ³rio' });
 
   let formattedProtocol = protocolo;
   if (protocolo.replace(/[^\d]/g, '').length === 17) {
@@ -446,7 +446,7 @@ app.get('/api/sipac/processo', async (req, res) => {
 // PROXY Endpoint para PDF
 app.get('/api/proxy/pdf', async (req, res) => {
   const { url } = req.query;
-  if (!url) return res.status(400).json({ error: 'URL é obrigatória' });
+  if (!url) return res.status(400).json({ error: 'URL Ã© obrigatÃ³ria' });
 
   try {
     const { buffer, contentType, fileName } = await downloadSIPACDocument(url);
@@ -460,7 +460,7 @@ app.get('/api/proxy/pdf', async (req, res) => {
     const message = error?.message || 'Erro desconhecido';
     if (message.includes('Could not find Chrome')) {
       return res.status(503).json({
-        error: 'Navegador para scraping não encontrado no servidor',
+        error: 'Navegador para scraping nÃ£o encontrado no servidor',
         details: 'Instale Chrome/Edge no sistema ou execute: npm --prefix server run postinstall'
       });
     }
@@ -468,17 +468,17 @@ app.get('/api/proxy/pdf', async (req, res) => {
   }
 });
 
-// Endpoint para conteúdo de documento (HTML/Texto)
+// Endpoint para conteÃºdo de documento (HTML/Texto)
 app.get('/api/sipac/documento/conteudo', async (req, res) => {
   const { url } = req.query;
-  if (!url) return res.status(400).json({ error: 'URL é obrigatória' });
+  if (!url) return res.status(400).json({ error: 'URL Ã© obrigatÃ³ria' });
 
   console.log(`[CONTENT ENPOINT] Request for: ${url.substring(0, 100)}...`);
   try {
     const text = await scrapeSIPACDocumentContent(url);
     if (!text) {
       console.warn(`[CONTENT ENPOINT] Scraper returned empty for: ${url.substring(0, 50)}`);
-      return res.json({ text: '', error: 'Conteúdo vazio ou bloqueado' });
+      return res.json({ text: '', error: 'ConteÃºdo vazio ou bloqueado' });
     }
     console.log(`[CONTENT ENPOINT] Extracted ${text.length} chars`);
     res.json({ text });
@@ -492,7 +492,6 @@ app.get('/api/sipac/documento/conteudo', async (req, res) => {
 app.get('/api/sipac/documento/ocr', async (req, res) => {
   const { url, protocolo, ordem, tipo } = req.query;
   if (!url) return res.status(400).json({ error: 'URL e obrigatoria' });
-  if (!db_admin) return res.status(500).json({ error: 'Firebase Admin nao inicializado' });
 
   const cleanProtocol = String(protocolo || '').replace(/[^\d]/g, '');
   const safeDoc = {
@@ -501,55 +500,134 @@ app.get('/api/sipac/documento/ocr', async (req, res) => {
     tipo: String(tipo || 'DOCUMENTO')
   };
   const docId = buildSipacDocumentId(safeDoc);
-  const docRef = cleanProtocol
+  const docRef = db_admin && cleanProtocol
     ? db_admin.collection('contratacoes').doc(cleanProtocol).collection('arquivos').doc(docId)
     : null;
 
   try {
+    let firestoreWarning = null;
+
     if (docRef) {
-      const snap = await docRef.get();
-      const existing = snap.exists ? snap.data() : null;
-      if (existing?.ocrStatus === 'READY' && typeof existing?.ocrText === 'string') {
-        return res.json({
-          text: existing.ocrText,
-          status: existing.ocrStatus,
-          chars: Number(existing.ocrChars || existing.ocrText.length || 0),
-          source: existing.ocrSource || null,
-          fromCache: true
-        });
+      try {
+        const snap = await docRef.get();
+        const existing = snap.exists ? snap.data() : null;
+        if (existing?.ocrStatus === 'READY' && typeof existing?.ocrText === 'string') {
+          return res.json({
+            text: existing.ocrText,
+            status: existing.ocrStatus,
+            chars: Number(existing.ocrChars || existing.ocrText.length || 0),
+            source: existing.ocrSource || null,
+            fromCache: true
+          });
+        }
+      } catch (firestoreReadErr) {
+        firestoreWarning = firestoreReadErr?.message || String(firestoreReadErr);
+        console.warn('[OCR ENDPOINT] Firestore indisponivel para leitura de cache:', firestoreWarning);
       }
     }
 
+    const extracted = await extractDocumentText(String(url));
+    const text = String(extracted.text || '').trim();
+    const payload = {
+      text,
+      status: text ? 'READY' : 'ERROR',
+      chars: Number(text.length),
+      source: extracted.sourceKind,
+      fromCache: false,
+      warning: firestoreWarning
+    };
+
     if (docRef) {
-      await syncSingleDocumentOcr(cleanProtocol, safeDoc);
-      const refreshed = await docRef.get();
-      const data = refreshed.exists ? refreshed.data() : null;
-      return res.json({
-        text: data?.ocrText || '',
-        status: data?.ocrStatus || 'ERROR',
-        chars: Number(data?.ocrChars || 0),
-        source: data?.ocrSource || null,
-        fromCache: false,
-        error: data?.ocrError || null
-      });
+      try {
+        await docRef.set({
+          ocrStatus: text ? 'READY' : 'ERROR',
+          ocrText: text,
+          ocrChars: text.length,
+          ocrSource: extracted.sourceKind,
+          ocrContentType: extracted.contentType,
+          ocrFileName: extracted.fileName,
+          ocrFileHash: extracted.fileHash,
+          ocrFileSizeBytes: extracted.sizeBytes,
+          ocrError: text ? null : 'Texto nao encontrado no documento.',
+          ocrUpdatedAt: admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      } catch (firestoreWriteErr) {
+        payload.warning = firestoreWriteErr?.message || String(firestoreWriteErr);
+        console.warn('[OCR ENDPOINT] Firestore indisponivel para escrita de OCR:', payload.warning);
+      }
     }
 
-    // Fallback sem protocolo: extrai e retorna, sem persistir em coleção de processo.
-    const extracted = await extractDocumentText(String(url));
-    return res.json({
-      text: extracted.text || '',
-      status: extracted.text ? 'READY' : 'ERROR',
-      chars: Number((extracted.text || '').length),
-      source: extracted.sourceKind,
-      fromCache: false
-    });
+    return res.json(payload);
   } catch (error) {
     console.error('[OCR ENDPOINT ERROR]', error);
     return res.status(500).json({ error: error?.message || String(error) });
   }
 });
 
-// Endpoint para backfill global de OCR nos documentos já sincronizados.
+// Endpoint para backfill global de OCR nos documentos jÃ¡ sincronizados.
+app.post('/api/sipac/ocr/enqueue-linked', async (req, res) => {
+  const protocolo = String(req.body?.protocolo || '').trim();
+  const documentosRaw = Array.isArray(req.body?.documentos) ? req.body.documentos : [];
+
+  if (!db_admin) {
+    return res.status(500).json({ error: 'Firebase Admin nao inicializado para persistencia de OCR.' });
+  }
+
+  if (!protocolo) {
+    return res.status(400).json({ error: 'protocolo e obrigatorio' });
+  }
+
+  if (documentosRaw.length === 0) {
+    return res.json({
+      started: false,
+      message: 'Nenhum documento enviado para OCR.',
+      totalDocumentos: 0
+    });
+  }
+
+  const protocolDigits = protocolo.replace(/[^\d]/g, '');
+  const formattedProtocol = protocolDigits.length === 17
+    ? `${protocolDigits.slice(0, 5)}.${protocolDigits.slice(5, 11)}/${protocolDigits.slice(11, 15)}-${protocolDigits.slice(15)}`
+    : protocolo;
+  const processId = formattedProtocol.replace(/[^\d]/g, '');
+
+  const documentos = documentosRaw
+    .map((doc) => ({
+      ordem: String(doc?.ordem || ''),
+      tipo: String(doc?.tipo || 'DOCUMENTO'),
+      data: String(doc?.data || ''),
+      unidadeOrigem: String(doc?.unidadeOrigem || ''),
+      url: doc?.url ? String(doc.url) : ''
+    }))
+    .filter((doc) => !!doc.url);
+
+  const uniqueDocumentosMap = new Map();
+  for (const doc of documentos) {
+    uniqueDocumentosMap.set(`${doc.ordem}::${doc.tipo}::${doc.url}`, doc);
+  }
+  const uniqueDocumentos = Array.from(uniqueDocumentosMap.values());
+
+  if (uniqueDocumentos.length === 0) {
+    return res.json({
+      started: false,
+      message: 'Documentos sem URL valida.',
+      totalDocumentos: 0
+    });
+  }
+
+  syncProcessDocuments(formattedProtocol, processId, uniqueDocumentos).then(() => {
+    console.log(`[OCR ENQUEUE] Sincronizacao concluida para ${formattedProtocol} (${uniqueDocumentos.length} docs).`);
+  }).catch((error) => {
+    console.error(`[OCR ENQUEUE] Falha na sincronizacao para ${formattedProtocol}:`, error?.message || error);
+  });
+
+  return res.status(202).json({
+    started: true,
+    protocolo: formattedProtocol,
+    totalDocumentos: uniqueDocumentos.length
+  });
+});
+
 app.post('/api/sipac/ocr/reindex', async (req, res) => {
   const maxDocs = Number(req.body?.maxDocs || req.query?.maxDocs || 1000);
   if (!db_admin) return res.status(500).json({ error: 'Firebase Admin nao inicializado' });
@@ -585,26 +663,26 @@ function readJsonFileSafely(filePath, context) {
 }
 
 /**
- * Sincroniza dados de contratações (compras) do PNCP para os anos especificados
- * Salva em arquivos JSON no diretório dados_abertos_compras
+ * Sincroniza dados de contrataÃ§Ãµes (compras) do PNCP para os anos especificados
+ * Salva em arquivos JSON no diretÃ³rio dados_abertos_compras
  */
 async function syncProcurementData() {
   const YEARS = ['2022', '2023', '2024', '2025', '2026'];
-  console.log(`[${new Date().toISOString()}] 🛒 Iniciando Sincronização de Contratações PNCP...`);
+  console.log(`[${new Date().toISOString()}] ðŸ›’ Iniciando SincronizaÃ§Ã£o de ContrataÃ§Ãµes PNCP...`);
 
-  // Garante que o diretório existe
+  // Garante que o diretÃ³rio existe
   if (!fs.existsSync(PROCUREMENT_DATA_DIR)) {
     fs.mkdirSync(PROCUREMENT_DATA_DIR, { recursive: true });
   }
 
   for (const year of YEARS) {
     try {
-      console.log(`[PROCUREMENT SYNC] Buscando contratações de ${year}...`);
+      console.log(`[PROCUREMENT SYNC] Buscando contrataÃ§Ãµes de ${year}...`);
 
       let purchases = [];
       let fetchSuccess = false;
 
-      // Tenta múltiplos endpoints
+      // Tenta mÃºltiplos endpoints
       const endpoints = [
         `https://pncp.gov.br/api/consulta/v1/orgaos/${CNPJ_IFES_BSF}/compras?ano=${year}&pagina=1&tamanhoPagina=500`,
         `https://pncp.gov.br/api/pncp/v1/orgaos/${CNPJ_IFES_BSF}/compras?ano=${year}&pagina=1&tamanhoPagina=500`
@@ -623,7 +701,7 @@ async function syncProcurementData() {
           purchases = response.data.data || response.data || [];
           if (purchases.length > 0) {
             fetchSuccess = true;
-            console.log(`[PROCUREMENT SYNC] ✅ Endpoint funcionou: ${url.split('?')[0]}`);
+            console.log(`[PROCUREMENT SYNC] âœ… Endpoint funcionou: ${url.split('?')[0]}`);
             break;
           }
         } catch (endpointError) {
@@ -634,7 +712,7 @@ async function syncProcurementData() {
 
       if (purchases.length > 0) {
         // Para cada compra, buscar os itens detalhados
-        console.log(`[PROCUREMENT SYNC] Encontradas ${purchases.length} contratações em ${year}. Buscando itens...`);
+        console.log(`[PROCUREMENT SYNC] Encontradas ${purchases.length} contrataÃ§Ãµes em ${year}. Buscando itens...`);
 
         for (const purchase of purchases) {
           try {
@@ -650,10 +728,10 @@ async function syncProcurementData() {
 
             purchase.itens = itemsResponse.data.data || [];
 
-            // Pequeno delay para não sobrecarregar a API
+            // Pequeno delay para nÃ£o sobrecarregar a API
             await new Promise(resolve => setTimeout(resolve, 100));
           } catch (itemError) {
-            console.warn(`[PROCUREMENT SYNC] ⚠️ Erro ao buscar itens da compra ${purchase.numeroCompra}:`, itemError.message);
+            console.warn(`[PROCUREMENT SYNC] âš ï¸ Erro ao buscar itens da compra ${purchase.numeroCompra}:`, itemError.message);
             purchase.itens = [];
           }
         }
@@ -671,33 +749,33 @@ async function syncProcurementData() {
         };
 
         fs.writeFileSync(filePath, JSON.stringify(fileData, null, 2));
-        console.log(`[PROCUREMENT SYNC] ✅ Salvo: contratacoes_${year}.json (${purchases.length} contratações)`);
+        console.log(`[PROCUREMENT SYNC] âœ… Salvo: contratacoes_${year}.json (${purchases.length} contrataÃ§Ãµes)`);
       } else {
-        // Verifica se já existe um arquivo local
+        // Verifica se jÃ¡ existe um arquivo local
         const filePath = path.join(PROCUREMENT_DATA_DIR, `contratacoes_${year}.json`);
         if (fs.existsSync(filePath)) {
-          console.log(`[PROCUREMENT SYNC] ℹ️ Usando dados existentes para ${year} (API não retornou dados)`);
+          console.log(`[PROCUREMENT SYNC] â„¹ï¸ Usando dados existentes para ${year} (API nÃ£o retornou dados)`);
         } else {
-          console.log(`[PROCUREMENT SYNC] ℹ️ Nenhuma contratação encontrada para ${year}`);
+          console.log(`[PROCUREMENT SYNC] â„¹ï¸ Nenhuma contrataÃ§Ã£o encontrada para ${year}`);
         }
       }
 
-      // Delay entre anos para não sobrecarregar a API
+      // Delay entre anos para nÃ£o sobrecarregar a API
       await new Promise(resolve => setTimeout(resolve, 500));
 
     } catch (error) {
       if (error.response && error.response.status === 404) {
-        // Verifica se já existe um arquivo local
+        // Verifica se jÃ¡ existe um arquivo local
         const filePath = path.join(PROCUREMENT_DATA_DIR, `contratacoes_${year}.json`);
         if (fs.existsSync(filePath)) {
-          console.log(`[PROCUREMENT SYNC] ℹ️ API indisponível para ${year}, mantendo dados existentes`);
+          console.log(`[PROCUREMENT SYNC] â„¹ï¸ API indisponÃ­vel para ${year}, mantendo dados existentes`);
         } else {
-          console.log(`[PROCUREMENT SYNC] ℹ️ Nenhuma contratação publicada para ${year} (404)`);
+          console.log(`[PROCUREMENT SYNC] â„¹ï¸ Nenhuma contrataÃ§Ã£o publicada para ${year} (404)`);
         }
       } else if (error.response && error.response.status === 400) {
-        console.error(`[PROCUREMENT SYNC] ⚠️ Requisição inválida para ${year}:`, error.response.data?.message || error.message);
+        console.error(`[PROCUREMENT SYNC] âš ï¸ RequisiÃ§Ã£o invÃ¡lida para ${year}:`, error.response.data?.message || error.message);
       } else {
-        console.error(`[PROCUREMENT SYNC] ❌ Erro ao sincronizar ${year}:`, error.message);
+        console.error(`[PROCUREMENT SYNC] âŒ Erro ao sincronizar ${year}:`, error.message);
         if (error.response) {
           console.error(`[PROCUREMENT SYNC] Status: ${error.response.status}`);
         }
@@ -705,13 +783,13 @@ async function syncProcurementData() {
     }
   }
 
-  console.log(`[PROCUREMENT SYNC] 🎉 Sincronização de contratações concluída!`);
+  console.log(`[PROCUREMENT SYNC] ðŸŽ‰ SincronizaÃ§Ã£o de contrataÃ§Ãµes concluÃ­da!`);
 }
 
 async function performAutomaticSync() {
   // Sync PCA data
   const YEARS_MAP = { '2026': '12', '2025': '12', '2024': '15', '2023': '14', '2022': '20' };
-  console.log(`[${new Date().toISOString()}] 🚀 Iniciando Sincronização PNCP (PCA)...`);
+  console.log(`[${new Date().toISOString()}] ðŸš€ Iniciando SincronizaÃ§Ã£o PNCP (PCA)...`);
   for (const [year, seq] of Object.entries(YEARS_MAP)) {
     try {
       const url = `https://pncp.gov.br/api/pncp/v1/orgaos/${CNPJ_IFES_BSF}/pca/${year}/${seq}/itens?pagina=1&tamanhoPagina=1000`;
@@ -721,15 +799,15 @@ async function performAutomaticSync() {
         if (!fs.existsSync(PUBLIC_DATA_DIR)) fs.mkdirSync(PUBLIC_DATA_DIR, { recursive: true });
         const filePath = path.join(PUBLIC_DATA_DIR, `pca_${year}.json`);
         fs.writeFileSync(filePath, JSON.stringify({ data, updatedAt: new Date().toISOString() }, null, 2));
-        console.log(`[PCA SYNC] ✅ Salvo: pca_${year}.json (${data.length} itens)`);
+        console.log(`[PCA SYNC] âœ… Salvo: pca_${year}.json (${data.length} itens)`);
       } else {
-        console.log(`[PCA SYNC] ℹ️ Nenhum item encontrado para ${year}`);
+        console.log(`[PCA SYNC] â„¹ï¸ Nenhum item encontrado para ${year}`);
       }
     } catch (error) {
       if (error.response && error.response.status === 404) {
-        console.log(`[PCA SYNC] ℹ️ PCA ${year} ainda não publicado no PNCP (404)`);
+        console.log(`[PCA SYNC] â„¹ï¸ PCA ${year} ainda nÃ£o publicado no PNCP (404)`);
       } else {
-        console.error(`[PCA SYNC] ❌ Erro ao sincronizar PCA ${year}:`, error.message);
+        console.error(`[PCA SYNC] âŒ Erro ao sincronizar PCA ${year}:`, error.message);
       }
     }
   }
@@ -740,7 +818,7 @@ async function performAutomaticSync() {
 
 import { onRequest } from "firebase-functions/v2/https";
 
-// Exporta como Cloud Function (Gen 2) com memória ajustada para Puppeteer
+// Exporta como Cloud Function (Gen 2) com memÃ³ria ajustada para Puppeteer
 export const api = onRequest({
   memory: '2GiB',
   timeoutSeconds: 300,
@@ -748,7 +826,7 @@ export const api = onRequest({
   invoker: 'public'
 }, app);
 
-// Endpoint para ler dados brutos da integração Compras.gov/PNCP (Legacy - mantido para compatibilidade)
+// Endpoint para ler dados brutos da integraÃ§Ã£o Compras.gov/PNCP (Legacy - mantido para compatibilidade)
 app.get('/api/integration/procurement-data', async (req, res) => {
   try {
     const COMPRAS_GOV_PATH = path.join(PROCUREMENT_DATA_DIR, 'compras_gov_result.json');
@@ -756,14 +834,14 @@ app.get('/api/integration/procurement-data', async (req, res) => {
       const data = JSON.parse(fs.readFileSync(COMPRAS_GOV_PATH, 'utf8'));
       return res.json(data);
     }
-    res.status(404).json({ error: 'Arquivo de integração não encontrado' });
+    res.status(404).json({ error: 'Arquivo de integraÃ§Ã£o nÃ£o encontrado' });
   } catch (error) {
     console.error('[INTEGRATION DATA ERROR]', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Endpoint para obter dados de contratações de um ano específico
+// Endpoint para obter dados de contrataÃ§Ãµes de um ano especÃ­fico
 app.get('/api/procurement/year/:year', async (req, res) => {
   try {
     const { year } = req.params;
@@ -785,8 +863,8 @@ app.get('/api/procurement/year/:year', async (req, res) => {
     }
 
     res.status(404).json({
-      error: `Dados de contratações para ${year} não encontrados`,
-      message: 'Execute a sincronização primeiro usando /api/procurement/sync'
+      error: `Dados de contrataÃ§Ãµes para ${year} nÃ£o encontrados`,
+      message: 'Execute a sincronizaÃ§Ã£o primeiro usando /api/procurement/sync'
     });
   } catch (error) {
     console.error('[PROCUREMENT DATA ERROR]', error);
@@ -794,7 +872,7 @@ app.get('/api/procurement/year/:year', async (req, res) => {
   }
 });
 
-// Endpoint para obter todos os dados de contratações (todos os anos)
+// Endpoint para obter todos os dados de contrataÃ§Ãµes (todos os anos)
 app.get('/api/procurement/all', async (req, res) => {
   try {
     const YEARS = ['2022', '2023', '2024', '2025', '2026'];
@@ -827,10 +905,10 @@ app.get('/api/procurement/all', async (req, res) => {
   }
 });
 
-// Endpoint para forçar sincronização manual
+// Endpoint para forÃ§ar sincronizaÃ§Ã£o manual
 app.post('/api/procurement/sync', async (req, res) => {
   try {
-    console.log('[MANUAL SYNC] Iniciando sincronização manual de contratações...');
+    console.log('[MANUAL SYNC] Iniciando sincronizaÃ§Ã£o manual de contrataÃ§Ãµes...');
     for (const year of YEARS) {
       const filePath = path.join(PROCUREMENT_DATA_DIR, `contratacoes_${year}.json`);
       if (fs.existsSync(filePath)) {
@@ -858,7 +936,7 @@ app.post('/api/procurement/sync', async (req, res) => {
   }
 });
 
-// --- MÓDULO GOOGLE DE COMPRAS IFES ---
+// --- MÃ“DULO GOOGLE DE COMPRAS IFES ---
 
 const CATALOGO_DOC_PATH = fs.existsSync(path.join(__dirname, 'data', 'historico_compras_ifes_completo.json'))
   ? path.join(__dirname, 'data', 'historico_compras_ifes_completo.json')
@@ -884,7 +962,7 @@ let MINI_SEARCH = new MiniSearch({
   storeFields: ['id'], // Campos retornados na busca (usamos o ID para pegar o objeto completo no MAP)
   searchOptions: {
     boost: { descricao_busca: 2, codigo_catmat_completo: 3, keywords: 1.5 },
-    fuzzy: 0.2, // Permite erros de digitação (Levenshtein distance)
+    fuzzy: 0.2, // Permite erros de digitaÃ§Ã£o (Levenshtein distance)
     prefix: true // Permite busca por prefixo ("cade" acha "cadeira")
   }
 });
@@ -892,20 +970,20 @@ let IS_CATALOG_LOADED = false;
 
 /**
  * Loads and processes catalog items from all available sources into memory.
- * Implementa AGREGACAO INTELIGENTE: Itens com mesmo CATMAT são agrupados para estatísticas.
+ * Implementa AGREGACAO INTELIGENTE: Itens com mesmo CATMAT sÃ£o agrupados para estatÃ­sticas.
  */
 function loadCatalogIntoMemory() {
-  console.log('[CATALOG LOAD] Iniciando carregamento do catálogo com Indexação Inteligente...');
+  console.log('[CATALOG LOAD] Iniciando carregamento do catÃ¡logo com IndexaÃ§Ã£o Inteligente...');
   const startTime = Date.now();
-  const tempMap = new Map(); // Map temporário para agregação (Chave: CATMAT/Código Único)
+  const tempMap = new Map(); // Map temporÃ¡rio para agregaÃ§Ã£o (Chave: CATMAT/CÃ³digo Ãšnico)
 
-  // Função auxiliar para normalizar e agregar itens
+  // FunÃ§Ã£o auxiliar para normalizar e agregar itens
   const processAndAggregateItem = (sourceItem, sourceName, weightBoost = 0) => {
-    // Normalização de campos
+    // NormalizaÃ§Ã£o de campos
     let catmat = String(sourceItem.codigo_catmat || sourceItem.codigo_catmat_completo || sourceItem.codigoItem || sourceItem.codigo_item || '').trim();
     if (!catmat || catmat === 'undefined') return;
 
-    // Padronizar ID como apenas números e hífens
+    // Padronizar ID como apenas nÃºmeros e hÃ­fens
     const normalizedId = catmat.replace(/\//g, '-');
 
     const desc = (sourceItem.descricao_resumida || sourceItem.descricao || sourceItem.descricao_busca || '').toUpperCase();
@@ -913,16 +991,16 @@ function loadCatalogIntoMemory() {
     const price = parseFloat(sourceItem.valor_unitario || sourceItem.valorUnitario || sourceItem.valor_referencia || 0);
     const unit = (sourceItem.unidade_fornecimento || sourceItem.unidadeFornecimento || sourceItem.unidade_padrao || 'UNIDADE').toUpperCase();
 
-    // Filtros de qualidade básica
+    // Filtros de qualidade bÃ¡sica
     if (price <= 0 || unit === '-' || !desc) return;
 
     if (!tempMap.has(normalizedId)) {
-      // Novo Item no Catálogo Mestre
+      // Novo Item no CatÃ¡logo Mestre
       tempMap.set(normalizedId, {
         id: normalizedId,
         codigo_catmat_completo: catmat,
         familia_id: catmat.split('-')[0] || '0000',
-        tipo_item: (sourceItem.tipo || sourceItem.nomeClassificacao === 'Serviço') ? 'SERVICO' : 'MATERIAL',
+        tipo_item: (sourceItem.tipo || sourceItem.nomeClassificacao === 'ServiÃ§o') ? 'SERVICO' : 'MATERIAL',
         descricao_busca: desc,
         descricao_tecnica: descTec,
         unidade_padrao: unit,
@@ -930,7 +1008,7 @@ function loadCatalogIntoMemory() {
         frequencia_uso: 1 + weightBoost,
         uasg_origem_exemplo: sourceItem.uasg_nome || sourceItem.nomeUnidade || sourceItem.unidadeOrgaoNomeUnidade || sourceName,
 
-        // Dados estatísticos para agregação
+        // Dados estatÃ­sticos para agregaÃ§Ã£o
         stats: {
           price_sum: price,
           price_count: 1,
@@ -938,23 +1016,23 @@ function loadCatalogIntoMemory() {
           max_price: price,
           sources: [sourceName]
         },
-        // Set de descrições para indexação rica
+        // Set de descriÃ§Ãµes para indexaÃ§Ã£o rica
         all_descriptions: new Set([desc, descTec])
       });
     } else {
       // Item existente: Agregar dados
       const existing = tempMap.get(normalizedId);
 
-      // Atualizar estatísticas de preço
+      // Atualizar estatÃ­sticas de preÃ§o
       existing.stats.price_sum += price;
       existing.stats.price_count += 1;
       existing.stats.min_price = Math.min(existing.stats.min_price, price);
       existing.stats.max_price = Math.max(existing.stats.max_price, price);
 
-      // Atualizar valor de referência (Média)
+      // Atualizar valor de referÃªncia (MÃ©dia)
       existing.valor_referencia = existing.stats.price_sum / existing.stats.price_count;
 
-      // Incrementar relevância
+      // Incrementar relevÃ¢ncia
       existing.frequencia_uso += (1 + weightBoost);
 
       // Adicionar fonte se nova
@@ -962,26 +1040,26 @@ function loadCatalogIntoMemory() {
         existing.stats.sources.push(sourceName);
       }
 
-      // Enriquecer descrições para busca
+      // Enriquecer descriÃ§Ãµes para busca
       existing.all_descriptions.add(desc);
       existing.all_descriptions.add(descTec);
 
-      // Se a nova descrição técnica for maior/melhor, usamos ela como principal para exibição
+      // Se a nova descriÃ§Ã£o tÃ©cnica for maior/melhor, usamos ela como principal para exibiÃ§Ã£o
       if (descTec.length > existing.descricao_tecnica.length) {
         existing.descricao_tecnica = descTec;
       }
     }
   };
 
-  // 1. Carrega Histórico Base (Peso 1)
+  // 1. Carrega HistÃ³rico Base (Peso 1)
   if (fs.existsSync(CATALOGO_DOC_PATH)) {
     try {
       const rawData = JSON.parse(fs.readFileSync(CATALOGO_DOC_PATH, 'utf8'));
       (rawData.historico || []).forEach(item => processAndAggregateItem(item, 'HISTORICO_BASE', 0));
-    } catch (e) { console.error('[CATALOG LOAD] Erro histórico:', e.message); }
+    } catch (e) { console.error('[CATALOG LOAD] Erro histÃ³rico:', e.message); }
   }
 
-  // 2. Carrega PCA (Peso 2 - Planejamento recente é relevante)
+  // 2. Carrega PCA (Peso 2 - Planejamento recente Ã© relevante)
   if (fs.existsSync(PUBLIC_DATA_DIR_PATH)) {
     try {
       const files = fs.readdirSync(PUBLIC_DATA_DIR_PATH).filter(f => f.startsWith('pca_') && f.endsWith('.json'));
@@ -995,7 +1073,7 @@ function loadCatalogIntoMemory() {
     } catch (e) { console.error('[CATALOG LOAD] Erro PCA:', e.message); }
   }
 
-  // 3. Carrega Contratações Recentes (Peso 3 - Compras reais recentes são muito relevantes)
+  // 3. Carrega ContrataÃ§Ãµes Recentes (Peso 3 - Compras reais recentes sÃ£o muito relevantes)
   if (fs.existsSync(PROCUREMENT_DATA_DIR_PATH)) {
       try {
           const files = fs.readdirSync(PROCUREMENT_DATA_DIR_PATH).filter(f => f.startsWith('contratacoes_') && f.endsWith('.json'));
@@ -1010,25 +1088,25 @@ function loadCatalogIntoMemory() {
                 });
              } catch (e) {}
           });
-      } catch (e) { console.error('[CATALOG LOAD] Erro Contratações:', e.message); }
+      } catch (e) { console.error('[CATALOG LOAD] Erro ContrataÃ§Ãµes:', e.message); }
   }
 
-  // Finalização: Prepara objetos para Cache e Indexação
+  // FinalizaÃ§Ã£o: Prepara objetos para Cache e IndexaÃ§Ã£o
   CATALOG_MAP = tempMap;
   CACHED_CATALOG = Array.from(tempMap.values()).map(item => {
     // Flatten para o frontend e cria campo keywords para o MiniSearch
     item.keywords = Array.from(item.all_descriptions).join(' ');
-    delete item.all_descriptions; // Limpa memória
+    delete item.all_descriptions; // Limpa memÃ³ria
     return item;
   });
 
-  // Reconstruir Índice de Busca
+  // Reconstruir Ãndice de Busca
   MINI_SEARCH.removeAll();
   MINI_SEARCH.addAll(CACHED_CATALOG);
 
   IS_CATALOG_LOADED = true;
   const duration = (Date.now() - startTime) / 1000;
-  console.log(`[CATALOG LOAD] Indexação concluída em ${duration}s. Itens únicos (Agrupados): ${CACHED_CATALOG.length}`);
+  console.log(`[CATALOG LOAD] IndexaÃ§Ã£o concluÃ­da em ${duration}s. Itens Ãºnicos (Agrupados): ${CACHED_CATALOG.length}`);
 }
 
 // Initial load
@@ -1038,11 +1116,11 @@ loadCatalogIntoMemory();
  * Importa e higieniza os dados do JSON para o Firestore
  */
 app.post('/api/catalog/import', async (req, res) => {
-  if (!db_admin) return res.status(500).json({ error: 'Firebase Admin não inicializado' });
+  if (!db_admin) return res.status(500).json({ error: 'Firebase Admin nÃ£o inicializado' });
 
   try {
     if (!fs.existsSync(CATALOGO_DOC_PATH)) {
-      return res.status(404).json({ error: 'Arquivo histórico não encontrado para importação.' });
+      return res.status(404).json({ error: 'Arquivo histÃ³rico nÃ£o encontrado para importaÃ§Ã£o.' });
     }
 
     const rawData = JSON.parse(fs.readFileSync(CATALOGO_DOC_PATH, 'utf8'));
@@ -1053,7 +1131,7 @@ app.post('/api/catalog/import', async (req, res) => {
     const catalogMap = new Map();
 
     for (const item of items) {
-      // 1. Sanitização (Filtros de Qualidade)
+      // 1. SanitizaÃ§Ã£o (Filtros de Qualidade)
       if (!item.valor_unitario || item.valor_unitario <= 0) continue;
       if (!item.unidade_fornecimento || item.unidade_fornecimento === "-" || item.unidade_fornecimento.trim() === "") continue;
 
@@ -1061,10 +1139,10 @@ app.post('/api/catalog/import', async (req, res) => {
       const familiaId = catmatCompleto.split('-')[0];
 
       if (catalogMap.has(catmatCompleto)) {
-        // 2. Deduplicação Inteligente (Ranking)
+        // 2. DeduplicaÃ§Ã£o Inteligente (Ranking)
         const existing = catalogMap.get(catmatCompleto);
         existing.frequencia_uso += 1;
-        // Média ponderada simplificada ou apenas manter a média
+        // MÃ©dia ponderada simplificada ou apenas manter a mÃ©dia
         existing.valor_referencia = (existing.valor_referencia + item.valor_unitario) / 2;
       } else {
         catalogMap.set(catmatCompleto, {
@@ -1082,7 +1160,7 @@ app.post('/api/catalog/import', async (req, res) => {
       }
     }
 
-    console.log(`[CATALOG IMPORT] Sanitização concluída. ${catalogMap.size} itens únicos para salvar.`);
+    console.log(`[CATALOG IMPORT] SanitizaÃ§Ã£o concluÃ­da. ${catalogMap.size} itens Ãºnicos para salvar.`);
 
     // Batch upload para o Firestore
     const batchSize = 400;
@@ -1125,9 +1203,9 @@ app.get('/api/catalog/search', async (req, res) => {
   const searchTerm = q.trim();
   console.log(`[CATALOG SEARCH] Buscando por: "${searchTerm}"`);
 
-  // Garante que o índice está carregado
+  // Garante que o Ã­ndice estÃ¡ carregado
   if (!IS_CATALOG_LOADED) {
-    console.warn('[CATALOG SEARCH] Índice não carregado. Tentando carregar agora...');
+    console.warn('[CATALOG SEARCH] Ãndice nÃ£o carregado. Tentando carregar agora...');
     loadCatalogIntoMemory();
   }
 
@@ -1140,7 +1218,7 @@ app.get('/api/catalog/search', async (req, res) => {
       combineWith: 'AND' // Tenta ser preciso primeiro
     });
 
-    // 2. Fallback: Se não achar nada, tenta 'OR' para achar pelo menos um dos termos
+    // 2. Fallback: Se nÃ£o achar nada, tenta 'OR' para achar pelo menos um dos termos
     if (searchResults.length === 0) {
       console.log(`[CATALOG SEARCH] Nenhum resultado exato/AND para "${searchTerm}". Tentando fuzzy/OR...`);
       searchResults = MINI_SEARCH.search(searchTerm, {
@@ -1153,7 +1231,7 @@ app.get('/api/catalog/search', async (req, res) => {
 
     console.log(`[CATALOG SEARCH] Encontrados ${searchResults.length} resultados brutos para "${searchTerm}"`);
 
-    // 3. Hidratação dos resultados (Recupera objetos completos)
+    // 3. HidrataÃ§Ã£o dos resultados (Recupera objetos completos)
     const results = searchResults
       .slice(0, 100)
       .map(hit => {
@@ -1212,7 +1290,7 @@ app.post('/api/cart/add', async (req, res) => {
       }
     }
 
-    if (!itemData) return res.status(404).json({ error: 'Item não encontrado no catálogo' });
+    if (!itemData) return res.status(404).json({ error: 'Item nÃ£o encontrado no catÃ¡logo' });
 
     const cartItem = {
       usuario_id: userId || 'anonimo',
@@ -1231,7 +1309,7 @@ app.post('/api/cart/add', async (req, res) => {
       createdAt: new Date().toISOString()
     };
 
-    // Tenta salvar no Firestore se disponível
+    // Tenta salvar no Firestore se disponÃ­vel
     if (db_admin) {
       try {
         const docRef = await db_admin.collection('carrinho_demanda').add({
@@ -1273,7 +1351,7 @@ app.get('/api/cart', async (req, res) => {
         snapshot.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
         if (items.length > 0) return res.json(items);
       } catch (e) {
-        console.warn('[CART] Firestore indisponível para consulta do carrinho.');
+        console.warn('[CART] Firestore indisponÃ­vel para consulta do carrinho.');
       }
     }
 
@@ -1313,22 +1391,22 @@ app.delete('/api/cart/:id', async (req, res) => {
   }
 });
 
-// Executa servidor local apenas se NÃO estivermos no ambiente Cloud Functions
+// Executa servidor local apenas se NÃƒO estivermos no ambiente Cloud Functions
 if (!process.env.FUNCTION_TARGET && !process.env.FIREBASE_CONFIG) {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Servidor rodando em http://localhost:${PORT}`);
 
-    // Executa sincronização inicial após 5 segundos (dá tempo do servidor iniciar completamente)
+    // Executa sincronizaÃ§Ã£o inicial apÃ³s 5 segundos (dÃ¡ tempo do servidor iniciar completamente)
     setTimeout(() => {
-      console.log('[AUTO SYNC] Iniciando sincronização automática...');
+      console.log('[AUTO SYNC] Iniciando sincronizaÃ§Ã£o automÃ¡tica...');
       performAutomaticSync().catch(err => {
         console.error('[AUTO SYNC ERROR]', err);
       });
     }, 5000);
 
-    // Sincronização periódica a cada 6 horas (21600000 ms)
+    // SincronizaÃ§Ã£o periÃ³dica a cada 6 horas (21600000 ms)
     setInterval(() => {
-      console.log('[PERIODIC SYNC] Executando sincronização periódica...');
+      console.log('[PERIODIC SYNC] Executando sincronizaÃ§Ã£o periÃ³dica...');
       performAutomaticSync().catch(err => {
         console.error('[PERIODIC SYNC ERROR]', err);
       });

@@ -247,6 +247,16 @@ const AnnualHiringPlan: React.FC = () => {
     return `${String(docLike?.ordem ?? '')}::${String(docLike?.tipo ?? '')}`;
   }, []);
 
+  const parseApiPayload = useCallback(async (response: Response) => {
+    const raw = await response.text();
+    if (!raw) return {};
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return { error: raw };
+    }
+  }, []);
+
   const handleIdentifyTeam = useCallback(async () => {
     if (!viewingItem?.dadosSIPAC?.documentos) return;
 
@@ -271,9 +281,9 @@ const AnnualHiringPlan: React.FC = () => {
       const protocolo = String(viewingItem.protocoloSIPAC || viewingItem.dadosSIPAC?.numeroProcesso || '');
       const endpoint = `${API_SERVER_URL}/api/sipac/documento/ocr?url=${encodeURIComponent(oldestPortaria.url)}&protocolo=${encodeURIComponent(protocolo)}&ordem=${encodeURIComponent(String(oldestPortaria.ordem || ''))}&tipo=${encodeURIComponent(String(oldestPortaria.tipo || 'PORTARIA'))}`;
       const response = await fetch(endpoint);
-      const payload = await response.json();
+      const payload = await parseApiPayload(response);
       if (!response.ok || payload?.status === 'ERROR') {
-        throw new Error(payload?.error || payload?.ocrError || 'Falha ao obter OCR da portaria.');
+        throw new Error(payload?.error || payload?.ocrError || `Falha ao obter OCR da portaria (HTTP ${response.status}).`);
       }
       const fullText = String(payload?.text || '').trim();
       if (!fullText) throw new Error('OCR vazio na portaria.');
@@ -333,7 +343,7 @@ const AnnualHiringPlan: React.FC = () => {
       setIsIdentifyingTeam(false);
       setTeamIdentificationAttempted(true);
     }
-  }, [viewingItem]);
+  }, [viewingItem, parseApiPayload]);
 
   const handleExtractEstimatedValue = useCallback(async () => {
     if (!viewingItem?.dadosSIPAC?.documentos) return;
@@ -501,10 +511,10 @@ const AnnualHiringPlan: React.FC = () => {
       const protocolo = String(viewingItem?.protocoloSIPAC || viewingItem?.dadosSIPAC?.numeroProcesso || '');
       const endpoint = `${API_SERVER_URL}/api/sipac/documento/ocr?url=${encodeURIComponent(docInfo.url)}&protocolo=${encodeURIComponent(protocolo)}&ordem=${encodeURIComponent(String(docInfo.ordem || ''))}&tipo=${encodeURIComponent(String(docInfo.tipo || 'DOCUMENTO'))}`;
       const response = await fetch(endpoint);
-      const result = await response.json();
+      const result = await parseApiPayload(response);
 
       if (!response.ok || result?.status === 'ERROR') {
-        throw new Error(result?.error || result?.ocrError || 'Falha ao gerar OCR deste documento.');
+        throw new Error(result?.error || result?.ocrError || `Falha ao gerar OCR deste documento (HTTP ${response.status}).`);
       }
 
       const text = String(result?.text || '').trim();
@@ -533,7 +543,7 @@ const AnnualHiringPlan: React.FC = () => {
     } finally {
       setOcrLoadingDocKey(null);
     }
-  }, [getDocKey, lakeDocuments, viewingItem]);
+  }, [getDocKey, lakeDocuments, viewingItem, parseApiPayload]);
 
   const extractPdfContent = async (docUrl: string) => {
     try {
