@@ -425,7 +425,7 @@ const PublicDashboard: React.FC = () => {
                                         <h3 className="text-lg font-black text-slate-800 mb-6">Distribuição por Categoria</h3>
                                         <div className="h-72 w-full">
                                             {isMounted && (
-                                                <ResponsiveContainer width="100%" height="100%" minWidth={100} debounce={50}>
+                                                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={220} debounce={50}>
                                                     <PieChart>
                                                         <Pie data={pcaChartData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value" stroke="none">
                                                             {pcaChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
@@ -449,7 +449,7 @@ const PublicDashboard: React.FC = () => {
                                         <h3 className="text-lg font-black text-slate-800 mb-6 font-sans">Cronograma de Contratações</h3>
                                         <div className="h-72 w-full">
                                             {isMounted && (
-                                                <ResponsiveContainer width="100%" height="100%" minWidth={100} debounce={50}>
+                                                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={220} debounce={50}>
                                                     <BarChart data={pcaSummary.monthlyPlan}>
                                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                                         <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} />
@@ -551,7 +551,7 @@ const PublicDashboard: React.FC = () => {
                                 <h3 className="text-xl font-black text-slate-800 mb-8">Cronograma Financeiro Mensal</h3>
                                 <div className="h-96 w-full">
                                     {isMounted && (
-                                        <ResponsiveContainer width="100%" height="100%" minWidth={100} debounce={50}>
+                                        <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={320} debounce={50}>
                                             <BarChart data={budgetChartData} barGap={8}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} />

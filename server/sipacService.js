@@ -12,6 +12,31 @@ import os from 'os';
 
 puppeteer.use(StealthPlugin());
 
+function getPuppeteerLaunchOptions() {
+    const executableCandidates = [
+        process.env.PUPPETEER_EXECUTABLE_PATH,
+        process.env.CHROME_PATH,
+        process.env.EDGE_PATH,
+        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+        'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+        'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+        'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+        '/usr/bin/google-chrome',
+        '/usr/bin/chromium-browser',
+        '/usr/bin/chromium',
+        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+        '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'
+    ].filter(Boolean);
+
+    const executablePath = executableCandidates.find(candidate => fs.existsSync(candidate));
+
+    return {
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+        ...(executablePath ? { executablePath } : {})
+    };
+}
+
 /**
  * Gera um hash MD5 determinístico para o conteúdo do processo.
  * Usado para detectar mudanças e evitar chamadas redundantes de IA.
@@ -35,10 +60,7 @@ export async function scrapeSIPACProcess(protocol) {
 
     // Real scraping attempt
     console.log(`[SIPAC] Starting real scraper for ${protocol}...`);
-    const browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-    });
+    const browser = await puppeteer.launch(getPuppeteerLaunchOptions());
 
     try {
         const page = await browser.newPage();
@@ -396,10 +418,7 @@ export async function scrapeSIPACProcess(protocol) {
 
 export async function scrapeSIPACDocumentHTML(url) {
     console.log(`[SIPAC] Fetching document HTML from: ${url}`);
-    const browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-    });
+    const browser = await puppeteer.launch(getPuppeteerLaunchOptions());
 
     try {
         const page = await browser.newPage();
@@ -424,10 +443,7 @@ export async function scrapeSIPACDocumentHTML(url) {
 
 export async function scrapeSIPACDocumentContent(url) {
     console.log(`[SIPAC] Fetching document content from: ${url}`);
-    const browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-    });
+    const browser = await puppeteer.launch(getPuppeteerLaunchOptions());
 
     try {
         const page = await browser.newPage();
@@ -478,7 +494,7 @@ export async function downloadSIPACDocument(url) {
                 }
             });
 
-            const contentType = response.headers['content-type'];
+            let contentType = response.headers['content-type'];
             let buffer = Buffer.from(response.data);
 
             // Verificação de Integridade e Correção de Encoding: SIPAC usa ISO-8859-1
@@ -523,10 +539,7 @@ export async function downloadSIPACDocument(url) {
     }
 
     // Tática 2: Fallback para Puppeteer (Download via CDP para evitar ERR_ABORTED)
-    const browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-    });
+    const browser = await puppeteer.launch(getPuppeteerLaunchOptions());
 
     try {
         const page = await browser.newPage();

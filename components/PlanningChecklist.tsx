@@ -9,6 +9,8 @@ interface PlanningChecklistProps {
   initialIsARP?: boolean;
   onToggleARP?: (isARP: boolean) => void;
   estimatedValue?: number | null;
+  checklistAssociations?: Record<string, string>;
+  onAssociateDocument?: (ruleId: string, documentOrder: string) => void;
 }
 
 
@@ -16,6 +18,7 @@ const PlanningChecklist: React.FC<PlanningChecklistProps> = ({
   documents,
   initialIsARP = false,
   onToggleARP,
+  estimatedValue = null,
   checklistAssociations,
   onAssociateDocument
 }) => {

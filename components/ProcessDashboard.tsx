@@ -353,7 +353,7 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
                         </h3>
                         <div className="w-full h-[400px] relative">
                             {isMounted && (
-                                <ResponsiveContainer width="99%" height={380}>
+                                <ResponsiveContainer width="100%" height={380} minWidth={100}>
                                     <PieChart>
                                         <Pie data={statusData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={2} dataKey="value" stroke="none">
                                             {statusData.map((entry, index) => (
@@ -381,7 +381,7 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
                         </h3>
                         <div className="w-full h-[400px] relative">
                             {isMounted && (
-                                <ResponsiveContainer width="99%" height={380}>
+                                <ResponsiveContainer width="100%" height={380} minWidth={100}>
                                     <BarChart data={movementData} layout="vertical" margin={{ left: 0 }}>
                                         <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
                                         <XAxis type="number" hide />

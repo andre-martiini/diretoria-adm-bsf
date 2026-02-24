@@ -4,9 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently --kill-others-on-fail \"npm run dev:web\" \"npm run server\"",
+    "dev:web": "vite --strictPort",
     "server": "cd server && npm run dev",
-    "dev:full": "concurrently \"npm run dev\" \"npm run server\"",
+    "dev:full": "npm run dev",
     "build": "vite build",
     "preview": "vite preview"
   },

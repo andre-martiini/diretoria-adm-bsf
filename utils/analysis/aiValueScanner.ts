@@ -31,10 +31,25 @@ export const extractEstimatedValue = async (text: string): Promise<{ valor: numb
     try {
         const apiKey = rawApiKey.trim();
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite-preview-02-05" }); // Using faster model if available, or fallback to standard
+        const preferredModel = import.meta.env.VITE_GEMINI_MODEL?.trim() || "gemini-2.5-flash-lite";
+        const fallbackModels = [preferredModel, "gemini-2.5-flash", "gemini-1.5-flash"];
 
-        const result = await model.generateContent(VALUE_PROMPT + text.substring(0, 30000)); // Limit text size to avoid token limits if PDF is huge
-        const responseText = result.response.text();
+        let responseText = '';
+        let lastError: unknown = null;
+        for (const modelName of fallbackModels) {
+            try {
+                const model = genAI.getGenerativeModel({ model: modelName });
+                const result = await model.generateContent(VALUE_PROMPT + text.substring(0, 30000)); // Limit text size to avoid token limits if PDF is huge
+                responseText = result.response.text();
+                break;
+            } catch (err) {
+                lastError = err;
+            }
+        }
+
+        if (!responseText) {
+            throw lastError || new Error('Nenhum modelo respondeu.');
+        }
 
         const jsonMatch = responseText.match(/\{[\s\S]*\}/);
         const jsonStr = jsonMatch ? jsonMatch[0] : responseText;

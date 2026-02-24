@@ -174,40 +174,43 @@ app.get('/api/pncp/pca/:cnpj/:ano', async (req, res) => {
 
 // Proxy para listar compras (Contratações)
 app.get('/api/pncp/consulta/compras', async (req, res) => {
-  const { ano, pagina = 1, tamanhoPagina = 100, codigoModalidadeContratacao } = req.query;
+  const { ano, pagina = 1, tamanhoPagina = 100 } = req.query;
   const CNPJ = '10838653000106'; // IFES BSF
 
-  // Na API de Consulta, usamos 'contratacoes/publicacao'
-  // Data inicial e final cobrindo o ano inteiro
-  const dataInicial = `${ano}0101`;
-  const dataFinal = `${ano}1231`;
-
-  // Se não foi fornecido um código de modalidade específico, buscar todas as modalidades
-  // Códigos comuns: 1=Pregão Eletrônico, 2=Concorrência, 3=Dispensa, 4=Inexigibilidade, etc.
-  // Para buscar todas, podemos fazer múltiplas requisições ou usar a API de orgãos
-
-  // Tentativa 1: Usar endpoint alternativo que não requer modalidade
-  // https://pncp.gov.br/api/consulta/v1/orgaos/{cnpj}/compras?ano=...
-  const urlOrgao = `https://pncp.gov.br/api/consulta/v1/orgaos/${CNPJ}/compras?ano=${ano}&pagina=${pagina}&tamanhoPagina=${tamanhoPagina}`;
-
-  console.log(`[PNCP PROXY] Buscando compras via endpoint de órgão: ${urlOrgao}`);
-  try {
-    const response = await axios.get(urlOrgao, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/json'
-      }
-    });
-    res.json(response.data);
-  } catch (error) {
-    console.error(`[PNCP PROXY ERROR]`, error.message);
-    if (error.response) {
-      console.error(`[PNCP PROXY STATUS]`, error.response.status);
-      console.error(`[PNCP PROXY DATA]`, error.response.data);
-      return res.status(error.response.status).json(error.response.data);
-    }
-    res.status(500).json({ error: error.message });
+  if (!ano) {
+    return res.status(400).json({ error: 'Parametro ano e obrigatorio' });
   }
+
+  const endpoints = [
+    `https://pncp.gov.br/api/consulta/v1/orgaos/${CNPJ}/compras?ano=${ano}&pagina=${pagina}&tamanhoPagina=${tamanhoPagina}`,
+    `https://pncp.gov.br/api/pncp/v1/orgaos/${CNPJ}/compras?ano=${ano}&pagina=${pagina}&tamanhoPagina=${tamanhoPagina}`
+  ];
+
+  const upstreamErrors = [];
+  for (const url of endpoints) {
+    try {
+      console.log(`[PNCP PROXY] Buscando compras: ${url}`);
+      const response = await axios.get(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'application/json'
+        },
+        timeout: 10000
+      });
+      return res.json(response.data);
+    } catch (error) {
+      const status = error.response?.status || 500;
+      const message = error.response?.data?.message || error.message;
+      upstreamErrors.push({ url, status, message });
+      console.warn(`[PNCP PROXY WARN] ${status} em ${url}: ${message}`);
+    }
+  }
+
+  res.json({
+    data: [],
+    message: 'Falha temporaria ao consultar PNCP; retornando lista vazia.',
+    upstreamErrors
+  });
 });
 
 // Proxy para itens de uma compra específica
@@ -307,7 +310,14 @@ app.get('/api/proxy/pdf', async (req, res) => {
 
   } catch (error) {
     console.error(`[PROXY ERROR]`, error);
-    res.status(500).json({ error: 'Falha ao obter documento: ' + error.message });
+    const message = error?.message || 'Erro desconhecido';
+    if (message.includes('Could not find Chrome')) {
+      return res.status(503).json({
+        error: 'Navegador para scraping não encontrado no servidor',
+        details: 'Instale Chrome/Edge no sistema ou execute: npm --prefix server run postinstall'
+      });
+    }
+    res.status(500).json({ error: 'Falha ao obter documento: ' + message });
   }
 });
 
@@ -339,6 +349,15 @@ const PUBLIC_DATA_DIR = fs.existsSync(path.join(__dirname, 'data', 'public_data'
 const PROCUREMENT_DATA_DIR = fs.existsSync(path.join(__dirname, 'data', 'dados_abertos_compras'))
   ? path.join(__dirname, 'data', 'dados_abertos_compras')
   : path.join(__dirname, '..', 'dados_abertos_compras');
+
+function readJsonFileSafely(filePath, context) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch (error) {
+    console.error(`[JSON READ ERROR] ${context}: ${filePath} - ${error.message}`);
+    return null;
+  }
+}
 
 /**
  * Sincroniza dados de contratações (compras) do PNCP para os anos especificados
@@ -526,8 +545,18 @@ app.get('/api/procurement/year/:year', async (req, res) => {
     const filePath = path.join(PROCUREMENT_DATA_DIR, `contratacoes_${year}.json`);
 
     if (fs.existsSync(filePath)) {
-      const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-      return res.json(data);
+      const data = readJsonFileSafely(filePath, `/api/procurement/year/${year}`);
+      if (data) {
+        return res.json(data);
+      }
+      return res.json({
+        metadata: {
+          generatedAt: new Date().toISOString(),
+          year,
+          warning: `Arquivo local invalido para ${year}`
+        },
+        data: []
+      });
     }
 
     res.status(404).json({
@@ -548,7 +577,8 @@ app.get('/api/procurement/all', async (req, res) => {
       metadata: {
         generatedAt: new Date().toISOString(),
         cnpj: CNPJ_IFES_BSF,
-        years: YEARS
+        years: YEARS,
+        skippedYears: []
       },
       data: []
     };
@@ -556,8 +586,12 @@ app.get('/api/procurement/all', async (req, res) => {
     for (const year of YEARS) {
       const filePath = path.join(PROCUREMENT_DATA_DIR, `contratacoes_${year}.json`);
       if (fs.existsSync(filePath)) {
-        const yearData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-        allData.data.push(...(yearData.data || []));
+        const yearData = readJsonFileSafely(filePath, `/api/procurement/all/${year}`);
+        if (yearData?.data) {
+          allData.data.push(...yearData.data);
+        } else {
+          allData.metadata.skippedYears.push(year);
+        }
       }
     }
 

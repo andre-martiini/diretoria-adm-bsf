@@ -53,8 +53,7 @@ import {
   addDoc,
   deleteDoc,
   Timestamp,
-  writeBatch,
-  updateDoc
+  writeBatch
 } from 'firebase/firestore';
 import {
   ContractItem,
@@ -890,14 +889,14 @@ const AnnualHiringPlan: React.FC = () => {
 
     // Persist to Firestore
     try {
-      const docId = viewingItem.isManual ? String(viewingItem.id) : `${selectedYear}-${viewingItem.id}`;
+      const docId = viewingItem.isManual ? String(viewingItem.id) : `${viewingItem.ano || selectedYear}-${viewingItem.id}`;
       const safeDocId = docId.replace(/\//g, '-');
       const docRef = doc(db, "pca_data", safeDocId);
 
-      await updateDoc(docRef, {
+      await setDoc(docRef, {
         "dadosSIPAC.isARP": isARP,
         updatedAt: Timestamp.now()
-      });
+      }, { merge: true });
     } catch (err) {
       console.error("Erro ao salvar estado ARP:", err);
       setToast({ message: "Erro ao salvar estado do checklist.", type: "error" });
@@ -925,14 +924,14 @@ const AnnualHiringPlan: React.FC = () => {
 
     // Persist to Firestore
     try {
-      const docId = viewingItem.isManual ? String(viewingItem.id) : `${selectedYear}-${viewingItem.id}`;
+      const docId = viewingItem.isManual ? String(viewingItem.id) : `${viewingItem.ano || selectedYear}-${viewingItem.id}`;
       const safeDocId = docId.replace(/\//g, '-');
       const docRef = doc(db, "pca_data", safeDocId);
 
-      await updateDoc(docRef, {
+      await setDoc(docRef, {
         "dadosSIPAC.checklistAssociations": newAssociations,
         updatedAt: Timestamp.now()
-      });
+      }, { merge: true });
     } catch (err) {
       console.error("Erro ao salvar associação de checklist:", err);
       setToast({ message: "Erro ao salvar vínculo.", type: "error" });
@@ -1265,7 +1264,7 @@ const AnnualHiringPlan: React.FC = () => {
                     </div>
                     <div className="w-full h-[300px] relative">
                       {chartsReady && (
-                        <ResponsiveContainer width="99%" height="100%" debounce={50}>
+                        <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={280} debounce={50}>
                           <ComposedChart data={summary.monthlyPlan}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                             <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} />
@@ -1293,7 +1292,7 @@ const AnnualHiringPlan: React.FC = () => {
                     </div>
                     <div className="w-full flex-1 relative min-h-[300px]">
                       {chartsReady && (
-                        <ResponsiveContainer width="99%" height="100%" debounce={50}>
+                        <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={280} debounce={50}>
                           <PieChart>
                             <Pie data={chartData} cx="50%" cy="50%" innerRadius={70} outerRadius={95} paddingAngle={5} dataKey="value" stroke="none">
                               {chartData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}

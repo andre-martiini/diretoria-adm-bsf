@@ -1,147 +1,346 @@
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  query,
+  setDoc,
+  updateDoc,
+  where,
+  writeBatch
+} from 'firebase/firestore';
+import { db } from '../../firebase';
 import { Process, Item, Quote } from './types';
 
 const STORAGE_KEY = 'gestao_clc_mapa_precos_v1';
+const COLLECTIONS = {
+  processes: 'price_map_processes',
+  items: 'price_map_items',
+  quotes: 'price_map_quotes'
+};
 
-function getDB() {
+type LocalDB = {
+  processes: Process[];
+  items: Item[];
+  quotes: Quote[];
+};
+
+function getLocalDB(): LocalDB {
   const data = localStorage.getItem(STORAGE_KEY);
   if (!data) return { processes: [], items: [], quotes: [] };
   return JSON.parse(data);
 }
 
-function saveDB(data: any) {
+function saveLocalDB(data: LocalDB) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
-function getNextId(collection: { id: number }[]): number {
-  return collection.length > 0 ? Math.max(...collection.map(i => i.id)) + 1 : 1;
+function getNextId(collectionRows: { id: number }[]): number {
+  return collectionRows.length > 0 ? Math.max(...collectionRows.map(i => i.id)) + 1 : 1;
+}
+
+const useFirestore = () => !!db;
+
+async function getAllProcessesRemote(): Promise<Process[]> {
+  const snap = await getDocs(collection(db!, COLLECTIONS.processes));
+  return snap.docs
+    .map(d => d.data() as Process)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+}
+
+async function getAllItemsRemote(): Promise<Item[]> {
+  const snap = await getDocs(collection(db!, COLLECTIONS.items));
+  return snap.docs.map(d => d.data() as Item);
+}
+
+async function getAllQuotesRemote(): Promise<Quote[]> {
+  const snap = await getDocs(collection(db!, COLLECTIONS.quotes));
+  return snap.docs.map(d => d.data() as Quote);
+}
+
+async function getNextIdRemote(collectionName: string): Promise<number> {
+  const snap = await getDocs(collection(db!, collectionName));
+  let maxId = 0;
+  snap.forEach(row => {
+    const value = Number(row.data()?.id || 0);
+    if (value > maxId) maxId = value;
+  });
+  return maxId + 1;
+}
+
+async function getProcessByIdRemote(id: number): Promise<Process> {
+  const q = query(collection(db!, COLLECTIONS.processes), where('id', '==', id));
+  const snap = await getDocs(q);
+  const first = snap.docs[0];
+  if (!first) throw new Error('Not found');
+  return first.data() as Process;
+}
+
+async function deleteByNumericId(collectionName: string, id: number): Promise<void> {
+  await deleteDoc(doc(db!, collectionName, String(id)));
 }
 
 export const storage = {
-  // Processes
   async getProcesses(): Promise<Process[]> {
-    const db = getDB();
-    const rows = [...db.processes].sort((a, b) => 
+    if (useFirestore()) return getAllProcessesRemote();
+
+    const local = getLocalDB();
+    return [...local.processes].sort((a, b) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
-    return rows;
   },
 
   async getProcess(id: number): Promise<Process> {
-    const db = getDB();
-    const p = db.processes.find((x: any) => x.id === id);
+    if (useFirestore()) return getProcessByIdRemote(id);
+
+    const local = getLocalDB();
+    const p = local.processes.find(x => x.id === id);
     if (!p) throw new Error('Not found');
     return p;
   },
 
   async createProcess(process: { process_number: string, object: string }): Promise<{ id: number }> {
-    const db = getDB();
-    const newP = {
-      id: getNextId(db.processes),
+    if (useFirestore()) {
+      const id = await getNextIdRemote(COLLECTIONS.processes);
+      const payload: Process = {
+        id,
+        process_number: process.process_number,
+        object: process.object,
+        created_at: new Date().toISOString()
+      };
+      await setDoc(doc(db!, COLLECTIONS.processes, String(id)), payload);
+      return { id };
+    }
+
+    const local = getLocalDB();
+    const newP: Process = {
+      id: getNextId(local.processes),
       process_number: process.process_number,
       object: process.object,
       created_at: new Date().toISOString()
     };
-    db.processes.push(newP);
-    saveDB(db);
+    local.processes.push(newP);
+    saveLocalDB(local);
     return { id: newP.id };
   },
 
   async updateProcess(id: number, process: { process_number: string, object: string }): Promise<void> {
-    const db = getDB();
-    const idx = db.processes.findIndex((p: any) => p.id === id);
+    if (useFirestore()) {
+      await updateDoc(doc(db!, COLLECTIONS.processes, String(id)), process);
+      return;
+    }
+
+    const local = getLocalDB();
+    const idx = local.processes.findIndex(p => p.id === id);
     if (idx !== -1) {
-      db.processes[idx] = { ...db.processes[idx], ...process };
-      saveDB(db);
+      local.processes[idx] = { ...local.processes[idx], ...process };
+      saveLocalDB(local);
     }
   },
 
   async deleteProcess(id: number): Promise<void> {
-    const db = getDB();
-    db.processes = db.processes.filter((p: any) => p.id !== id);
-    const itemIds = db.items.filter((i: any) => i.process_id === id).map((i: any) => i.id);
-    db.items = db.items.filter((i: any) => i.process_id !== id);
-    db.quotes = db.quotes.filter((q: any) => !itemIds.includes(q.item_id));
-    saveDB(db);
+    if (useFirestore()) {
+      const itemsQuery = query(collection(db!, COLLECTIONS.items), where('process_id', '==', id));
+      const itemsSnap = await getDocs(itemsQuery);
+      const itemIds = itemsSnap.docs.map(d => Number(d.data().id));
+
+      const batch = writeBatch(db!);
+      batch.delete(doc(db!, COLLECTIONS.processes, String(id)));
+      itemsSnap.docs.forEach(itemDoc => batch.delete(itemDoc.ref));
+
+      if (itemIds.length > 0) {
+        const quotesSnap = await getDocs(collection(db!, COLLECTIONS.quotes));
+        quotesSnap.docs.forEach(quoteDoc => {
+          if (itemIds.includes(Number(quoteDoc.data().item_id))) {
+            batch.delete(quoteDoc.ref);
+          }
+        });
+      }
+
+      await batch.commit();
+      return;
+    }
+
+    const local = getLocalDB();
+    local.processes = local.processes.filter(p => p.id !== id);
+    const itemIds = local.items.filter(i => i.process_id === id).map(i => i.id);
+    local.items = local.items.filter(i => i.process_id !== id);
+    local.quotes = local.quotes.filter(q => !itemIds.includes(q.item_id));
+    saveLocalDB(local);
   },
 
-  // Items
   async getItems(processId: number): Promise<Item[]> {
-    const db = getDB();
-    return db.items
-      .filter((i: any) => i.process_id === processId)
-      .sort((a: any, b: any) => a.item_number - b.item_number);
+    if (useFirestore()) {
+      const q = query(collection(db!, COLLECTIONS.items), where('process_id', '==', processId));
+      const snap = await getDocs(q);
+      return snap.docs
+        .map(d => d.data() as Item)
+        .sort((a, b) => a.item_number - b.item_number);
+    }
+
+    const local = getLocalDB();
+    return local.items
+      .filter(i => i.process_id === processId)
+      .sort((a, b) => a.item_number - b.item_number);
   },
 
   async createItem(processId: number, item: Omit<Item, 'id' | 'process_id'>): Promise<{ id: number }> {
-    const db = getDB();
-    const newI = {
-      id: getNextId(db.items),
+    if (useFirestore()) {
+      const id = await getNextIdRemote(COLLECTIONS.items);
+      const payload: Item = {
+        id,
+        process_id: processId,
+        item_number: item.item_number,
+        specification: item.specification,
+        unit: item.unit,
+        quantity: item.quantity,
+        pricing_strategy: item.pricing_strategy || 'sanitized'
+      };
+      await setDoc(doc(db!, COLLECTIONS.items, String(id)), payload);
+      return { id };
+    }
+
+    const local = getLocalDB();
+    const newI: Item = {
+      id: getNextId(local.items),
       process_id: processId,
-      ...item,
+      item_number: item.item_number,
+      specification: item.specification,
+      unit: item.unit,
+      quantity: item.quantity,
       pricing_strategy: item.pricing_strategy || 'sanitized'
     };
-    db.items.push(newI);
-    saveDB(db);
-    return { id: newI.id as number };
+    local.items.push(newI);
+    saveLocalDB(local);
+    return { id: newI.id };
   },
 
   async updateItem(id: number, item: Omit<Item, 'id' | 'process_id'>): Promise<void> {
-    const db = getDB();
-    const idx = db.items.findIndex((x: any) => x.id === id);
+    if (useFirestore()) {
+      await updateDoc(doc(db!, COLLECTIONS.items, String(id)), item);
+      return;
+    }
+
+    const local = getLocalDB();
+    const idx = local.items.findIndex(x => x.id === id);
     if (idx !== -1) {
-      db.items[idx] = { ...db.items[idx], ...item };
-      saveDB(db);
+      local.items[idx] = { ...local.items[idx], ...item };
+      saveLocalDB(local);
     }
   },
 
   async deleteItem(id: number): Promise<void> {
-    const db = getDB();
-    db.items = db.items.filter((x: any) => x.id !== id);
-    db.quotes = db.quotes.filter((q: any) => q.item_id !== id);
-    saveDB(db);
+    if (useFirestore()) {
+      const batch = writeBatch(db!);
+      batch.delete(doc(db!, COLLECTIONS.items, String(id)));
+
+      const quotesSnap = await getDocs(query(collection(db!, COLLECTIONS.quotes), where('item_id', '==', id)));
+      quotesSnap.docs.forEach(qd => batch.delete(qd.ref));
+      await batch.commit();
+      return;
+    }
+
+    const local = getLocalDB();
+    local.items = local.items.filter(x => x.id !== id);
+    local.quotes = local.quotes.filter(q => q.item_id !== id);
+    saveLocalDB(local);
   },
 
-  // Quotes
   async getQuotes(itemId: number): Promise<Quote[]> {
-    const db = getDB();
-    return db.quotes
-      .filter((q: any) => q.item_id === itemId)
-      .sort((a: any, b: any) => new Date(b.quote_date).getTime() - new Date(a.quote_date).getTime());
+    if (useFirestore()) {
+      const q = query(collection(db!, COLLECTIONS.quotes), where('item_id', '==', itemId));
+      const snap = await getDocs(q);
+      return snap.docs
+        .map(d => d.data() as Quote)
+        .sort((a, b) => new Date(b.quote_date).getTime() - new Date(a.quote_date).getTime());
+    }
+
+    const local = getLocalDB();
+    return local.quotes
+      .filter(q => q.item_id === itemId)
+      .sort((a, b) => new Date(b.quote_date).getTime() - new Date(a.quote_date).getTime());
   },
 
   async createQuote(itemId: number, quote: Omit<Quote, 'id' | 'item_id'>): Promise<{ id: number }> {
-    const db = getDB();
-    const newQ = {
-      id: getNextId(db.quotes),
+    if (useFirestore()) {
+      const id = await getNextIdRemote(COLLECTIONS.quotes);
+      const payload: Quote = {
+        id,
+        item_id: itemId,
+        source: quote.source,
+        quote_date: quote.quote_date,
+        unit_price: quote.unit_price,
+        quote_type: quote.quote_type || 'private',
+        is_outlier: false
+      };
+      await setDoc(doc(db!, COLLECTIONS.quotes, String(id)), payload);
+      return { id };
+    }
+
+    const local = getLocalDB();
+    const newQ: Quote = {
+      id: getNextId(local.quotes),
       item_id: itemId,
-      ...quote,
+      source: quote.source,
+      quote_date: quote.quote_date,
+      unit_price: quote.unit_price,
       quote_type: quote.quote_type || 'private',
       is_outlier: false
     };
-    db.quotes.push(newQ);
-    saveDB(db);
-    return { id: newQ.id as number };
+    local.quotes.push(newQ);
+    saveLocalDB(local);
+    return { id: newQ.id };
   },
 
   async updateQuote(id: number, quote: Omit<Quote, 'id' | 'item_id'>): Promise<void> {
-    const db = getDB();
-    const idx = db.quotes.findIndex((q: any) => q.id === id);
+    if (useFirestore()) {
+      await updateDoc(doc(db!, COLLECTIONS.quotes, String(id)), quote);
+      return;
+    }
+
+    const local = getLocalDB();
+    const idx = local.quotes.findIndex(q => q.id === id);
     if (idx !== -1) {
-      db.quotes[idx] = { ...db.quotes[idx], ...quote };
-      saveDB(db);
+      local.quotes[idx] = { ...local.quotes[idx], ...quote };
+      saveLocalDB(local);
     }
   },
 
   async deleteQuote(id: number): Promise<void> {
-    const db = getDB();
-    db.quotes = db.quotes.filter((q: any) => q.id !== id);
-    saveDB(db);
+    if (useFirestore()) {
+      await deleteByNumericId(COLLECTIONS.quotes, id);
+      return;
+    }
+
+    const local = getLocalDB();
+    local.quotes = local.quotes.filter(q => q.id !== id);
+    saveLocalDB(local);
   },
 
   async batchCreateItems(processId: number, items: any[]): Promise<void> {
-    const db = getDB();
-    let nextId = getNextId(db.items);
-    const newItems = items.map(item => ({
+    if (useFirestore()) {
+      const batch = writeBatch(db!);
+      let nextId = await getNextIdRemote(COLLECTIONS.items);
+      items.forEach(item => {
+        const payload: Item = {
+          id: nextId,
+          process_id: processId,
+          item_number: item.item_number,
+          specification: item.specification,
+          unit: item.unit,
+          quantity: item.quantity,
+          pricing_strategy: item.pricing_strategy || 'sanitized'
+        };
+        batch.set(doc(db!, COLLECTIONS.items, String(nextId)), payload);
+        nextId += 1;
+      });
+      await batch.commit();
+      return;
+    }
+
+    const local = getLocalDB();
+    let nextId = getNextId(local.items);
+    const newItems: Item[] = items.map(item => ({
       id: nextId++,
       process_id: processId,
       item_number: item.item_number,
@@ -150,14 +349,34 @@ export const storage = {
       quantity: item.quantity,
       pricing_strategy: item.pricing_strategy || 'sanitized'
     }));
-    db.items.push(...newItems);
-    saveDB(db);
+    local.items.push(...newItems);
+    saveLocalDB(local);
   },
 
   async batchCreateQuotes(itemId: number, quotes: any[]): Promise<void> {
-    const db = getDB();
-    let nextId = getNextId(db.quotes);
-    const newQuotes = quotes.map(quote => ({
+    if (useFirestore()) {
+      const batch = writeBatch(db!);
+      let nextId = await getNextIdRemote(COLLECTIONS.quotes);
+      quotes.forEach(quote => {
+        const payload: Quote = {
+          id: nextId,
+          item_id: itemId,
+          source: quote.source,
+          quote_date: quote.quote_date,
+          unit_price: quote.unit_price,
+          quote_type: quote.quote_type || 'private',
+          is_outlier: false
+        };
+        batch.set(doc(db!, COLLECTIONS.quotes, String(nextId)), payload);
+        nextId += 1;
+      });
+      await batch.commit();
+      return;
+    }
+
+    const local = getLocalDB();
+    let nextId = getNextId(local.quotes);
+    const newQuotes: Quote[] = quotes.map(quote => ({
       id: nextId++,
       item_id: itemId,
       source: quote.source,
@@ -166,23 +385,38 @@ export const storage = {
       quote_type: quote.quote_type || 'private',
       is_outlier: false
     }));
-    db.quotes.push(...newQuotes);
-    saveDB(db);
+    local.quotes.push(...newQuotes);
+    saveLocalDB(local);
   },
 
-  // History
   async getHistory(): Promise<(Item & { process_number: string, object: string, created_at?: string })[]> {
-    const db = getDB();
-    return db.items.map((item: any) => {
-      const process = db.processes.find((p: any) => p.id === item.process_id);
-      return {
-        ...item,
-        process_number: process?.process_number,
-        object: process?.object,
-        created_at: process?.created_at
-      };
-    }).sort((a: any, b: any) => 
-      new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
-    );
+    if (useFirestore()) {
+      const [processes, items] = await Promise.all([getAllProcessesRemote(), getAllItemsRemote()]);
+      const processById = new Map<number, Process>(processes.map(p => [p.id, p]));
+      return items
+        .map(item => {
+          const process = processById.get(item.process_id);
+          return {
+            ...item,
+            process_number: process?.process_number || '',
+            object: process?.object || '',
+            created_at: process?.created_at
+          };
+        })
+        .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+    }
+
+    const local = getLocalDB();
+    return local.items
+      .map(item => {
+        const process = local.processes.find(p => p.id === item.process_id);
+        return {
+          ...item,
+          process_number: process?.process_number || '',
+          object: process?.object || '',
+          created_at: process?.created_at
+        };
+      })
+      .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
   }
 };
