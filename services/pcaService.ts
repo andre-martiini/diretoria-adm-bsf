@@ -218,9 +218,10 @@ export const fetchPcaData = async (
 
         if (cacheSnap?.exists()) {
             cacheMetadata = cacheSnap.data();
-            if (cacheMetadata.items && (rawOfficialItems.length === 0 || forceSync)) {
+            // Prioritize Firestore cache if it has items, regardless of local JSON presence
+            if (cacheMetadata.items && cacheMetadata.items.length > 0) {
                 rawOfficialItems = cacheMetadata.items;
-                console.log(`[PCA Service] Usando cache do Firestore (${rawOfficialItems.length} itens)`);
+                console.log(`[PCA Service] Usando cache do Firestore (${rawOfficialItems.length} itens) - Prioridade sobre Local`);
             }
         }
 
