@@ -212,6 +212,21 @@ const AnnualHiringPlan: React.FC = () => {
   // Procurement History States
   const [procurementHistory, setProcurementHistory] = useState<ProcurementHistory | null>(null);
   const [isLoadingProcurement, setIsLoadingProcurement] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<number>(0);
+  const [isItemsListModalOpen, setIsItemsListModalOpen] = useState(false);
+  const [isPcaModalOpen, setIsPcaModalOpen] = useState(false);
+  const [isUnlinkModalOpen, setIsUnlinkModalOpen] = useState(false);
+  const [isYearMismatchModalOpen, setIsYearMismatchModalOpen] = useState(false);
+  const [itemToUnlink, setItemToUnlink] = useState<ContractItem | null>(null);
+  const [toast, setToast] = useState<{ message: string, type: ToastType } | null>(null);
+
+  // Data Lake States
+  const [lakeDocuments, setLakeDocuments] = useState<any[]>([]);
+  const [isLakeModalOpen, setIsLakeModalOpen] = useState(false);
+  const [selectedLakeDoc, setSelectedLakeDoc] = useState<any>(null);
+  const [lakeDocUrl, setLakeDocUrl] = useState<string | null>(null);
+  const [isFetchingUrl, setIsFetchingUrl] = useState(false);
+  const [loadingLake, setLoadingLake] = useState(false);
 
   // Initialize team/value state when item changes
   useEffect(() => {
@@ -253,18 +268,15 @@ const AnnualHiringPlan: React.FC = () => {
 
     try {
       setIsIdentifyingTeam(true);
-
-      const url = `${API_SERVER_URL}/api/proxy/pdf?url=${encodeURIComponent(oldestPortaria.url)}`;
-      const loadingTask = pdfjsLib.getDocument(url);
-      const pdf = await loadingTask.promise;
-
-      let fullText = '';
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items.map((item: any) => item.str).join(' ');
-        fullText += pageText + '\n\n';
+      const protocolo = String(viewingItem.protocoloSIPAC || viewingItem.dadosSIPAC?.numeroProcesso || '');
+      const endpoint = `${API_SERVER_URL}/api/sipac/documento/ocr?url=${encodeURIComponent(oldestPortaria.url)}&protocolo=${encodeURIComponent(protocolo)}&ordem=${encodeURIComponent(String(oldestPortaria.ordem || ''))}&tipo=${encodeURIComponent(String(oldestPortaria.tipo || 'PORTARIA'))}`;
+      const response = await fetch(endpoint);
+      const payload = await response.json();
+      if (!response.ok || payload?.status === 'ERROR') {
+        throw new Error(payload?.error || payload?.ocrError || 'Falha ao obter OCR da portaria.');
       }
+      const fullText = String(payload?.text || '').trim();
+      if (!fullText) throw new Error('OCR vazio na portaria.');
 
       const team = await extractPlanningTeam(fullText);
       setPlanningTeam(team);
@@ -569,23 +581,7 @@ const AnnualHiringPlan: React.FC = () => {
     }
   }, [dashboardView]);
 
-  const [syncProgress, setSyncProgress] = useState<number>(0);
-  const [isItemsListModalOpen, setIsItemsListModalOpen] = useState(false);
-  const [isPcaModalOpen, setIsPcaModalOpen] = useState(false);
-  const [isUnlinkModalOpen, setIsUnlinkModalOpen] = useState(false);
-  const [isYearMismatchModalOpen, setIsYearMismatchModalOpen] = useState(false);
-  const [itemToUnlink, setItemToUnlink] = useState<ContractItem | null>(null);
-  const [toast, setToast] = useState<{ message: string, type: ToastType } | null>(null);
-
   const processedAISummaryRefs = useRef<Set<string>>(new Set());
-
-  // Data Lake States
-  const [lakeDocuments, setLakeDocuments] = useState<any[]>([]);
-  const [isLakeModalOpen, setIsLakeModalOpen] = useState(false);
-  const [selectedLakeDoc, setSelectedLakeDoc] = useState<any>(null);
-  const [lakeDocUrl, setLakeDocUrl] = useState<string | null>(null);
-  const [isFetchingUrl, setIsFetchingUrl] = useState(false);
-  const [loadingLake, setLoadingLake] = useState(false);
 
   const [newItem, setNewItem] = useState<Partial<ContractItem>>({
     titulo: '',
@@ -1411,7 +1407,7 @@ const AnnualHiringPlan: React.FC = () => {
                     </div>
                     <div className="w-full h-[300px] relative">
                       {chartsReady && (
-                        <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={280} debounce={50}>
+                        <ResponsiveContainer width="99%" height={280} minWidth={100} minHeight={280} debounce={50}>
                           <ComposedChart data={summary.monthlyPlan}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                             <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }} />
@@ -1439,7 +1435,7 @@ const AnnualHiringPlan: React.FC = () => {
                     </div>
                     <div className="w-full flex-1 relative min-h-[300px]">
                       {chartsReady && (
-                        <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={280} debounce={50}>
+                        <ResponsiveContainer width="99%" height={280} minWidth={100} minHeight={280} debounce={50}>
                           <PieChart>
                             <Pie data={chartData} cx="50%" cy="50%" innerRadius={70} outerRadius={95} paddingAngle={5} dataKey="value" stroke="none">
                               {chartData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}

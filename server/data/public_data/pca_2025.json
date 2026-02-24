@@ -25,12 +25,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-03-03",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2024-05-08T12:35:47",
@@ -57,12 +57,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-05-01",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2024-05-08T12:35:50",
@@ -89,12 +89,12 @@
       "valorUnitario": 4000,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-04-01",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2024-05-08T12:35:55",
@@ -121,12 +121,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-08-01",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2024-05-08T12:35:58",
@@ -153,12 +153,12 @@
       "valorUnitario": 450000,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-06-02",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:00",
@@ -185,12 +185,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-01-31",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:03",
@@ -217,12 +217,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-09-01",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:06",
@@ -249,12 +249,12 @@
       "valorUnitario": 1000000,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-01",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:09",
@@ -281,12 +281,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-05-02",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:11",
@@ -313,12 +313,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-04-01",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:17",
@@ -345,12 +345,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-09-01",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:19",
@@ -377,12 +377,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-11-03",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:22",
@@ -409,12 +409,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-02-03",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:22",
@@ -441,12 +441,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-02-03",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:22",
@@ -473,12 +473,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-02-03",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:22",
@@ -505,12 +505,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-02-03",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:22",
@@ -537,12 +537,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-02-03",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:22",
@@ -569,12 +569,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-02-03",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:25",
@@ -601,12 +601,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-07-01",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:28",
@@ -633,12 +633,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-02-03",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:36",
@@ -665,12 +665,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-01-02",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:39",
@@ -697,12 +697,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-10-01",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:41",
@@ -729,12 +729,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-01-02",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:44",
@@ -761,12 +761,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-03-03",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:44",
@@ -793,12 +793,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-03-03",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:44",
@@ -825,12 +825,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-03-03",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:44",
@@ -857,12 +857,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-03-03",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:47",
@@ -889,12 +889,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-10-01",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:49",
@@ -921,12 +921,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-06-03",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:52",
@@ -953,12 +953,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-01-02",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 5,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:52",
@@ -985,12 +985,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-01-02",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 5,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:52",
@@ -1017,12 +1017,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-01-02",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 5,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:52",
@@ -1049,12 +1049,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-01-02",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 5,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:52",
@@ -1081,12 +1081,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-01-02",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 5,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:52",
@@ -1113,12 +1113,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-01-02",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 5,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-08T12:36:52",
@@ -1145,12 +1145,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-01-02",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 5,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-14T08:42:04",
@@ -1177,12 +1177,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-10-31",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-14T08:42:04",
@@ -1209,12 +1209,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-10-31",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-14T08:42:04",
@@ -1241,12 +1241,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-10-31",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-05-14T08:42:04",
@@ -1273,12 +1273,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-10-31",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2024-11-27T10:57:20",
@@ -1305,12 +1305,12 @@
       "valorUnitario": 2615125.1,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-02-21",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-01-03T14:15:46",
@@ -1337,12 +1337,12 @@
       "valorUnitario": 100000,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-02-25",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-01-03T14:15:49",
@@ -1369,12 +1369,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-03-20",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-02-03T08:38:24",
@@ -1401,12 +1401,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-04-30",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-02-03T08:38:27",
@@ -1433,12 +1433,12 @@
       "valorUnitario": 55000,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-03-28",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-02-03T08:38:27",
@@ -1465,12 +1465,12 @@
       "valorUnitario": 40000,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-03-28",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-02-20T09:10:42",
@@ -1497,12 +1497,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-07-31",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-02-20T09:10:42",
@@ -1529,12 +1529,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-07-31",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-02-20T09:10:42",
@@ -1561,12 +1561,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-07-31",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-04-10T11:43:28",
@@ -1593,12 +1593,12 @@
       "valorUnitario": 50000,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-06-27",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-04-10T11:43:30",
@@ -1625,12 +1625,12 @@
       "valorUnitario": 5000,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-07-01",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-04-15T15:18:49",
@@ -1657,12 +1657,12 @@
       "valorUnitario": 40000,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-08-29",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-04-23T17:42:53",
@@ -1689,12 +1689,12 @@
       "valorUnitario": 269.35,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-07-31",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-04-23T17:42:55",
@@ -1721,12 +1721,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-08-29",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 5,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Soluções de TIC"
+      "categoriaItemPcaNome": "Soluções de TIC",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-05-30T11:29:35",
@@ -1753,12 +1753,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-08-15",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-06-16T17:09:53",
@@ -1785,12 +1785,12 @@
       "valorUnitario": 50000,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-11-17",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-06-16T17:09:56",
@@ -1817,12 +1817,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-11-17",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-06-17T01:19:15",
@@ -1849,12 +1849,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-07-15",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-06-26T14:28:13",
@@ -1881,12 +1881,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-11-03",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-06-26T15:07:33",
@@ -1913,12 +1913,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-11-17",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-06-26T16:55:57",
@@ -1945,12 +1945,12 @@
       "valorUnitario": 2000,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-11-17",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-07-08T11:20:57",
@@ -1977,12 +1977,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-10-30",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-07-08T11:21:00",
@@ -2009,12 +2009,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-10-30",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-07-08T11:21:04",
@@ -2041,12 +2041,12 @@
       "valorUnitario": 5000,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-09-30",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-07-08T11:21:07",
@@ -2073,12 +2073,12 @@
       "valorUnitario": 250,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-10-20",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-07-08T11:21:07",
@@ -2105,12 +2105,12 @@
       "valorUnitario": 250,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-10-20",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-07-08T11:21:07",
@@ -2137,12 +2137,12 @@
       "valorUnitario": 3500,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-10-20",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-07-08T11:21:07",
@@ -2169,12 +2169,12 @@
       "valorUnitario": 2000,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-10-20",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-07-08T11:21:07",
@@ -2201,12 +2201,12 @@
       "valorUnitario": 800,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-10-20",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-07-08T11:21:07",
@@ -2233,12 +2233,12 @@
       "valorUnitario": 500,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-10-20",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-07-08T11:21:07",
@@ -2265,12 +2265,12 @@
       "valorUnitario": 250,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-10-20",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-08-27T16:17:42",
@@ -2297,12 +2297,12 @@
       "valorUnitario": 52000,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-11-03",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-08-29T15:28:21",
@@ -2329,12 +2329,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-01",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-08-29T15:28:21",
@@ -2361,12 +2361,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-01",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-08-29T15:28:21",
@@ -2393,12 +2393,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-01",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-08-29T15:28:21",
@@ -2425,12 +2425,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-01",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-08-29T15:28:21",
@@ -2457,12 +2457,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-01",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-08-29T15:28:21",
@@ -2489,12 +2489,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-01",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-08-29T15:28:21",
@@ -2521,12 +2521,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-01",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-08-29T15:28:21",
@@ -2553,12 +2553,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-01",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-08-29T15:28:21",
@@ -2585,12 +2585,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-01",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-08-29T15:28:21",
@@ -2617,12 +2617,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-01",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-08-29T15:28:21",
@@ -2649,12 +2649,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-01",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-08-29T15:28:21",
@@ -2681,12 +2681,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-01",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-08-29T15:28:21",
@@ -2713,12 +2713,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-01",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-08-29T15:28:21",
@@ -2745,12 +2745,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-01",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-08-29T15:28:21",
@@ -2777,12 +2777,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-01",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-09-03T17:02:54",
@@ -2809,12 +2809,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-01",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-09-11T08:38:54",
@@ -2841,12 +2841,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-12",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-09-11T08:38:54",
@@ -2873,12 +2873,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-12",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-09-11T08:38:54",
@@ -2905,12 +2905,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-12",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-09-11T08:38:54",
@@ -2937,12 +2937,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-12",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-09-22T16:32:51",
@@ -2969,12 +2969,12 @@
       "valorUnitario": 136.8,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-11",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-10-01T12:02:34",
@@ -3001,12 +3001,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-15",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-10-09T14:00:16",
@@ -3033,12 +3033,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-31",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-10-15T16:04:39",
@@ -3065,12 +3065,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-19",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-10-21T16:51:32",
@@ -3097,12 +3097,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-31",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-10-21T16:54:31",
@@ -3129,12 +3129,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-11-12",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-11-26T08:25:17",
@@ -3161,12 +3161,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-23",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-11-26T08:28:17",
@@ -3193,12 +3193,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-26",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-11-26T08:31:17",
@@ -3225,12 +3225,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-12",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-11-26T08:31:20",
@@ -3257,12 +3257,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-12",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Material"
     },
     {
       "dataAtualizacao": "2025-12-02T14:37:54",
@@ -3289,12 +3289,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-30",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-12-02T14:39:17",
@@ -3321,12 +3321,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-26",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-12-04T11:25:55",
@@ -3353,12 +3353,12 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-15",
+      "classificacaoCatalogoId": 2,
       "categoriaItemPcaid": 2,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 2,
-      "nomeClassificacao": "Serviço",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Serviço"
+      "categoriaItemPcaNome": "Serviço",
+      "nomeClassificacao": "Serviço"
     },
     {
       "dataAtualizacao": "2025-12-19T09:39:41",
@@ -3385,13 +3385,13 @@
       "valorUnitario": 0,
       "valorOrcamentoExercicio": 0,
       "dataDesejada": "2025-12-24",
+      "classificacaoCatalogoId": 1,
       "categoriaItemPcaid": 1,
       "nomeCatalogo": "Catálogo do Compras.gov.br",
-      "classificacaoCatalogoId": 1,
-      "nomeClassificacao": "Material",
       "catalogoId": 1,
-      "categoriaItemPcaNome": "Material"
+      "categoriaItemPcaNome": "Material",
+      "nomeClassificacao": "Material"
     }
   ],
-  "updatedAt": "2026-02-24T19:46:57.678Z"
+  "updatedAt": "2026-02-24T20:46:01.884Z"
 }

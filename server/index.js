@@ -7,7 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import MiniSearch from 'minisearch';
-import pdfParse from 'pdf-parse';
+import { PDFParse } from 'pdf-parse';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -70,8 +70,10 @@ async function extractDocumentText(url) {
 
   if (isPdf) {
     try {
-      const parsed = await pdfParse(buffer);
+      const parser = new PDFParse({ data: buffer });
+      const parsed = await parser.getText({ parsePageInfo: false });
       text = String(parsed?.text || '').replace(/\s+\n/g, '\n').trim();
+      await parser.destroy();
       sourceKind = 'pdf';
     } catch (pdfErr) {
       console.warn(`[OCR] Falha ao extrair texto PDF: ${pdfErr?.message || pdfErr}`);
@@ -223,6 +225,11 @@ async function syncProcessDocuments(protocol, processId, documentos) {
       console.error(`[DATA SYNC] ❌ Erro ao salvar metadados do documento ${doc.ordem}:`, err.message);
     }
   }
+
+  // OCR completo em background para todos os documentos do processo.
+  syncProcessDocumentsOCR(protocol, documentos).catch((err) => {
+    console.error(`[OCR SYNC ERROR] ${protocol}:`, err?.message || err);
+  });
 }
 
 // Prevenção de crash global
@@ -575,11 +582,6 @@ function readJsonFileSafely(filePath, context) {
     console.error(`[JSON READ ERROR] ${context}: ${filePath} - ${error.message}`);
     return null;
   }
-
-  // OCR completo em background para todos os documentos do processo.
-  syncProcessDocumentsOCR(protocol, documentos).catch((err) => {
-    console.error(`[OCR SYNC ERROR] ${protocol}:`, err?.message || err);
-  });
 }
 
 /**
