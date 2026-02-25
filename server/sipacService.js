@@ -139,33 +139,95 @@ export async function scrapeSIPACProcess(protocol) {
 
         // 4. Submit Search
         console.log(`[SIPAC] Clicking 'Consultar'...`);
-        await Promise.all([
-            page.evaluate(() => {
-                const b = Array.from(document.querySelectorAll('input[type="submit"]')).find(b =>
-                    b.value.toLowerCase().includes('consultar')
-                );
-                if (b) b.click();
-            }),
-            page.waitForNavigation({ waitUntil: 'load', timeout: 90000 })
-        ]);
+        const clickedConsultar = await page.evaluate(() => {
+            const submitBtn = Array.from(document.querySelectorAll('input[type="submit"]')).find(b =>
+                (b.value || '').toLowerCase().includes('consultar')
+            );
+            if (submitBtn) {
+                submitBtn.click();
+                return true;
+            }
 
-        // 5. Look for results and click "Visualizar Processo" (Lupa)
-        console.log(`[SIPAC] Checking results...`);
-        const lupa = await page.evaluateHandle(() => {
-            return document.querySelector('img[title="Visualizar Processo"], img[alt="Visualizar Processo"], a[id*="detalhar"]');
+            const genericBtn = Array.from(document.querySelectorAll('button, a, span, div')).find(el =>
+                (el.innerText || '').trim().toLowerCase() === 'consultar'
+            );
+            if (genericBtn && typeof genericBtn.click === 'function') {
+                genericBtn.click();
+                return true;
+            }
+
+            const form = document.querySelector('form');
+            if (form && typeof form.submit === 'function') {
+                form.submit();
+                return true;
+            }
+            return false;
         });
 
-        if (!lupa || !lupa.asElement()) {
-            const noResults = await page.evaluate(() => document.body.innerText.includes('Nenhum processo foi encontrado'));
-            if (noResults) throw new Error('Nenhum processo foi encontrado com este número/ano.');
+        if (!clickedConsultar) throw new Error('Falha ao acionar consulta no SIPAC.');
+
+        // Some SIPAC screens update via JSF/AJAX without full navigation.
+        await Promise.race([
+            page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 45000 }).catch(() => null),
+            page.waitForSelector('img[title*="Visualizar"], img[alt*="Visualizar"], a[id*="detalhar"], a[href*="processo_detalhado"]', { timeout: 45000 }).catch(() => null),
+            page.waitForFunction(() => {
+                const text = (document.body?.innerText || '').toLowerCase();
+                return text.includes('nenhum processo foi encontrado');
+            }, { timeout: 45000 }).catch(() => null)
+        ]);
+
+        // 5. Look for results and open process details
+        console.log(`[SIPAC] Checking results...`);
+        const detailUrl = await page.evaluate(() => {
+            const SIPAC_DOMAIN = 'https://sipac.ifes.edu.br';
+            const toAbs = (url) => {
+                if (!url) return '';
+                if (url.startsWith('http')) return url;
+                return SIPAC_DOMAIN + (url.startsWith('/') ? '' : '/') + url;
+            };
+
+            const extractUrlFromOnclick = (onclick) => {
+                if (!onclick) return '';
+                const openMatch = onclick.match(/window\.open\('([^']+)'/i);
+                if (openMatch && openMatch[1]) return openMatch[1];
+                const detailMatch = onclick.match(/(\/[^'"]*processo_detalhado[^'"]*)/i);
+                if (detailMatch && detailMatch[1]) return detailMatch[1];
+                const idMatch = onclick.match(/detalhar\((\d+)\)/i);
+                if (idMatch && idMatch[1]) return `/public/jsp/processos/processo_detalhado.jsf?id=${idMatch[1]}`;
+                return '';
+            };
+
+            const candidates = Array.from(document.querySelectorAll('a[href], a[onclick], img[onclick]'));
+            for (const el of candidates) {
+                const href = el.getAttribute('href') || '';
+                const onclick = el.getAttribute('onclick') || '';
+                const title = (el.getAttribute('title') || '').toLowerCase();
+                const alt = (el.getAttribute('alt') || '').toLowerCase();
+                const text = (el.textContent || '').toLowerCase();
+
+                if (
+                    href.includes('processo_detalhado') ||
+                    onclick.toLowerCase().includes('processo_detalhado') ||
+                    onclick.toLowerCase().includes('detalhar(') ||
+                    title.includes('visualizar processo') ||
+                    alt.includes('visualizar processo') ||
+                    text.includes('visualizar processo')
+                ) {
+                    const resolved = href || extractUrlFromOnclick(onclick);
+                    if (resolved) return toAbs(resolved);
+                }
+            }
+            return '';
+        });
+
+        if (!detailUrl) {
+            const noResults = await page.evaluate(() => (document.body?.innerText || '').includes('Nenhum processo foi encontrado'));
+            if (noResults) throw new Error('Nenhum processo foi encontrado com este numero/ano.');
             throw new Error('Falha ao localizar resultado na tabela do SIPAC.');
         }
 
-        console.log(`[SIPAC] Clicking 'Visualizar Processo'...`);
-        await Promise.all([
-            lupa.asElement().click(),
-            page.waitForNavigation({ waitUntil: 'load', timeout: 120000 })
-        ]);
+        console.log(`[SIPAC] Opening process detail page...`);
+        await page.goto(detailUrl, { waitUntil: 'networkidle2', timeout: 120000 });
 
         console.log(`[SIPAC] Extracting data...`);
         // 6. Extract Data from single vertical page
@@ -209,23 +271,37 @@ export async function scrapeSIPACProcess(protocol) {
             };
 
             const parseListagemTable = (titleText, extractLinks = false) => {
+                const normalizeTitle = (value) => String(value || '')
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .toUpperCase()
+                    .replace(/[^A-Z0-9]/g, '');
                 const tables = Array.from(document.querySelectorAll('table'));
 
                 const table = tables.find(t => {
-                    const cleanTitle = titleText.toUpperCase();
+                    const cleanTitle = normalizeTitle(titleText);
+                    const weakTitle = cleanTitle.slice(0, 8);
+                    const titleMatches = (text) => {
+                        const normalized = normalizeTitle(text);
+                        if (!normalized) return false;
+                        if (cleanTitle && normalized.includes(cleanTitle)) return true;
+                        if (cleanTitle && cleanTitle.includes(normalized)) return true;
+                        if (weakTitle.length >= 5 && normalized.includes(weakTitle)) return true;
+                        return false;
+                    };
 
                     // 1. Check caption
                     const caption = t.querySelector('caption');
-                    if (caption && caption.innerText.toUpperCase().includes(cleanTitle)) return true;
+                    if (caption && titleMatches(caption.innerText)) return true;
 
                     // 2. Check first row header
                     const firstHeader = t.querySelector('th');
-                    if (firstHeader && firstHeader.innerText.toUpperCase().includes(cleanTitle)) return true;
+                    if (firstHeader && titleMatches(firstHeader.innerText)) return true;
 
                     // 3. Check previous siblings (often a div or span with the title)
                     let prev = t.previousElementSibling;
                     while (prev) {
-                        if (prev.innerText && prev.innerText.toUpperCase().includes(titleText.toUpperCase())) return true;
+                        if (prev.innerText && titleMatches(prev.innerText)) return true;
                         // Don't look too far up
                         if (prev.tagName === 'TABLE' || prev.tagName === 'HR') break;
                         prev = prev.previousElementSibling;
@@ -233,7 +309,7 @@ export async function scrapeSIPACProcess(protocol) {
 
                     // 4. Check parent's previous sibling (common structure in SIPAC)
                     const parentPrev = t.parentElement?.previousElementSibling;
-                    if (parentPrev && parentPrev.innerText.toUpperCase().includes(cleanTitle)) return true;
+                    if (parentPrev && titleMatches(parentPrev.innerText)) return true;
 
                     return false;
                 });
@@ -254,8 +330,8 @@ export async function scrapeSIPACProcess(protocol) {
                     })
                     .map(r => {
                         const cells = Array.from(r.querySelectorAll('td'));
-                        // If specifically looking for Interessados, we expect [Tyoe, Name] or similar
-                        if (titleText === 'INTERESSADOS') {
+                        // If specifically looking for Interessados, we expect [Type, Name] or similar
+                        if (String(titleText || '').toUpperCase().includes('INTERESS')) {
                             // layout: [Tipo, Identificador, Nome]
                             const tipo = cells[0] ? cells[0].innerText.trim() : '';
                             // cells[1] is identifier, usually masked
@@ -326,7 +402,7 @@ export async function scrapeSIPACProcess(protocol) {
             // Filter out empty interessados
             const interessados = interessadosRaw.filter(i => i && i.nome && i.nome.trim() !== '');
 
-            const movimentacoes = parseListagemTable('MOVIMENTAÇÕES').filter(r => r.length >= 6).map(r => {
+            const movimentacoes = parseListagemTable('MOVIMENTACOES').filter(r => r.length >= 6).map(r => {
                 const fullDateStr = r[0] || '';
                 return {
                     data: fullDateStr.split(' ')[0],
@@ -407,6 +483,7 @@ export async function scrapeSIPACProcess(protocol) {
             numeroProcesso: protocol,
             scraping_last_error: errorMessage,
             status: "ERRO_SCRAPING",
+            interessados: [],
             documentos: [],
             movimentacoes: [],
             incidentes: []

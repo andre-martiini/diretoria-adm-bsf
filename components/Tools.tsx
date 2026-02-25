@@ -42,6 +42,14 @@ const Tools: React.FC = () => {
             route: '/mapa-precos',
             color: 'orange-600',
             accent: 'bg-orange-600'
+        },
+        {
+            title: 'Exportador Sipac',
+            description: 'Acesso ao mÃ³dulo externo para exportaÃ§Ã£o de dados do SIPAC.',
+            icon: <FileText size={22} />,
+            route: '/sipac',
+            color: 'teal-600',
+            accent: 'bg-teal-600'
         }
     ];
 
@@ -88,7 +96,13 @@ const Tools: React.FC = () => {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: index * 0.1 }}
-                            onClick={() => navigate(tool.route)}
+                            onClick={() => {
+                                if (tool.external) {
+                                    window.open(tool.route, '_blank', 'noopener,noreferrer');
+                                    return;
+                                }
+                                navigate(tool.route);
+                            }}
                             className="group bg-white p-8 rounded-[2rem] border border-slate-200 shadow-premium hover:shadow-2xl hover:border-ifes-green/20 hover:-translate-y-1 transition-all cursor-pointer flex flex-col justify-between h-[18rem]"
                         >
                             <div>

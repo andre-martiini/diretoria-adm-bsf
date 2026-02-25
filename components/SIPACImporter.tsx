@@ -57,7 +57,10 @@ export const SIPACImporter: React.FC = () => {
                 throw new Error('Processo não encontrado ou erro no servidor SIPAC.');
             }
 
-            const result = await response.json();
+            const result: SIPACProcess = await response.json();
+            if (result?.scraping_last_error) {
+                throw new Error(`Erro no SIPAC: ${result.scraping_last_error}`);
+            }
             setData(result);
         } catch (err: any) {
             setError(err.message || 'Falha ao conectar com o serviço de extração.');
@@ -83,12 +86,13 @@ export const SIPACImporter: React.FC = () => {
         if (!data) return;
         setIsExporting(true);
         try {
+            const documentos = Array.isArray(data.documentos) ? data.documentos : [];
             const response = await fetch(`${API_SERVER_URL}/api/sipac/processo/exportar-gemini`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     protocolo: data.numeroProcesso,
-                    documentos: data.documentos
+                    documentos
                 })
             });
 
@@ -98,7 +102,7 @@ export const SIPACImporter: React.FC = () => {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `Dossie_${data.numeroProcesso.replace(/[^\d]/g, '')}.zip`;
+            a.download = `Dossie_${String(data.numeroProcesso || 'processo').replace(/[^\d]/g, '')}.zip`;
             document.body.appendChild(a);
             a.click();
             a.remove();
@@ -109,6 +113,10 @@ export const SIPACImporter: React.FC = () => {
             setIsExporting(false);
         }
     };
+
+    const interessados = Array.isArray(data?.interessados) ? data.interessados : [];
+    const documentos = Array.isArray(data?.documentos) ? data.documentos : [];
+    const movimentacoes = Array.isArray(data?.movimentacoes) ? data.movimentacoes : [];
 
     return (
         <div className="min-h-screen border-t-4 border-ifes-green bg-[#f8fafc] font-sans text-slate-800">
@@ -242,14 +250,14 @@ export const SIPACImporter: React.FC = () => {
                                         <Users className="w-4 h-4" /> Interessados
                                     </h3>
                                     <div className="space-y-4">
-                                        {data.interessados.slice(0, 3).map((i, idx) => (
+                                        {interessados.slice(0, 3).map((i, idx) => (
                                             <div key={idx} className="bg-white/10 p-3 rounded-xl backdrop-blur-sm border border-white/5">
                                                 <span className="block text-[9px] text-white/50 uppercase font-black tracking-widest">{i.tipo}</span>
                                                 <span className="text-sm font-black tracking-tight">{i.nome}</span>
                                             </div>
                                         ))}
-                                        {data.interessados.length > 3 && (
-                                            <span className="block text-[10px] font-bold text-center text-white/40 uppercase">+ {data.interessados.length - 3} interessados</span>
+                                        {interessados.length > 3 && (
+                                            <span className="block text-[10px] font-bold text-center text-white/40 uppercase">+ {interessados.length - 3} interessados</span>
                                         )}
                                     </div>
                                 </div>
@@ -313,7 +321,7 @@ export const SIPACImporter: React.FC = () => {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100">
-                                            {data.documentos.map((doc, idx) => (
+                                            {documentos.map((doc, idx) => (
                                                 <tr key={idx} className="hover:bg-ifes-green/5 transition-colors group">
                                                     <td className="px-8 py-5">
                                                         <span className="text-xs font-black text-slate-400">#{doc.ordem}</span>
@@ -355,7 +363,7 @@ export const SIPACImporter: React.FC = () => {
                                     <History className="w-5 h-5 text-ifes-green" /> Linha do Tempo de Movimentação
                                 </h3>
                                 <div className="space-y-4">
-                                    {data.movimentacoes.map((mov, idx) => (
+                                    {movimentacoes.map((mov, idx) => (
                                         <div key={idx} className="relative pl-8 pb-4 border-l-2 border-slate-100 last:pb-0">
                                             <div className={`absolute left-[-9px] top-0 w-4 h-4 rounded-full border-4 border-white shadow-sm ${idx === 0 ? 'bg-ifes-green animate-pulse' : 'bg-slate-300'}`} />
                                             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-premium flex flex-col sm:grid sm:grid-cols-4 gap-6 hover:shadow-lg transition-all">
