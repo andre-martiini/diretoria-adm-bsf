@@ -18,7 +18,8 @@ import {
     Building2,
     RefreshCw,
     ExternalLink,
-    ChevronRight
+    ChevronRight,
+    Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import logoIfes from '../logo-ifes.png';
@@ -32,6 +33,7 @@ export const SIPACImporter: React.FC = () => {
     const [data, setData] = useState<SIPACProcess | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [config, setConfig] = useState<SystemConfig | null>(null);
+    const [isExporting, setIsExporting] = useState(false);
 
     useEffect(() => {
         const initConfig = async () => {
@@ -75,6 +77,37 @@ export const SIPACImporter: React.FC = () => {
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setProtocol(formatProtocol(e.target.value));
+    };
+
+    const handleExportZip = async () => {
+        if (!data) return;
+        setIsExporting(true);
+        try {
+            const response = await fetch(`${API_SERVER_URL}/api/sipac/processo/exportar-gemini`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    protocolo: data.numeroProcesso,
+                    documentos: data.documentos
+                })
+            });
+
+            if (!response.ok) throw new Error('Falha na geração do dossiê.');
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Dossie_${data.numeroProcesso.replace(/[^\d]/g, '')}.zip`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err: any) {
+            alert('Erro ao exportar: ' + err.message);
+        } finally {
+            setIsExporting(false);
+        }
     };
 
     return (
@@ -220,6 +253,18 @@ export const SIPACImporter: React.FC = () => {
                                         )}
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* Export Action */}
+                            <div className="flex justify-end">
+                                <button
+                                    onClick={handleExportZip}
+                                    disabled={isExporting}
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-3 shadow-lg shadow-indigo-600/20 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest text-xs"
+                                >
+                                    {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                                    <span>{isExporting ? 'Gerando Dossiê...' : 'Exportar Dossiê para o Gemini (.zip)'}</span>
+                                </button>
                             </div>
 
                             {/* Classification */}
