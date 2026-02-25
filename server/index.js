@@ -8,6 +8,9 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import MiniSearch from 'minisearch';
 import { PDFParse } from 'pdf-parse';
+import TurndownService from 'turndown';
+import { gfm } from 'turndown-plugin-gfm';
+import archiver from 'archiver';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -44,6 +47,9 @@ if (fs.existsSync(serviceAccountPath)) {
 const db_admin = admin.apps.length ? admin.firestore() : null;
 // Removed storage bucket reference as we are not using it anymore
 
+const turndownService = new TurndownService({ headingStyle: 'atx' });
+turndownService.use(gfm);
+
 /**
  * FunÃ§Ã£o para sincronizar documentos (Apenas Metadados) no Firestore
  */
@@ -79,9 +85,18 @@ async function extractDocumentText(url) {
       console.warn(`[OCR] Falha ao extrair texto PDF: ${pdfErr?.message || pdfErr}`);
     }
   } else if (isHtml) {
-    text = stripHtml(buffer.toString('utf8'));
-    sourceKind = 'html';
+    // Usar Turndown para preservar estrutura (tabelas, listas) em Markdown
+    try {
+      const htmlContent = buffer.toString('utf8');
+      text = turndownService.turndown(htmlContent);
+      sourceKind = 'html-markdown';
+    } catch (tdError) {
+      console.warn(`[OCR] Falha no Turndown, usando stripHtml: ${tdError.message}`);
+      text = stripHtml(buffer.toString('utf8'));
+      sourceKind = 'html-fallback';
+    }
   } else {
+    // Tenta converter qualquer texto plano também, se possível, ou mantém stripHtml para segurança
     text = stripHtml(buffer.toString('utf8'));
     sourceKind = 'text';
   }
@@ -89,7 +104,16 @@ async function extractDocumentText(url) {
   if (!text || text.length < 30) {
     try {
       const scraped = await scrapeSIPACDocumentContent(url);
-      const fallbackText = String(scraped || '').replace(/\s+/g, ' ').trim();
+      // Se o scraped for HTML, idealmente deveríamos passar pelo Turndown também,
+      // mas o scrapeSIPACDocumentContent geralmente retorna texto já limpo ou HTML parcial.
+      // Vamos assumir texto limpo por enquanto ou aplicar turndown se parecer HTML.
+      let fallbackText = String(scraped || '');
+      if (fallbackText.includes('<') && fallbackText.includes('>')) {
+         fallbackText = turndownService.turndown(fallbackText);
+      } else {
+         fallbackText = fallbackText.replace(/\s+/g, ' ').trim();
+      }
+
       if (fallbackText.length > text.length) {
         text = fallbackText;
         sourceKind = sourceKind === 'pdf' ? 'pdf+html-fallback' : 'html-scrape';
@@ -441,6 +465,84 @@ app.get('/api/sipac/processo', async (req, res) => {
     console.error(`[SIPAC ERROR]`, error);
     res.status(500).json({ error: error.message });
   }
+});
+
+// Endpoint para Exportar Dossiê (ZIP com Markdown + YAML) para Gemini
+app.post('/api/sipac/processo/exportar-gemini', async (req, res) => {
+  const { protocolo, documentos } = req.body;
+
+  if (!documentos || !Array.isArray(documentos) || documentos.length === 0) {
+    return res.status(400).json({ error: 'Nenhum documento fornecido.' });
+  }
+
+  const cleanProtocol = String(protocolo || 'processo_sem_numero').replace(/[^\w\d]/g, '_');
+  const filename = `Dossie_${cleanProtocol}.zip`;
+
+  // Configurar headers para download do ZIP
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+  const archive = archiver('zip', {
+    zlib: { level: 9 } // Nível máximo de compressão
+  });
+
+  // Pipe do archive para a resposta
+  archive.pipe(res);
+
+  // Tratamento de erro do archive
+  archive.on('error', (err) => {
+    console.error('[EXPORT ZIP ERROR]', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: err.message });
+    } else {
+      res.end();
+    }
+  });
+
+  // Aviso de finalização (opcional)
+  archive.on('end', () => {
+    console.log(`[EXPORT ZIP] Arquivo ${filename} enviado com sucesso.`);
+  });
+
+  // Iterar e processar documentos
+  for (const doc of documentos) {
+    if (!doc.url) continue;
+
+    const safeOrdem = String(doc.ordem || '00').padStart(2, '0');
+    const safeTipo = String(doc.tipo || 'doc').replace(/[^\w\d\s-]/g, '').trim().replace(/\s+/g, '_');
+    const docFilename = `${safeOrdem}_${safeTipo}.md`;
+
+    try {
+      console.log(`[EXPORT ZIP] Processando: ${docFilename}`);
+
+      // Extrair texto (agora em Markdown via Turndown se for HTML)
+      const extraction = await extractDocumentText(doc.url);
+      const markdownContent = extraction.text || '(Conteúdo vazio ou não extraído)';
+
+      // Montar Frontmatter YAML
+      const yamlHeader = `---
+Processo: "${protocolo || ''}"
+Documento: "${doc.tipo || ''}"
+Ordem: "${doc.ordem || ''}"
+Data: "${doc.data || ''}"
+Origem: "${doc.unidadeOrigem || ''}"
+Fonte: "${extraction.sourceKind}"
+---
+
+`;
+
+      // Adicionar arquivo ao ZIP
+      archive.append(yamlHeader + markdownContent, { name: docFilename });
+
+    } catch (error) {
+      console.error(`[EXPORT ZIP] Falha no doc ${doc.ordem}:`, error.message);
+      // Adicionar arquivo de erro para não quebrar o fluxo
+      archive.append(`Erro ao extrair documento: ${error.message}`, { name: `${safeOrdem}_ERRO.txt` });
+    }
+  }
+
+  // Finalizar o ZIP
+  await archive.finalize();
 });
 
 // PROXY Endpoint para PDF
