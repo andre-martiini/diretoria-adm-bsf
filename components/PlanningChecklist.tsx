@@ -1,45 +1,81 @@
 import React, { useMemo, useState } from 'react';
-import { SIPACDocument } from '../types';
-import { validateProcessDocuments } from '../services/documentValidationService';
-import { CheckCircle2, AlertTriangle, XCircle, Info, ChevronDown, ChevronUp, FileText, DollarSign } from 'lucide-react';
+import { SIPACDocument, DocumentChecklistAIAnalysis } from '../types';
+import { validateProcessDocuments, STANDARD_DOCUMENT_RULES, ARP_DOCUMENT_RULES, IRP_DOCUMENT_RULES } from '../services/documentValidationService';
+import { CheckCircle2, AlertTriangle, XCircle, Info, ChevronDown, ChevronUp, FileText, DollarSign, RefreshCw, Bot } from 'lucide-react';
 import { formatCurrency } from '../utils/formatters';
 
 interface PlanningChecklistProps {
   documents: SIPACDocument[];
   initialIsARP?: boolean;
+  initialMode?: 'standard' | 'arp' | 'irp';
   onToggleARP?: (isARP: boolean) => void;
+  onModeChange?: (mode: 'standard' | 'arp' | 'irp') => void;
   estimatedValue?: number | null;
   checklistAssociations?: Record<string, string>;
   onAssociateDocument?: (ruleId: string, documentOrder: string) => void;
+  documentAiAnalyses?: Record<string, DocumentChecklistAIAnalysis>;
+  isAnalyzingAiChecklist?: boolean;
+  aiChecklistError?: string | null;
+  onRefreshAiChecklist?: () => void;
 }
 
 
 const PlanningChecklist: React.FC<PlanningChecklistProps> = ({
   documents,
   initialIsARP = false,
+  initialMode,
   onToggleARP,
+  onModeChange,
   estimatedValue = null,
   checklistAssociations,
-  onAssociateDocument
+  onAssociateDocument,
+  documentAiAnalyses,
+  isAnalyzingAiChecklist = false,
+  aiChecklistError = null,
+  onRefreshAiChecklist
 }) => {
-  const [isARP, setIsARP] = useState(initialIsARP);
-  const [mode, setMode] = useState<'standard' | 'arp' | 'irp'>('standard');
+  const [mode, setMode] = useState<'standard' | 'arp' | 'irp'>(() => initialMode || (initialIsARP ? 'arp' : 'standard'));
   const [expandedRuleId, setExpandedRuleId] = useState<string | null>(null);
+  const [isAiSummaryOpen, setIsAiSummaryOpen] = useState(false);
 
   React.useEffect(() => {
-    // Sync if prop changes (though local selection overrides usually)
+    if (initialMode) {
+      setMode(initialMode);
+      return;
+    }
     if (initialIsARP && mode === 'standard') setMode('arp');
-  }, [initialIsARP]);
+  }, [initialIsARP, initialMode]);
 
   const checklist = useMemo(() => {
-    return validateProcessDocuments(documents, mode, checklistAssociations, estimatedValue);
-  }, [documents, mode, checklistAssociations, estimatedValue]);
+    return validateProcessDocuments(documents, mode, checklistAssociations, estimatedValue, documentAiAnalyses);
+  }, [documents, mode, checklistAssociations, estimatedValue, documentAiAnalyses]);
+
+  const analysisByOrder = useMemo(() => {
+    const map = new Map<string, DocumentChecklistAIAnalysis>();
+    Object.values(documentAiAnalyses || {}).forEach((analysis) => {
+      map.set(String(analysis.documentOrder), analysis);
+    });
+    return map;
+  }, [documentAiAnalyses]);
+
+  const ruleNameById = useMemo(() => {
+    const allRules = [...STANDARD_DOCUMENT_RULES, ...ARP_DOCUMENT_RULES, ...IRP_DOCUMENT_RULES];
+    const map = new Map<string, string>();
+    allRules.forEach((rule) => {
+      if (!map.has(rule.id)) map.set(rule.id, rule.nome);
+    });
+    return map;
+  }, []);
 
   const handleModeChange = (newMode: 'standard' | 'arp' | 'irp') => {
     setMode(newMode);
-    // Maintain compatibility with parent expecting boolean toggle for ARP
+    if (onModeChange) {
+      onModeChange(newMode);
+      return;
+    }
+    // Backward compatibility with legacy boolean handler
     if (onToggleARP) {
-        onToggleARP(newMode === 'arp');
+      onToggleARP(newMode === 'arp');
     }
   };
 
@@ -99,6 +135,67 @@ const PlanningChecklist: React.FC<PlanningChecklistProps> = ({
             IRP (Registro de Preços)
           </button>
         </div>
+
+        <button
+          onClick={() => onRefreshAiChecklist && onRefreshAiChecklist()}
+          disabled={!onRefreshAiChecklist || isAnalyzingAiChecklist}
+          className="px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest border border-indigo-200 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          title="Atualizar analise IA por OCR dos documentos"
+        >
+          {isAnalyzingAiChecklist ? <RefreshCw size={14} className="animate-spin" /> : <Bot size={14} />}
+          {isAnalyzingAiChecklist ? 'Analisando OCR...' : 'Reanalisar OCR com IA'}
+        </button>
+      </div>
+
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+        <button
+          onClick={() => setIsAiSummaryOpen((prev) => !prev)}
+          className="w-full flex items-center justify-between gap-3 text-left"
+        >
+          <h4 className="text-sm font-black text-slate-700 uppercase tracking-wide">Resumo IA por Documento</h4>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              {Object.keys(documentAiAnalyses || {}).length} analisado(s)
+            </span>
+            {isAiSummaryOpen ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
+          </div>
+        </button>
+
+        {aiChecklistError && (
+          <div className="p-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 text-xs font-bold">
+            {aiChecklistError}
+          </div>
+        )}
+
+        {isAiSummaryOpen && (
+          <div className="grid grid-cols-1 gap-2">
+            {documents.map((doc) => {
+              const analysis = analysisByOrder.get(String(doc.ordem));
+              return (
+                <div key={`${doc.ordem}-${doc.tipo}`} className="p-3 rounded-lg border border-slate-200 bg-slate-50/50">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs font-black text-slate-700">{doc.ordem} - {doc.tipo}</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      {analysis ? `${analysis.matchedRules.length} regra(s)` : 'Sem analise'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-2">
+                    {analysis?.summary || 'Resumo nao disponivel para este documento.'}
+                  </p>
+                  {analysis && analysis.matchedRules.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {analysis.matchedRules.map((match, idx) => (
+                        <span key={`${match.ruleId}-${idx}`} className="px-2 py-0.5 rounded-md text-[9px] font-black bg-indigo-50 text-indigo-700 border border-indigo-100">
+                          {ruleNameById.get(match.ruleId) || match.ruleId}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Checklist Grid */}

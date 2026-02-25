@@ -61,7 +61,8 @@ import {
   Category,
   SortConfig,
   SIPACProcess,
-  PCAMetadata
+  PCAMetadata,
+  DocumentChecklistAIAnalysis
 } from '../types';
 import {
   FALLBACK_DATA,
@@ -105,6 +106,11 @@ import { getFinancialStatusByProcess, ProcurementHistory } from '../services/pro
 import { ShoppingSearch } from './ShoppingSearch';
 import PlanningChecklist from './PlanningChecklist';
 import ProcessAutoLinker from './ProcessAutoLinker';
+import { analyzeDocumentChecklistWithAI } from '../utils/analysis/aiChecklistScanner';
+import { STANDARD_DOCUMENT_RULES, ARP_DOCUMENT_RULES, IRP_DOCUMENT_RULES } from '../services/documentValidationService';
+
+const checklistAiSessionCache: Record<string, Record<string, DocumentChecklistAIAnalysis>> = {};
+const checklistAiInFlightCache = new Map<string, Promise<Record<string, DocumentChecklistAIAnalysis>>>();
 
 // Configuração do Worker do PDF.js localmente
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
@@ -199,6 +205,10 @@ const AnnualHiringPlan: React.FC = () => {
   const [isExtracting, setIsExtracting] = useState(false);
   const [ocrLoadingDocKey, setOcrLoadingDocKey] = useState<string | null>(null);
   const [ocrTitle, setOcrTitle] = useState<string>('OCR do documento');
+  const [isExportingDossier, setIsExportingDossier] = useState(false);
+  const [checklistAiAnalyses, setChecklistAiAnalyses] = useState<Record<string, DocumentChecklistAIAnalysis>>({});
+  const [isAnalyzingChecklistAi, setIsAnalyzingChecklistAi] = useState(false);
+  const [checklistAiError, setChecklistAiError] = useState<string | null>(null);
 
   // AI Team Identification State
   const [planningTeam, setPlanningTeam] = useState<string[]>([]);
@@ -234,13 +244,26 @@ const AnnualHiringPlan: React.FC = () => {
       setPlanningTeam(viewingItem.equipePlanejamento || viewingItem.dadosSIPAC?.equipePlanejamento || []);
       setTeamIdentificationAttempted(viewingItem.equipeIdentificada || viewingItem.dadosSIPAC?.equipeIdentificada || false);
       setValueIdentificationAttempted(viewingItem.valorEstimadoIdentificado || viewingItem.dadosSIPAC?.valorEstimadoIdentificado || false);
+
+      const docs = viewingItem?.dadosSIPAC?.documentos || [];
+      const protocolo = String(viewingItem?.protocoloSIPAC || viewingItem?.dadosSIPAC?.numeroProcesso || '').trim();
+      const docsFingerprint = docs.map((doc) => `${String(doc?.ordem || '')}:${String(doc?.tipo || '')}:${doc?.url ? '1' : '0'}`).join('|');
+      const cacheKey = `${protocolo}::${docsFingerprint}`;
+      const persistedAnalyses = viewingItem?.dadosSIPAC?.checklistAiAnalyses || {};
+      const cachedAnalyses = checklistAiSessionCache[cacheKey] || {};
+      const mergedAnalyses = { ...persistedAnalyses, ...cachedAnalyses };
+      checklistAiSessionCache[cacheKey] = mergedAnalyses;
+      setChecklistAiAnalyses(mergedAnalyses);
     } else {
       setPlanningTeam([]);
       setTeamIdentificationAttempted(false);
       setValueIdentificationAttempted(false);
+      setChecklistAiAnalyses({});
     }
     setIsIdentifyingTeam(false);
     setIsIdentifyingValue(false);
+    setChecklistAiError(null);
+    setIsAnalyzingChecklistAi(false);
   }, [viewingItem]);
 
   const getDocKey = useCallback((docLike: { ordem?: string | number; tipo?: string }) => {
@@ -256,6 +279,38 @@ const AnnualHiringPlan: React.FC = () => {
       return { error: raw };
     }
   }, []);
+
+  const checklistRulesContext = useMemo(() => {
+    const allRules = [...STANDARD_DOCUMENT_RULES, ...ARP_DOCUMENT_RULES, ...IRP_DOCUMENT_RULES];
+    const unique = new Map<string, { id: string; nome: string }>();
+    allRules.forEach((rule) => {
+      if (!unique.has(rule.id)) {
+        unique.set(rule.id, { id: rule.id, nome: rule.nome });
+      }
+    });
+    return Array.from(unique.values());
+  }, []);
+
+  const getChecklistPersistenceTargets = useCallback((item: ContractItem): ContractItem[] => {
+    if (item?.isGroup && item?.childItems && item.childItems.length > 0) {
+      return item.childItems;
+    }
+    return [item];
+  }, []);
+
+  const persistChecklistPatch = useCallback(async (baseItem: ContractItem, patch: Record<string, any>) => {
+    const targets = getChecklistPersistenceTargets(baseItem);
+    const batch = writeBatch(db);
+
+    for (const target of targets) {
+      const docId = target.isManual ? String(target.id) : `${target.ano || selectedYear}-${target.id}`;
+      const safeDocId = docId.replace(/\//g, '-');
+      const docRef = doc(db, "pca_data", safeDocId);
+      batch.set(docRef, { ...patch, updatedAt: Timestamp.now() }, { merge: true });
+    }
+
+    await batch.commit();
+  }, [getChecklistPersistenceTargets, selectedYear]);
 
   const handleIdentifyTeam = useCallback(async () => {
     if (!viewingItem?.dadosSIPAC?.documentos) return;
@@ -544,6 +599,179 @@ const AnnualHiringPlan: React.FC = () => {
       setOcrLoadingDocKey(null);
     }
   }, [getDocKey, lakeDocuments, viewingItem, parseApiPayload]);
+
+  const handleAnalyzeChecklistFromOCR = useCallback(async (forceReanalyze: boolean = false) => {
+    const docs = viewingItem?.dadosSIPAC?.documentos || [];
+    if (!docs.length) {
+      setChecklistAiError('Nao ha documentos no processo para analise de checklist.');
+      return;
+    }
+
+    const protocolo = String(viewingItem?.protocoloSIPAC || viewingItem?.dadosSIPAC?.numeroProcesso || '').trim();
+    const docsFingerprint = docs.map((doc) => `${String(doc?.ordem || '')}:${String(doc?.tipo || '')}:${doc?.url ? '1' : '0'}`).join('|');
+    const cacheKey = `${protocolo}::${docsFingerprint}`;
+
+    if (!forceReanalyze && checklistAiSessionCache[cacheKey]) {
+      setChecklistAiAnalyses(checklistAiSessionCache[cacheKey]);
+      return;
+    }
+
+    setIsAnalyzingChecklistAi(true);
+    setChecklistAiError(null);
+
+    const runAnalysis = async (): Promise<Record<string, DocumentChecklistAIAnalysis>> => {
+      const nextAnalyses: Record<string, DocumentChecklistAIAnalysis> = {};
+
+      for (const docInfo of docs) {
+        const key = getDocKey(docInfo);
+        const documentOrder = String(docInfo?.ordem || '');
+        const documentType = String(docInfo?.tipo || 'DOCUMENTO');
+
+        if (!docInfo?.url) {
+          nextAnalyses[key] = {
+            documentOrder,
+            documentType,
+            summary: 'Documento sem URL publica para OCR.',
+            analyzedChars: 0,
+            source: 'ocr-ai',
+            matchedRules: []
+          };
+          continue;
+        }
+
+        let ocrText = '';
+        const cachedLakeDoc = lakeDocuments.find((ld) =>
+          String(ld?.sipacMetadata?.ordem) === String(docInfo?.ordem)
+          && String(ld?.sipacMetadata?.tipo) === String(docInfo?.tipo)
+        );
+
+        if (cachedLakeDoc?.ocrStatus === 'READY' && typeof cachedLakeDoc?.ocrText === 'string') {
+          ocrText = cachedLakeDoc.ocrText;
+        } else {
+          const endpoint = `${API_SERVER_URL}/api/sipac/documento/ocr?url=${encodeURIComponent(String(docInfo.url))}&protocolo=${encodeURIComponent(protocolo)}&ordem=${encodeURIComponent(String(docInfo.ordem || ''))}&tipo=${encodeURIComponent(String(docInfo.tipo || 'DOCUMENTO'))}`;
+          const response = await fetch(endpoint);
+          const payload = await parseApiPayload(response);
+
+          if (!response.ok || payload?.status === 'ERROR') {
+            throw new Error(payload?.error || payload?.ocrError || `Falha ao obter OCR do documento ${documentOrder}.`);
+          }
+          ocrText = String(payload?.text || '').trim();
+        }
+
+        if (!ocrText) {
+          nextAnalyses[key] = {
+            documentOrder,
+            documentType,
+            summary: 'OCR vazio para este documento.',
+            analyzedChars: 0,
+            source: 'ocr-ai',
+            matchedRules: []
+          };
+          continue;
+        }
+
+        try {
+          const analysis = await analyzeDocumentChecklistWithAI({
+            ordem: documentOrder,
+            tipo: documentType,
+            ocrText,
+            rules: checklistRulesContext
+          });
+          nextAnalyses[key] = analysis;
+        } catch (aiError: any) {
+          nextAnalyses[key] = {
+            documentOrder,
+            documentType,
+            summary: `Falha na analise IA: ${aiError?.message || 'erro desconhecido.'}`,
+            analyzedChars: Math.min(24000, ocrText.length),
+            source: 'ocr-ai',
+            matchedRules: []
+          };
+        }
+      }
+
+      return nextAnalyses;
+    };
+
+    try {
+      let promise = checklistAiInFlightCache.get(cacheKey);
+      if (!promise || forceReanalyze) {
+        promise = runAnalysis();
+        checklistAiInFlightCache.set(cacheKey, promise);
+      }
+
+      const result = await promise;
+      checklistAiSessionCache[cacheKey] = result;
+      setChecklistAiAnalyses(result);
+      if (viewingItem?.dadosSIPAC) {
+        const updatedSIPAC = { ...viewingItem.dadosSIPAC, checklistAiAnalyses: result };
+        const updatedItem = { ...viewingItem, dadosSIPAC: updatedSIPAC };
+        setViewingItem(updatedItem);
+        setData(prev => prev.map(i => String(i.id) === String(updatedItem.id) ? updatedItem : i));
+        await persistChecklistPatch(viewingItem, { "dadosSIPAC.checklistAiAnalyses": result });
+      }
+    } catch (error: any) {
+      setChecklistAiError(error?.message || 'Erro ao analisar OCR dos documentos para checklist.');
+    } finally {
+      checklistAiInFlightCache.delete(cacheKey);
+      setIsAnalyzingChecklistAi(false);
+    }
+  }, [viewingItem, getDocKey, lakeDocuments, parseApiPayload, checklistRulesContext, persistChecklistPatch]);
+
+  useEffect(() => {
+    if (!isDetailsModalOpen || activeTab !== 'checklist') return;
+    if (isAnalyzingChecklistAi) return;
+    const docs = viewingItem?.dadosSIPAC?.documentos || [];
+    if (!docs.length) return;
+
+    const analyzedCount = Object.keys(checklistAiAnalyses || {}).length;
+    if (analyzedCount >= docs.length) return;
+
+    handleAnalyzeChecklistFromOCR(false);
+  }, [isDetailsModalOpen, activeTab, isAnalyzingChecklistAi, viewingItem, checklistAiAnalyses, handleAnalyzeChecklistFromOCR]);
+
+  const handleExportProcessDossier = useCallback(async () => {
+    const protocolo = String(viewingItem?.dadosSIPAC?.numeroProcesso || viewingItem?.protocoloSIPAC || '').trim();
+    const documentos = viewingItem?.dadosSIPAC?.documentos || [];
+
+    if (!protocolo || documentos.length === 0) {
+      setToast({ message: 'Processo sem documentos para exportar.', type: 'error' });
+      return;
+    }
+
+    setIsExportingDossier(true);
+    try {
+      const response = await fetch(`${API_SERVER_URL}/api/sipac/processo/exportar-gemini`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ protocolo, documentos })
+      });
+
+      if (!response.ok) {
+        const payload = await parseApiPayload(response);
+        throw new Error(payload?.error || 'Falha na geracao do dossie.');
+      }
+
+      const blob = await response.blob();
+      if (!blob || blob.size === 0) {
+        throw new Error('Arquivo ZIP vazio retornado pelo servidor.');
+      }
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Dossie_${protocolo.replace(/[^\d]/g, '')}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      setToast({ message: 'Dossie gerado com sucesso.', type: 'success' });
+    } catch (error: any) {
+      setToast({ message: error?.message || 'Erro ao exportar dossie do processo.', type: 'error' });
+    } finally {
+      setIsExportingDossier(false);
+    }
+  }, [parseApiPayload, viewingItem]);
 
   const extractPdfContent = async (docUrl: string) => {
     try {
@@ -1020,31 +1248,35 @@ const AnnualHiringPlan: React.FC = () => {
     }
   };
 
-  const handleToggleARP = async (isARP: boolean) => {
+  const handleChecklistModeChange = async (mode: 'standard' | 'arp' | 'irp') => {
     if (!viewingItem || !viewingItem.dadosSIPAC) return;
 
-    // Update viewingItem (local state)
-    const updatedSIPAC = { ...viewingItem.dadosSIPAC, isARP };
+    const isARP = mode === 'arp';
+    const updatedSIPAC = { ...viewingItem.dadosSIPAC, isARP, checklistMode: mode };
     const updatedItem = { ...viewingItem, dadosSIPAC: updatedSIPAC };
     setViewingItem(updatedItem);
 
-    // Update data list (local cache)
-    setData(prev => prev.map(i => String(i.id) === String(updatedItem.id) ? updatedItem : i));
+    const targetIds = new Set(
+      getChecklistPersistenceTargets(viewingItem).map((item) => String(item.id))
+    );
+    setData(prev => prev.map(i => targetIds.has(String(i.id)) ? {
+      ...i,
+      dadosSIPAC: i.dadosSIPAC ? { ...i.dadosSIPAC, isARP, checklistMode: mode } : i.dadosSIPAC
+    } : i));
 
-    // Persist to Firestore
     try {
-      const docId = viewingItem.isManual ? String(viewingItem.id) : `${viewingItem.ano || selectedYear}-${viewingItem.id}`;
-      const safeDocId = docId.replace(/\//g, '-');
-      const docRef = doc(db, "pca_data", safeDocId);
-
-      await setDoc(docRef, {
+      await persistChecklistPatch(viewingItem, {
         "dadosSIPAC.isARP": isARP,
-        updatedAt: Timestamp.now()
-      }, { merge: true });
+        "dadosSIPAC.checklistMode": mode
+      });
     } catch (err) {
-      console.error("Erro ao salvar estado ARP:", err);
+      console.error("Erro ao salvar modo do checklist:", err);
       setToast({ message: "Erro ao salvar estado do checklist.", type: "error" });
     }
+  };
+
+  const handleToggleARP = async (isARP: boolean) => {
+    await handleChecklistModeChange(isARP ? 'arp' : 'standard');
   };
 
   const handleAssociateDocument = async (ruleId: string, docOrder: string) => {
@@ -1948,10 +2180,16 @@ const AnnualHiringPlan: React.FC = () => {
                    <PlanningChecklist
                       documents={viewingItem.dadosSIPAC.documentos || []}
                       initialIsARP={viewingItem.dadosSIPAC.isARP}
+                      initialMode={viewingItem.dadosSIPAC.checklistMode || (viewingItem.dadosSIPAC.isARP ? 'arp' : 'standard')}
                       onToggleARP={handleToggleARP}
+                      onModeChange={handleChecklistModeChange}
                       estimatedValue={viewingItem.valorEstimadoPesquisa || viewingItem.dadosSIPAC.valorEstimadoPesquisa || null}
                       checklistAssociations={viewingItem.dadosSIPAC.checklistAssociations}
                       onAssociateDocument={handleAssociateDocument}
+                      documentAiAnalyses={checklistAiAnalyses}
+                      isAnalyzingAiChecklist={isAnalyzingChecklistAi}
+                      aiChecklistError={checklistAiError}
+                      onRefreshAiChecklist={() => handleAnalyzeChecklistFromOCR(true)}
                    />
                 )}
 
@@ -2191,7 +2429,26 @@ const AnnualHiringPlan: React.FC = () => {
                 )}
 
                 {activeTab === 'documents' && (
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="space-y-4 h-full animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-xs font-black text-slate-700 uppercase tracking-widest">Documentos & Atas</h3>
+                        <p className="text-[10px] font-bold text-slate-400 mt-1">
+                          {(viewingItem.dadosSIPAC.documentos || []).length} documento(s) do processo vinculado
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleExportProcessDossier}
+                        disabled={isExportingDossier || (viewingItem.dadosSIPAC.documentos || []).length === 0}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-600/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        title="Gerar ZIP consolidado do processo atual"
+                      >
+                        {isExportingDossier ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />}
+                        <span>{isExportingDossier ? 'Gerando Dossie...' : 'Gerar Dossie (.zip)'}</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
                     {/* Left: Document List */}
                     <div className="lg:col-span-5 flex flex-col h-full overflow-hidden">
                       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-y-auto custom-scrollbar flex-1">
@@ -2339,6 +2596,7 @@ const AnnualHiringPlan: React.FC = () => {
                         </div>
                       )}
                     </div>
+                  </div>
                   </div>
                 )}
 

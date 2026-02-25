@@ -11,6 +11,7 @@ import { PDFParse } from 'pdf-parse';
 import TurndownService from 'turndown';
 import { gfm } from 'turndown-plugin-gfm';
 import archiver from 'archiver';
+import { PassThrough } from 'stream';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -503,6 +504,109 @@ app.post('/api/sipac/processo/exportar-gemini', async (req, res) => {
   archive.on('end', () => {
     console.log(`[EXPORT ZIP] Arquivo ${filename} enviado com sucesso.`);
   });
+
+  // Consolidar em 2 arquivos no ZIP:
+  // 1) dossie_consolidado.md (conteudo completo de todos os docs)
+  // 2) manifesto_dossie.json (metadados e status de extracao)
+  const dossierStream = new PassThrough();
+  archive.append(dossierStream, { name: 'dossie_consolidado.md' });
+
+  const manifest = {
+    processo: String(protocolo || ''),
+    geradoEm: new Date().toISOString(),
+    totalDocumentosInformados: documentos.length,
+    documentosComConteudo: 0,
+    documentosComErro: 0,
+    documentos: []
+  };
+
+  dossierStream.write(`# Dossie Consolidado do Processo ${String(protocolo || '')}\n\n`);
+  dossierStream.write(`Gerado em: ${manifest.geradoEm}\n\n`);
+  dossierStream.write(`Total de documentos informados: ${documentos.length}\n\n`);
+  dossierStream.write(`Este arquivo consolida o conteudo de todos os documentos em um unico Markdown.\n\n`);
+
+  for (const doc of documentos) {
+    const safeOrdem = String(doc?.ordem || '00').padStart(2, '0');
+    const tipo = String(doc?.tipo || 'DOCUMENTO');
+    const data = String(doc?.data || '');
+    const origem = String(doc?.unidadeOrigem || '');
+    const url = String(doc?.url || '');
+
+    dossierStream.write(`---\n`);
+    dossierStream.write(`## Documento ${safeOrdem} - ${tipo}\n\n`);
+    dossierStream.write(`- Ordem: ${String(doc?.ordem || '')}\n`);
+    dossierStream.write(`- Tipo: ${tipo}\n`);
+    dossierStream.write(`- Data: ${data}\n`);
+    dossierStream.write(`- Unidade de origem: ${origem}\n`);
+    dossierStream.write(`- URL: ${url || '(nao informada)'}\n`);
+
+    if (!url) {
+      manifest.documentosComErro += 1;
+      manifest.documentos.push({
+        ordem: String(doc?.ordem || ''),
+        tipo,
+        data,
+        unidadeOrigem: origem,
+        url: '',
+        status: 'ERRO',
+        erro: 'Documento sem URL para extracao.'
+      });
+      dossierStream.write(`- Status: ERRO\n\n`);
+      dossierStream.write(`> Erro ao extrair: Documento sem URL para extracao.\n\n`);
+      continue;
+    }
+
+    try {
+      console.log(`[EXPORT ZIP] Processando doc ${safeOrdem} - ${tipo}`);
+      const extraction = await extractDocumentText(url);
+      const markdownContent = String(extraction.text || '(Conteudo vazio ou nao extraido)');
+
+      manifest.documentosComConteudo += 1;
+      manifest.documentos.push({
+        ordem: String(doc?.ordem || ''),
+        tipo,
+        data,
+        unidadeOrigem: origem,
+        url,
+        status: 'OK',
+        fonteExtracao: extraction.sourceKind,
+        contentType: extraction.contentType || '',
+        fileName: extraction.fileName || '',
+        sizeBytes: Number(extraction.sizeBytes || 0),
+        fileHash: extraction.fileHash || '',
+        charsExtraidos: markdownContent.length
+      });
+
+      dossierStream.write(`- Status: OK\n`);
+      dossierStream.write(`- Fonte da extracao: ${String(extraction.sourceKind || 'unknown')}\n`);
+      dossierStream.write(`- Nome do arquivo: ${String(extraction.fileName || '')}\n`);
+      dossierStream.write(`- Content-Type: ${String(extraction.contentType || '')}\n`);
+      dossierStream.write(`- Tamanho (bytes): ${Number(extraction.sizeBytes || 0)}\n`);
+      dossierStream.write(`- Hash: ${String(extraction.fileHash || '')}\n`);
+      dossierStream.write(`- Caracteres extraidos: ${markdownContent.length}\n\n`);
+      dossierStream.write(`${markdownContent}\n\n`);
+    } catch (error) {
+      const errorMessage = error?.message || String(error);
+      manifest.documentosComErro += 1;
+      manifest.documentos.push({
+        ordem: String(doc?.ordem || ''),
+        tipo,
+        data,
+        unidadeOrigem: origem,
+        url,
+        status: 'ERRO',
+        erro: errorMessage
+      });
+      console.error(`[EXPORT ZIP] Falha no doc ${doc?.ordem}:`, errorMessage);
+      dossierStream.write(`- Status: ERRO\n\n`);
+      dossierStream.write(`> Erro ao extrair documento: ${errorMessage}\n\n`);
+    }
+  }
+
+  dossierStream.end();
+  archive.append(JSON.stringify(manifest, null, 2), { name: 'manifesto_dossie.json' });
+  await archive.finalize();
+  return;
 
   // Iterar e processar documentos
   for (const doc of documentos) {
@@ -1517,4 +1621,3 @@ if (!process.env.FUNCTION_TARGET && !process.env.FIREBASE_CONFIG) {
 }
 
 setInterval(() => { }, 60000);
-

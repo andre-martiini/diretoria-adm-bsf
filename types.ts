@@ -184,6 +184,21 @@ export interface ChecklistItemResult {
   note?: string;
 }
 
+export interface ChecklistRuleAIMatch {
+  ruleId: string;
+  confidence?: 'alta' | 'media' | 'baixa';
+  justification?: string;
+}
+
+export interface DocumentChecklistAIAnalysis {
+  documentOrder: string;
+  documentType: string;
+  summary: string;
+  analyzedChars: number;
+  source: 'ocr-ai';
+  matchedRules: ChecklistRuleAIMatch[];
+}
+
 export interface SIPACProcess {
   // Cabeçalho e Identificação
   numeroProcesso: string;
@@ -231,6 +246,8 @@ export interface SIPACProcess {
   valorEstimadoIdentificado?: boolean;
   checklist?: ChecklistItemResult[];
   checklistAssociations?: Record<string, string>; // RuleID -> Document Order
+  checklistMode?: 'standard' | 'arp' | 'irp';
+  checklistAiAnalyses?: Record<string, DocumentChecklistAIAnalysis>;
   isARP?: boolean;
 }
 

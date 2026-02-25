@@ -1,4 +1,4 @@
-import { SIPACDocument, DocumentRule, ChecklistItemResult, ValidationStatus } from '../types';
+import { SIPACDocument, DocumentRule, ChecklistItemResult, ValidationStatus, DocumentChecklistAIAnalysis } from '../types';
 import { DISPENSA_LICITACAO_LIMIT } from '../constants';
 
 export const STANDARD_DOCUMENT_RULES: DocumentRule[] = [
@@ -258,7 +258,8 @@ export const validateProcessDocuments = (
     documents: SIPACDocument[],
     modeOrIsARP: boolean | 'standard' | 'arp' | 'irp' = 'standard',
     manualAssociations?: Record<string, string>,
-    estimatedValue?: number | null
+    estimatedValue?: number | null,
+    aiAnalyses?: Record<string, DocumentChecklistAIAnalysis>
 ): ChecklistItemResult[] => {
 
     let mode: 'standard' | 'arp' | 'irp';
@@ -274,6 +275,7 @@ export const validateProcessDocuments = (
 
     return rules.map(rule => {
         let found: SIPACDocument | undefined;
+        let aiMatch: { doc: SIPACDocument; analysis: DocumentChecklistAIAnalysis } | undefined;
 
         // 1. Check manual association first
         if (manualAssociations && manualAssociations[rule.id]) {
@@ -281,7 +283,22 @@ export const validateProcessDocuments = (
             found = documents.find(d => String(d.ordem) === String(associatedDocOrder));
         }
 
-        // 2. If not found manually, try auto-detection
+        // 2. If not found manually, try AI-based detection from OCR summaries
+        if (!found && aiAnalyses) {
+            const analyses = Object.values(aiAnalyses);
+            for (const analysis of analyses) {
+                const hasRuleMatch = Array.isArray(analysis?.matchedRules)
+                    && analysis.matchedRules.some(m => String(m.ruleId) === String(rule.id));
+                if (!hasRuleMatch) continue;
+                const doc = documents.find(d => String(d.ordem) === String(analysis.documentOrder));
+                if (!doc) continue;
+                aiMatch = { doc, analysis };
+                found = doc;
+                break;
+            }
+        }
+
+        // 3. If still not found, try keyword-based auto-detection
         if (!found) {
             found = documents.find(doc => {
                 const docType = doc.tipo.toLowerCase();
@@ -311,6 +328,13 @@ export const validateProcessDocuments = (
         // Custom logic for Price Survey to show the value
         if (rule.id === 'pesquisa_precos' && estimatedValue) {
             note = `Valor Estimado Identificado: R$ ${estimatedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+        }
+
+        if (aiMatch) {
+            const ruleMatch = aiMatch.analysis.matchedRules.find(m => String(m.ruleId) === String(rule.id));
+            const confidenceLabel = ruleMatch?.confidence ? ` (confianca IA: ${ruleMatch.confidence})` : '';
+            const justification = ruleMatch?.justification ? ` ${ruleMatch.justification}` : '';
+            note = `Identificado por IA no OCR do documento #${aiMatch.doc.ordem}${confidenceLabel}.${justification}`.trim();
         }
 
         return {
