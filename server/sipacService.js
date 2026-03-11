@@ -82,11 +82,11 @@ export async function scrapeSIPACProcess(protocol) {
         await page.goto('https://sipac.ifes.edu.br/public/jsp/portal.jsf', { waitUntil: 'networkidle2', timeout: 90000 });
 
         const hasSearchForm = async () => page.evaluate(() =>
-            !!document.querySelector('#n_proc_p, input[name*="RADICAL_PROTOCOLO"]')
+            !!document.querySelector('form#processoForm input[name="RADICAL_PROTOCOLO"], form#processoForm input[name="NUM_PROTOCOLO"]')
         );
 
         const tryDirectSearchPage = async () => {
-            await page.goto('https://sipac.ifes.edu.br/public/jsp/processos/processo_consulta.jsf', {
+            await page.goto('https://sipac.ifes.edu.br/public/jsp/portal.jsf', {
                 waitUntil: 'networkidle2',
                 timeout: 30000
             }).catch(() => null);
@@ -128,7 +128,7 @@ export async function scrapeSIPACProcess(protocol) {
         }
 
         await page.evaluate(() => {
-            const radio = document.getElementById('n_proc_p');
+            const radio = document.querySelector('form#processoForm #n_proc_p');
             if (radio) {
                 // The site uses a checkbox/radio that triggers divProcessoP(true)
                 radio.click();
@@ -142,7 +142,8 @@ export async function scrapeSIPACProcess(protocol) {
         if (!parts) throw new Error('Formato de protocolo inválido. Use XXXXX.XXXXXX/XXXX-XX');
 
         await page.evaluate((p) => {
-            const findInput = (namePart) => Array.from(document.querySelectorAll('input')).find(i => i.name && i.name.includes(namePart));
+            const form = document.querySelector('form#processoForm');
+            const findInput = (namePart) => Array.from(form?.querySelectorAll('input') || []).find(i => i.name && i.name.includes(namePart));
             const fields = {
                 'RADICAL_PROTOCOLO': p[1], 'NUM_PROTOCOLO': p[2], 'ANO_PROTOCOLO': p[3], 'DV_PROTOCOLO': p[4]
             };
@@ -159,7 +160,8 @@ export async function scrapeSIPACProcess(protocol) {
         // 4. Submit Search
         console.log(`[SIPAC] Clicking 'Consultar'...`);
         const clickedConsultar = await page.evaluate(() => {
-            const submitBtn = Array.from(document.querySelectorAll('input[type="submit"]')).find(b =>
+            const form = document.querySelector('form#processoForm');
+            const submitBtn = Array.from(form?.querySelectorAll('input[type="submit"]') || []).find(b =>
                 (b.value || '').toLowerCase().includes('consultar')
             );
             if (submitBtn) {
@@ -167,7 +169,7 @@ export async function scrapeSIPACProcess(protocol) {
                 return true;
             }
 
-            const genericBtn = Array.from(document.querySelectorAll('button, a, span, div')).find(el =>
+            const genericBtn = Array.from(form?.querySelectorAll('button, a, span, div') || []).find(el =>
                 (el.innerText || '').trim().toLowerCase() === 'consultar'
             );
             if (genericBtn && typeof genericBtn.click === 'function') {
@@ -175,7 +177,6 @@ export async function scrapeSIPACProcess(protocol) {
                 return true;
             }
 
-            const form = document.querySelector('form');
             if (form && typeof form.submit === 'function') {
                 form.submit();
                 return true;
