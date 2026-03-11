@@ -49,7 +49,8 @@ const Tools: React.FC = () => {
             icon: <FileText size={22} />,
             route: '/sipac',
             color: 'teal-600',
-            accent: 'bg-teal-600'
+            accent: 'bg-teal-600',
+            external: false
         }
     ];
 
@@ -97,7 +98,7 @@ const Tools: React.FC = () => {
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: index * 0.1 }}
                             onClick={() => {
-                                if (tool.external) {
+                                if ((tool as any).external) {
                                     window.open(tool.route, '_blank', 'noopener,noreferrer');
                                     return;
                                 }
