@@ -279,3 +279,42 @@ export interface SystemConfig {
   pcaYearsMap: Record<string, string>;
   defaultYear: string;
 }
+
+// --- INTEGRAÇÃO GOVERNAMENTAL (COMPRAS E LICITAÇÕES) ---
+// Interfaces de domínio baseadas nos requisitos da Nova API (PNCP/Compras.gov)
+
+export interface GovIntegrationBase {
+  numeroProcesso: string;
+  objeto: string;
+  valorHomologado: number;
+  dataPublicacao?: string;
+  uasg?: string;
+  cnpj?: string;
+}
+
+export interface PregaoEletronico extends GovIntegrationBase {
+  modalidade: 'Pregão Eletrônico';
+  modoDisputa?: string;
+}
+
+export interface DispensaLicitacao extends GovIntegrationBase {
+  modalidade: 'Dispensa de Licitação';
+  amparoLegal?: string;
+}
+
+export interface InexigibilidadeLicitacao extends GovIntegrationBase {
+  modalidade: 'Inexigibilidade de Licitação';
+  amparoLegal?: string;
+}
+
+export interface Concorrencia extends GovIntegrationBase {
+  modalidade: 'Concorrência';
+  regimeExecucao?: string;
+}
+
+// Tipo união representando as 4 modalidades filtradas
+export type ModalidadeContratacaoGov =
+  | PregaoEletronico
+  | DispensaLicitacao
+  | InexigibilidadeLicitacao
+  | Concorrencia;
