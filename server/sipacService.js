@@ -77,33 +77,35 @@ export async function scrapeSIPACProcess(protocol) {
             }
         });
 
-        // 1. Go to portal (Establishing session)
+        // 1. Go to portal and then open the public process search page with the session established.
         console.log(`[SIPAC] Opening portal...`);
         await page.goto('https://sipac.ifes.edu.br/public/jsp/portal.jsf', { waitUntil: 'networkidle2', timeout: 90000 });
 
-        // 2. Click "Processos" (AJAX Navigation)
-        console.log(`[SIPAC] Clicking 'Processos' menu...`);
+        console.log(`[SIPAC] Opening process search page...`);
         try {
+            await page.goto('https://sipac.ifes.edu.br/public/jsp/processos/processo_consulta.jsf', { waitUntil: 'domcontentloaded', timeout: 15000 });
+            const searchPageReady = await page.evaluate(() =>
+                !!document.querySelector('#n_proc_p, input[name*="RADICAL_PROTOCOLO"]')
+            );
+            if (!searchPageReady) {
+                throw new Error('Search form not available after direct navigation');
+            }
+        } catch (err) {
+            console.warn(`[SIPAC] Direct search page failed: ${err.message}. Trying menu fallback...`);
+            await page.goto('https://sipac.ifes.edu.br/public/jsp/portal.jsf', { waitUntil: 'networkidle2', timeout: 60000 });
             await page.waitForSelector('div#l-processos, span#ext-gen10, .item.sub-item', { timeout: 30000 });
             await page.evaluate(() => {
                 const el = document.querySelector('div#l-processos') ||
                     Array.from(document.querySelectorAll('span, div, a')).find(e => e.innerText.trim() === 'Processos');
                 if (el) el.click();
             });
-
-            // Wait for the AJAX form to appear
-            console.log(`[SIPAC] Waiting for search form to load...`);
-            await page.waitForSelector('#n_proc_p', { timeout: 30000 });
-        } catch (err) {
-            console.warn(`[SIPAC] Menu click or form load failed: ${err.message}. Trying direct recovery...`);
-            // Only try direct jump if AJAX fails, though portal usually requires session
-            await page.goto('https://sipac.ifes.edu.br/public/jsp/processos/processo_consulta.jsf', { waitUntil: 'networkidle2', timeout: 30000 }).catch(() => { });
+            await page.waitForSelector('#n_proc_p, input[name*="RADICAL_PROTOCOLO"]', { timeout: 30000 });
         }
 
         // 3. Ensure "Nº Processo" is selected and fill fields
         console.log(`[SIPAC] Preparing search form...`);
         try {
-            await page.waitForSelector('#n_proc_p', { timeout: 20000 });
+            await page.waitForSelector('#n_proc_p, input[name*="RADICAL_PROTOCOLO"]', { timeout: 20000 });
         } catch (e) {
             console.log('[SIPAC] Selector #n_proc_p not found, but trying to proceed...');
         }
@@ -270,13 +272,27 @@ export async function scrapeSIPACProcess(protocol) {
                 return 'Não informado';
             };
 
+            const normalizeTitle = (value) => String(value || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toUpperCase()
+                .replace(/[^A-Z0-9]/g, '');
+
+            const getDirectCaptionText = (table) => {
+                const caption = Array.from(table.children).find(child => child.tagName === 'CAPTION');
+                return caption ? caption.innerText.trim() : '';
+            };
+
+            const getDirectRows = (table) => {
+                const rows = [];
+                if (table.tHead) rows.push(...Array.from(table.tHead.rows));
+                Array.from(table.tBodies || []).forEach(body => rows.push(...Array.from(body.rows)));
+                if (table.tFoot) rows.push(...Array.from(table.tFoot.rows));
+                return rows;
+            };
+
             const parseListagemTable = (titleText, extractLinks = false) => {
-                const normalizeTitle = (value) => String(value || '')
-                    .normalize('NFD')
-                    .replace(/[\u0300-\u036f]/g, '')
-                    .toUpperCase()
-                    .replace(/[^A-Z0-9]/g, '');
-                const tables = Array.from(document.querySelectorAll('table'));
+                const tables = Array.from(document.querySelectorAll('table.subListagem, table.listagem'));
 
                 const table = tables.find(t => {
                     const cleanTitle = normalizeTitle(titleText);
@@ -290,26 +306,15 @@ export async function scrapeSIPACProcess(protocol) {
                         return false;
                     };
 
-                    // 1. Check caption
-                    const caption = t.querySelector('caption');
-                    if (caption && titleMatches(caption.innerText)) return true;
+                    const caption = getDirectCaptionText(t);
+                    if (caption && titleMatches(caption)) return true;
 
-                    // 2. Check first row header
-                    const firstHeader = t.querySelector('th');
-                    if (firstHeader && titleMatches(firstHeader.innerText)) return true;
-
-                    // 3. Check previous siblings (often a div or span with the title)
                     let prev = t.previousElementSibling;
                     while (prev) {
                         if (prev.innerText && titleMatches(prev.innerText)) return true;
-                        // Don't look too far up
                         if (prev.tagName === 'TABLE' || prev.tagName === 'HR') break;
                         prev = prev.previousElementSibling;
                     }
-
-                    // 4. Check parent's previous sibling (common structure in SIPAC)
-                    const parentPrev = t.parentElement?.previousElementSibling;
-                    if (parentPrev && titleMatches(parentPrev.innerText)) return true;
 
                     return false;
                 });
@@ -318,23 +323,19 @@ export async function scrapeSIPACProcess(protocol) {
 
                 const SIPAC_DOMAIN = 'https://sipac.ifes.edu.br';
 
-                return Array.from(table.querySelectorAll('tr'))
+                return getDirectRows(table)
                     .filter(r => {
-                        // Skip header rows explicitly
-                        const text = r.innerText.toUpperCase();
+                        const text = String(r.innerText || '').toUpperCase();
                         if (text.includes('TIPO') && text.includes('NOME') && text.includes('IDENTIFICADOR')) return false;
                         if (r.className.includes('header')) return false;
 
-                        const cells = r.querySelectorAll('td');
+                        const cells = Array.from(r.children).filter(cell => cell.tagName === 'TD');
                         return cells.length >= 2;
                     })
                     .map(r => {
-                        const cells = Array.from(r.querySelectorAll('td'));
-                        // If specifically looking for Interessados, we expect [Type, Name] or similar
+                        const cells = Array.from(r.children).filter(cell => cell.tagName === 'TD');
                         if (String(titleText || '').toUpperCase().includes('INTERESS')) {
-                            // layout: [Tipo, Identificador, Nome]
                             const tipo = cells[0] ? cells[0].innerText.trim() : '';
-                            // cells[1] is identifier, usually masked
                             const nome = cells[2] ? cells[2].innerText.trim() : (cells[1] ? cells[1].innerText.trim() : '');
                             return { tipo, nome };
                         }
@@ -398,6 +399,8 @@ export async function scrapeSIPACProcess(protocol) {
                 return results;
             }
 
+            const getCellText = (value) => typeof value === 'object' ? value.text : value;
+
             const interessadosRaw = parseListagemTable('INTERESSADOS').map(r => ({ tipo: r.tipo, nome: r.nome }));
             // Filter out empty interessados
             const interessados = interessadosRaw.filter(i => i && i.nome && i.nome.trim() !== '');
@@ -417,16 +420,50 @@ export async function scrapeSIPACProcess(protocol) {
                 };
             });
 
+            const movimentacoesFiltradas = movimentacoes.filter(mov =>
+                /^\d{2}\/\d{2}\/\d{4}$/.test(String(mov.data || '').trim()) &&
+                String(mov.unidadeOrigem || '').trim() !== '' &&
+                String(mov.unidadeDestino || '').trim() !== ''
+            );
+
+            const documentosProcessoRaw = parseListagemTable('DOCUMENTOS DO PROCESSO', true)
+                .filter(r => {
+                    const ordem = String(getCellText(r[0]) || '').trim();
+                    const dataDocumento = String(getCellText(r[2]) || '').trim();
+                    return r.length >= 5 && /^\d+$/.test(ordem) && /^\d{2}\/\d{2}\/\d{4}$/.test(dataDocumento);
+                })
+                .map(r => {
+                    const findLink = r.find(col => typeof col === 'object' && col.url);
+                    return {
+                        ordem: getCellText(r[0]),
+                        tipo: getCellText(r[1]),
+                        data: getCellText(r[2]),
+                        unidadeOrigem: getCellText(r[3]),
+                        natureza: getCellText(r[4]),
+                        statusVisualizacao: 'Identificado',
+                        url: findLink ? findLink.url : ''
+                    };
+                });
+
+            const documentosProcesso = [];
+            const documentosKeys = new Set();
+            for (const doc of documentosProcessoRaw) {
+                const docKey = `${doc.ordem}|${doc.tipo}|${doc.data}`;
+                if (documentosKeys.has(docKey)) continue;
+                documentosKeys.add(docKey);
+                documentosProcesso.push(doc);
+            }
+
             // Determine Unidade Atual based on last movement destination or falling back to origin
             let unidadeAtual = getText('Unidade de Origem:');
-            if (movimentacoes.length > 0) {
+            if (movimentacoesFiltradas.length > 0) {
                 // The list usually comes ordered, but let's confirm logic if needed. 
                 // Assuming top-down or bottom-up, checking the most recent date is safer, 
                 // but usually the first row in "Movimentações" is the oldest. 
                 // Actually in SIPAC, usually the last one in the list is the most recent action? 
                 // Let's trust the 'Unidade de Origem' field from the header mostly, OR the last destination.
                 // A safe bet for "Current Unit" is the destination of the last movement.
-                const lastMov = movimentacoes[movimentacoes.length - 1];
+                const lastMov = movimentacoesFiltradas[movimentacoesFiltradas.length - 1];
                 if (lastMov) unidadeAtual = lastMov.unidadeDestino;
             }
 
@@ -446,20 +483,8 @@ export async function scrapeSIPACProcess(protocol) {
                 assuntoDescricao: getText('Assunto do Processo:').split(' - ').slice(1).join(' - '),
                 assuntoDetalhado: getText('Assunto Detalhado:'),
                 interessados: interessados,
-                documentos: parseListagemTable('DOCUMENTOS DO PROCESSO', true).filter(r => r.length >= 5).map(r => {
-                    const findLink = r.find(col => typeof col === 'object' && col.url);
-                    const getText = (val) => typeof val === 'object' ? val.text : val;
-                    return {
-                        ordem: getText(r[0]),
-                        tipo: getText(r[1]),
-                        data: getText(r[2]),
-                        unidadeOrigem: getText(r[3]),
-                        natureza: getText(r[4]),
-                        statusVisualizacao: 'Identificado',
-                        url: findLink ? findLink.url : ''
-                    };
-                }),
-                movimentacoes: movimentacoes,
+                documentos: documentosProcesso,
+                movimentacoes: movimentacoesFiltradas,
                 incidentes: parseDocumentosCancelados()
             };
         });

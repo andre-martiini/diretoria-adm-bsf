@@ -168,10 +168,11 @@ export const SIPACImporter: React.FC = () => {
                                         className="w-full bg-transparent px-6 py-4 font-mono text-lg text-slate-800 focus:outline-none placeholder:text-slate-300"
                                         value={protocol}
                                         onChange={handleInputChange}
-                                        onKeyPress={(e) => e.key === 'Enter' && handleFetch()}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleFetch()}
                                     />
                                 </div>
                                 <button
+                                    type="button"
                                     onClick={handleFetch}
                                     disabled={loading || !protocol.trim()}
                                     className="w-full sm:w-auto bg-ifes-green hover:bg-[#15803d] text-white px-8 py-4 rounded-xl font-black transition-all flex items-center justify-center gap-3 group shadow-lg shadow-ifes-green/20 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest text-sm"
