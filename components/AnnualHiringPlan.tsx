@@ -67,6 +67,7 @@ import {
 import {
   FALLBACK_DATA,
   API_SERVER_URL,
+  DOSSIER_EXPORT_API_URL,
   DEFAULT_YEAR,
   PCA_YEARS_MAP,
   CNPJ_IFES_BSF
@@ -741,7 +742,7 @@ const AnnualHiringPlan: React.FC = () => {
 
     setIsExportingDossier(true);
     try {
-      const response = await fetch(`${API_SERVER_URL}/api/sipac/processo/exportar-gemini`, {
+      const response = await fetch(`${DOSSIER_EXPORT_API_URL}/api/sipac/processo/exportar-gemini`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ protocolo, documentos })

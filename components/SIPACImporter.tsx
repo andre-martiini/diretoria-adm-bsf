@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { API_SERVER_URL } from '../constants';
+import { API_SERVER_URL, DOSSIER_EXPORT_API_URL } from '../constants';
 import { SIPACProcess } from '../types';
 import { 
     Search, 
@@ -87,7 +87,7 @@ export const SIPACImporter: React.FC = () => {
         setIsExporting(true);
         try {
             const documentos = Array.isArray(data.documentos) ? data.documentos : [];
-            const response = await fetch(`${API_SERVER_URL}/api/sipac/processo/exportar-gemini`, {
+            const response = await fetch(`${DOSSIER_EXPORT_API_URL}/api/sipac/processo/exportar-gemini`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

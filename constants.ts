@@ -18,6 +18,12 @@ export const DEFAULT_YEAR = '2026';
 export const DISPENSA_LICITACAO_LIMIT = 59000;
 
 export const API_SERVER_URL = import.meta.env.VITE_API_URL || '';
+const DIRECT_API_FALLBACK_URL = 'https://api-2pcibyapqa-uc.a.run.app';
+const isLocalDevelopment = typeof window !== 'undefined' &&
+    ['localhost', '127.0.0.1'].includes(window.location.hostname);
+export const DOSSIER_EXPORT_API_URL = import.meta.env.VITE_DIRECT_API_URL ||
+    API_SERVER_URL ||
+    (isLocalDevelopment ? '' : DIRECT_API_FALLBACK_URL);
 
 // A URL base agora será construída dinamicamente no App.tsx
 
