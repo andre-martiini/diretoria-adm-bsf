@@ -858,6 +858,38 @@ const PUBLIC_DATA_DIR = fs.existsSync(path.join(__dirname, 'data', 'public_data'
 const PROCUREMENT_DATA_DIR = fs.existsSync(path.join(__dirname, 'data', 'dados_abertos_compras'))
   ? path.join(__dirname, 'data', 'dados_abertos_compras')
   : path.join(__dirname, '..', 'dados_abertos_compras');
+const MODALITY_LABELS = {
+  pregao_eletronico: 'Pregão Eletrônico',
+  dispensa_licitacao: 'Dispensa de Licitação',
+  inexigibilidade_licitacao: 'Inexigibilidade de Licitação',
+  concorrencia: 'Concorrência'
+};
+const MODALITY_TYPES = new Set(['all', ...Object.keys(MODALITY_LABELS)]);
+const PNCP_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept': 'application/json'
+};
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const getCurrentProcurementYear = () => String(new Date().getFullYear());
+const getCurrentProcurementYearNumber = () => Number(getCurrentProcurementYear());
+const sanitizeYear = (value) => String(value || '').replace(/[^\d]/g, '');
+const isFixedProcurementYear = (year) => Number(year) < getCurrentProcurementYearNumber();
+const getProcurementFilePath = (year) => path.join(PROCUREMENT_DATA_DIR, `contratacoes_${year}.json`);
+
+function getProcurementYears() {
+  const knownYears = new Set(['2022', '2023', '2024', '2025', getCurrentProcurementYear()]);
+
+  if (fs.existsSync(PROCUREMENT_DATA_DIR)) {
+    const files = fs.readdirSync(PROCUREMENT_DATA_DIR);
+    files
+      .map((file) => file.match(/^contratacoes_(\d{4})\.json$/)?.[1])
+      .filter(Boolean)
+      .forEach((year) => knownYears.add(year));
+  }
+
+  return Array.from(knownYears).sort((a, b) => Number(a) - Number(b));
+}
 
 function readJsonFileSafely(filePath, context) {
   try {
@@ -868,11 +900,363 @@ function readJsonFileSafely(filePath, context) {
   }
 }
 
+function normalizeText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function detectGovModalityType(purchase) {
+  const combined = normalizeText(
+    `${purchase?.modalidadeNome || ''} ${purchase?.modoDisputaNomePncp || purchase?.modoDisputaNome || ''} ${purchase?.amparoLegalNome || purchase?.amparoLegal?.nome || ''}`
+  );
+
+  if (combined.includes('pregao')) return 'pregao_eletronico';
+  if (combined.includes('dispensa')) return 'dispensa_licitacao';
+  if (combined.includes('inexig')) return 'inexigibilidade_licitacao';
+  if (combined.includes('concorr')) return 'concorrencia';
+  return null;
+}
+
+function mapPurchaseToGovRecord(purchase) {
+  const modalidadeCodigo = detectGovModalityType(purchase);
+  if (!modalidadeCodigo) return null;
+
+  const fallbackProcess =
+    purchase?.processo ||
+    purchase?.numeroControlePNCP ||
+    purchase?.idCompra ||
+    purchase?.numeroCompra ||
+    'PROCESSO_NAO_INFORMADO';
+  const numeroProcesso = String(fallbackProcess).trim();
+
+  const itemDescription = Array.isArray(purchase?.itens)
+    ? purchase.itens
+      .map((item) => String(item?.descricao || '').trim())
+      .filter(Boolean)
+      .join(' | ')
+    : '';
+  const objeto = String(purchase?.objetoCompra || '').trim() || itemDescription || 'Objeto nao informado';
+
+  const rawHomologado = Number(purchase?.valorTotalHomologado);
+  const valorHomologado = Number.isFinite(rawHomologado) ? rawHomologado : 0;
+  const temValorHomologado = Number.isFinite(rawHomologado) && rawHomologado > 0;
+  const rawAnoCompra = purchase?.anoCompraPncp || purchase?.anoCompra || purchase?.fetchYear || null;
+  const anoCompra = rawAnoCompra ? String(rawAnoCompra) : null;
+  const rawSequencial = purchase?.sequencialCompraPncp || purchase?.sequencialCompra || null;
+  const sequencialCompra = rawSequencial !== null && rawSequencial !== undefined
+    ? String(rawSequencial)
+    : null;
+  const baseRecord = {
+    modalidade: MODALITY_LABELS[modalidadeCodigo],
+    modalidadeCodigo,
+    numeroProcesso,
+    objeto,
+    valorHomologado,
+    dataPublicacao: purchase?.dataPublicacaoPncp || purchase?.dataInclusaoPncp || purchase?.dataPublicacao || null,
+    uasg: purchase?.unidadeOrgaoCodigoUnidade
+      ? String(purchase.unidadeOrgaoCodigoUnidade)
+      : (purchase?.unidadeOrgao?.codigoUnidade ? String(purchase.unidadeOrgao.codigoUnidade) : undefined),
+    cnpj: purchase?.orgaoEntidadeCnpj || purchase?.orgaoEntidade?.cnpj || CNPJ_IFES_BSF,
+    numeroControlePNCP: purchase?.numeroControlePNCP || null,
+    anoCompra,
+    sequencialCompra,
+    valorEstimado: Number(purchase?.valorTotalEstimado || 0),
+    temValorHomologado,
+    statusHomologacao: temValorHomologado ? 'HOMOLOGADO' : 'NAO_HOMOLOGADO',
+    situacaoCompra: purchase?.situacaoCompraNomePncp || purchase?.situacaoCompraNome || null
+  };
+
+  if (modalidadeCodigo === 'pregao_eletronico') {
+    return {
+      ...baseRecord,
+      modoDisputa: purchase?.modoDisputaNomePncp || purchase?.modoDisputaNome || undefined
+    };
+  }
+
+  if (modalidadeCodigo === 'dispensa_licitacao' || modalidadeCodigo === 'inexigibilidade_licitacao') {
+    return {
+      ...baseRecord,
+      amparoLegal: purchase?.amparoLegalNome || purchase?.amparoLegal?.nome || undefined
+    };
+  }
+
+  if (modalidadeCodigo === 'concorrencia') {
+    return {
+      ...baseRecord,
+      regimeExecucao: purchase?.modoDisputaNomePncp || undefined
+    };
+  }
+
+  return baseRecord;
+}
+
+function buildGovModalityPayload(rawPurchases = [], modalityType = 'all') {
+  const mapped = rawPurchases
+    .map(mapPurchaseToGovRecord)
+    .filter(Boolean);
+
+  if (modalityType === 'all') return mapped;
+  return mapped.filter((item) => item.modalidadeCodigo === modalityType);
+}
+
+function extractPurchaseYear(purchase, fallbackYear = null) {
+  const rawYear = purchase?.anoCompraPncp || purchase?.anoCompra || purchase?.fetchYear || fallbackYear;
+  const normalizedYear = sanitizeYear(rawYear);
+  return normalizedYear.length === 4 ? normalizedYear : null;
+}
+
+function extractPurchaseSequential(purchase) {
+  const rawSequencial = purchase?.sequencialCompraPncp || purchase?.sequencialCompra || null;
+  if (rawSequencial === null || rawSequencial === undefined) return null;
+  const normalized = String(rawSequencial).replace(/[^\d]/g, '');
+  return normalized.length > 0 ? normalized : null;
+}
+
+function normalizeOptionalString(value) {
+  if (value === null || value === undefined) return null;
+  const normalized = String(value).trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function buildGovContractDetailPayload(basePurchase, detailPurchase = null, requestYear = null) {
+  const source = detailPurchase && typeof detailPurchase === 'object'
+    ? { ...basePurchase, ...detailPurchase }
+    : (basePurchase || {});
+
+  const mapped = mapPurchaseToGovRecord(source) || mapPurchaseToGovRecord(basePurchase) || null;
+  const anoCompra = extractPurchaseYear(source, requestYear);
+  const sequencialCompra = extractPurchaseSequential(source) || extractPurchaseSequential(basePurchase);
+  const rawHomologado = Number(source?.valorTotalHomologado);
+  const valorHomologado = Number.isFinite(rawHomologado) ? rawHomologado : 0;
+  const temValorHomologado = Number.isFinite(rawHomologado) && rawHomologado > 0;
+
+  const orgaoEntidade = source?.orgaoEntidade || {};
+  const unidadeOrgao = source?.unidadeOrgao || {};
+  const amparoLegal = source?.amparoLegal || {};
+
+  return {
+    modalidadeCodigo: mapped?.modalidadeCodigo || null,
+    modalidade: mapped?.modalidade || source?.modalidadeNome || null,
+    numeroProcesso: normalizeOptionalString(source?.processo) || mapped?.numeroProcesso || 'PROCESSO_NAO_INFORMADO',
+    numeroControlePNCP: normalizeOptionalString(source?.numeroControlePNCP),
+    anoCompra,
+    sequencialCompra,
+    situacaoCompra: normalizeOptionalString(source?.situacaoCompraNomePncp || source?.situacaoCompraNome),
+    objeto: normalizeOptionalString(source?.objetoCompra) || mapped?.objeto || 'Objeto nao informado',
+    informacaoComplementar: normalizeOptionalString(source?.informacaoComplementar),
+    valorEstimado: Number(source?.valorTotalEstimado || 0),
+    valorHomologado,
+    temValorHomologado,
+    statusHomologacao: temValorHomologado ? 'HOMOLOGADO' : 'NAO_HOMOLOGADO',
+    dataPublicacao: source?.dataPublicacaoPncp || source?.dataPublicacao || null,
+    dataInclusao: source?.dataInclusaoPncp || source?.dataInclusao || null,
+    dataAtualizacao: source?.dataAtualizacaoPncp || source?.dataAtualizacao || null,
+    dataAberturaProposta: source?.dataAberturaPropostaPncp || source?.dataAberturaProposta || null,
+    dataEncerramentoProposta: source?.dataEncerramentoPropostaPncp || source?.dataEncerramentoProposta || null,
+    amparoLegal: {
+      codigo: normalizeOptionalString(source?.amparoLegalCodigoPncp || amparoLegal?.codigo),
+      nome: normalizeOptionalString(source?.amparoLegalNome || amparoLegal?.nome),
+      descricao: normalizeOptionalString(source?.amparoLegalDescricao || amparoLegal?.descricao)
+    },
+    tipoInstrumentoConvocatorio: {
+      codigo: normalizeOptionalString(source?.tipoInstrumentoConvocatorioCodigoPncp || source?.tipoInstrumentoConvocatorioCodigo),
+      nome: normalizeOptionalString(source?.tipoInstrumentoConvocatorioNome)
+    },
+    orgaoEntidade: {
+      cnpj: normalizeOptionalString(source?.orgaoEntidadeCnpj || orgaoEntidade?.cnpj),
+      razaoSocial: normalizeOptionalString(source?.orgaoEntidadeRazaoSocial || orgaoEntidade?.razaoSocial),
+      poderId: normalizeOptionalString(source?.orgaoEntidadePoderId || orgaoEntidade?.poderId),
+      esferaId: normalizeOptionalString(source?.orgaoEntidadeEsferaId || orgaoEntidade?.esferaId),
+      codigoOrgao: normalizeOptionalString(source?.codigoOrgao || orgaoEntidade?.codigoOrgao)
+    },
+    unidadeOrgao: {
+      codigoUnidade: normalizeOptionalString(source?.unidadeOrgaoCodigoUnidade || unidadeOrgao?.codigoUnidade),
+      nomeUnidade: normalizeOptionalString(source?.unidadeOrgaoNomeUnidade || unidadeOrgao?.nomeUnidade),
+      municipio: normalizeOptionalString(source?.unidadeOrgaoMunicipioNome || unidadeOrgao?.municipioNome),
+      uf: normalizeOptionalString(source?.unidadeOrgaoUfSigla || unidadeOrgao?.ufSigla),
+      codigoIbge: normalizeOptionalString(source?.unidadeOrgaoCodigoIbge || unidadeOrgao?.codigoIbge)
+    },
+    srp: typeof source?.srp === 'boolean' ? source.srp : null,
+    orcamentoSigiloso: {
+      codigo: Number.isFinite(Number(source?.orcamentoSigilosoCodigo)) ? Number(source.orcamentoSigilosoCodigo) : null,
+      descricao: normalizeOptionalString(source?.orcamentoSigilosoDescricao)
+    },
+    links: {
+      sistemaOrigem: normalizeOptionalString(source?.linkSistemaOrigem),
+      processoEletronico: normalizeOptionalString(source?.linkProcessoEletronico),
+      pncp: normalizeOptionalString(source?.numeroControlePNCP)
+        ? `https://pncp.gov.br/app/editais/${String(source.numeroControlePNCP).trim()}`
+        : null
+    },
+    fontesOrcamentarias: Array.isArray(source?.fontesOrcamentarias) ? source.fontesOrcamentarias : []
+  };
+}
+
+async function fetchProcurementDetailFromPncp(year, sequencialCompra) {
+  const normalizedYear = sanitizeYear(year);
+  const normalizedSequencial = String(sequencialCompra || '').replace(/[^\d]/g, '');
+  if (normalizedYear.length !== 4 || !normalizedSequencial) return null;
+
+  const url = `https://pncp.gov.br/api/consulta/v1/orgaos/${CNPJ_IFES_BSF}/compras/${normalizedYear}/${normalizedSequencial}`;
+  const response = await axios.get(url, {
+    headers: PNCP_HEADERS,
+    timeout: 30000
+  });
+  return response?.data || null;
+}
+
+function getProcurementSyncStatus() {
+  const years = getProcurementYears();
+  const status = {};
+  const currentYear = getCurrentProcurementYear();
+
+  for (const year of years) {
+    const filePath = getProcurementFilePath(year);
+    if (!fs.existsSync(filePath)) {
+      status[year] = {
+        exists: false,
+        fixedSnapshot: isFixedProcurementYear(year),
+        currentYear: year === currentYear,
+        lastUpdated: null,
+        totalPurchases: 0
+      };
+      continue;
+    }
+
+    const stats = fs.statSync(filePath);
+    const data = readJsonFileSafely(filePath, `/api/procurement/status/${year}`);
+    status[year] = {
+      exists: true,
+      fixedSnapshot: isFixedProcurementYear(year),
+      currentYear: year === currentYear,
+      lastUpdated: data?.metadata?.extractedAt || stats.mtime,
+      totalPurchases: Number(data?.metadata?.totalPurchases || (Array.isArray(data?.data) ? data.data.length : 0)),
+      fileSize: stats.size
+    };
+  }
+
+  return {
+    currentYear,
+    fixedThroughYear: getCurrentProcurementYearNumber() - 1,
+    years: status
+  };
+}
+
+async function fetchProcurementsFromPncp(year) {
+  const baseUrl = 'https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao';
+  const unidadeAdministrativaBsf = '158886';
+  const modalidades = [6, 8, 12, 4]; // pregao, dispensa, inexigibilidade, concorrencia
+  const dataInicial = `${year}0101`;
+  const dataFinal = `${year}1231`;
+  const pageSize = 50;
+  const purchases = [];
+  const errors = [];
+
+  for (const codigoModalidadeContratacao of modalidades) {
+    let page = 1;
+    let totalPages = 1;
+    let keepPaging = true;
+
+    while (keepPaging && page <= totalPages) {
+      const url =
+        `${baseUrl}?dataInicial=${dataInicial}` +
+        `&dataFinal=${dataFinal}` +
+        `&codigoModalidadeContratacao=${codigoModalidadeContratacao}` +
+        `&cnpj=${CNPJ_IFES_BSF}` +
+        `&codigoUnidadeAdministrativa=${unidadeAdministrativaBsf}` +
+        `&pagina=${page}&tamanhoPagina=${pageSize}`;
+
+      try {
+        const response = await axios.get(url, {
+          headers: PNCP_HEADERS,
+          timeout: 30000
+        });
+
+        const payload = response.data || {};
+        const pageData = Array.isArray(payload?.data) ? payload.data : [];
+
+        if (pageData.length > 0) {
+          for (const item of pageData) {
+            purchases.push({
+              ...item,
+              itens: Array.isArray(item?.itens) ? item.itens : []
+            });
+          }
+        }
+
+        const parsedTotalPages = Number(payload?.totalPaginas || 1);
+        totalPages = Number.isFinite(parsedTotalPages) && parsedTotalPages > 0 ? parsedTotalPages : 1;
+
+        if (pageData.length === 0) {
+          keepPaging = false;
+        } else {
+          page += 1;
+          await sleep(120);
+        }
+      } catch (error) {
+        const status = error?.response?.status || null;
+        const message = error?.response?.data?.message || error?.message || 'Erro desconhecido';
+        errors.push({
+          modalidade: codigoModalidadeContratacao,
+          status,
+          message
+        });
+        keepPaging = false;
+      }
+    }
+  }
+
+  const uniquePurchases = Array.from(
+    new Map(
+      purchases.map((purchase) => {
+        const key = purchase?.numeroControlePNCP || `${purchase?.anoCompra}-${purchase?.sequencialCompra}`;
+        return [key, purchase];
+      })
+    ).values()
+  );
+
+  if (uniquePurchases.length === 0) {
+    const firstError = errors[0];
+    if (firstError) {
+      throw new Error(`Falha ao obter compras PNCP para ${year}: ${firstError.message}`);
+    }
+  }
+
+  return {
+    purchases: uniquePurchases,
+    endpointUsed: baseUrl
+  };
+}
+
+function saveProcurementSnapshot(year, purchases, source = 'pncp_sync') {
+  const filePath = getProcurementFilePath(year);
+  const payload = {
+    metadata: {
+      extractedAt: new Date().toISOString(),
+      cnpj: CNPJ_IFES_BSF,
+      year,
+      totalPurchases: purchases.length,
+      source
+    },
+    data: purchases
+  };
+  fs.writeFileSync(filePath, JSON.stringify(payload, null, 2));
+  return filePath;
+}
+
+function readProcurementYearSnapshot(year, context = '/api/procurement') {
+  const filePath = getProcurementFilePath(year);
+  if (!fs.existsSync(filePath)) return null;
+  return readJsonFileSafely(filePath, `${context}/${year}`);
+}
+
 /**
  * Sincroniza dados de contrataÃ§Ãµes (compras) do PNCP para os anos especificados
  * Salva em arquivos JSON no diretÃ³rio dados_abertos_compras
  */
-async function syncProcurementData() {
+async function syncProcurementDataLegacy() {
   const YEARS = ['2022', '2023', '2024', '2025', '2026'];
   console.log(`[${new Date().toISOString()}] ðŸ›’ Iniciando SincronizaÃ§Ã£o de ContrataÃ§Ãµes PNCP...`);
 
@@ -992,6 +1376,143 @@ async function syncProcurementData() {
   console.log(`[PROCUREMENT SYNC] ðŸŽ‰ SincronizaÃ§Ã£o de contrataÃ§Ãµes concluÃ­da!`);
 }
 
+async function syncProcurementData() {
+  const years = getProcurementYears();
+  const currentYear = getCurrentProcurementYear();
+  const summary = {
+    currentYear,
+    syncedYears: [],
+    fixedYears: [],
+    skippedYears: [],
+    errors: []
+  };
+  console.log(`[${new Date().toISOString()}] [PROCUREMENT SYNC] Iniciando sincronizacao de compras PNCP...`);
+
+  if (!fs.existsSync(PROCUREMENT_DATA_DIR)) {
+    fs.mkdirSync(PROCUREMENT_DATA_DIR, { recursive: true });
+  }
+
+  for (const year of years) {
+    try {
+      const filePath = getProcurementFilePath(year);
+      const fileExists = fs.existsSync(filePath);
+      const shouldSyncYear = year === currentYear;
+      const fixedYear = isFixedProcurementYear(year);
+
+      if (!shouldSyncYear && fixedYear) {
+        if (fileExists) {
+          summary.fixedYears.push(year);
+          summary.skippedYears.push({
+            year,
+            reason: 'snapshot_fixo_historico'
+          });
+        } else {
+          summary.skippedYears.push({
+            year,
+            reason: 'snapshot_historico_ausente'
+          });
+        }
+        continue;
+      }
+
+      console.log(`[PROCUREMENT SYNC] Buscando contratacoes de ${year}...`);
+      const { purchases, endpointUsed } = await fetchProcurementsFromPncp(year);
+      saveProcurementSnapshot(year, purchases, shouldSyncYear ? 'pncp_live_current_year' : 'pncp_snapshot_historico');
+      summary.syncedYears.push({
+        year,
+        totalPurchases: purchases.length,
+        endpointUsed,
+        fixedSnapshot: !shouldSyncYear
+      });
+      await sleep(500);
+    } catch (error) {
+      const filePath = getProcurementFilePath(year);
+      if (fs.existsSync(filePath)) {
+        summary.skippedYears.push({
+          year,
+          reason: 'erro_api_mantendo_snapshot',
+          message: error.message
+        });
+        console.warn(`[PROCUREMENT SYNC] Falha ao sincronizar ${year}. Mantendo snapshot local.`);
+      } else {
+        summary.errors.push({
+          year,
+          message: error.message
+        });
+        console.error(`[PROCUREMENT SYNC] Erro sem snapshot de fallback em ${year}:`, error.message);
+      }
+    }
+  }
+
+  console.log(`[PROCUREMENT SYNC] Finalizado. Anos sincronizados: ${summary.syncedYears.map((i) => i.year).join(', ') || 'nenhum'}`);
+  return summary;
+}
+
+let procurementSyncPromise = null;
+async function runProcurementSyncShared(trigger = 'manual') {
+  if (procurementSyncPromise) {
+    console.log(`[PROCUREMENT SYNC] Reutilizando sincronizacao em andamento (${trigger}).`);
+    return procurementSyncPromise;
+  }
+
+  procurementSyncPromise = (async () => {
+    try {
+      return await syncProcurementData();
+    } finally {
+      procurementSyncPromise = null;
+    }
+  })();
+
+  return procurementSyncPromise;
+}
+
+const procurementYearSyncPromises = new Map();
+async function syncProcurementYear(year, source = null) {
+  const normalizedYear = sanitizeYear(year);
+  if (!normalizedYear || normalizedYear.length !== 4) {
+    throw new Error('Ano invalido para sincronizacao.');
+  }
+
+  if (!fs.existsSync(PROCUREMENT_DATA_DIR)) {
+    fs.mkdirSync(PROCUREMENT_DATA_DIR, { recursive: true });
+  }
+
+  const { purchases, endpointUsed } = await fetchProcurementsFromPncp(normalizedYear);
+  const isCurrent = normalizedYear === getCurrentProcurementYear();
+  const finalSource = source || (isCurrent ? 'pncp_live_current_year' : 'pncp_snapshot_historico');
+  saveProcurementSnapshot(normalizedYear, purchases, finalSource);
+
+  return {
+    year: normalizedYear,
+    totalPurchases: purchases.length,
+    endpointUsed,
+    source: finalSource
+  };
+}
+
+async function runProcurementYearSyncShared(year, trigger = 'manual-year') {
+  const normalizedYear = sanitizeYear(year);
+  if (!normalizedYear || normalizedYear.length !== 4) {
+    throw new Error('Ano invalido para sincronizacao.');
+  }
+
+  if (procurementYearSyncPromises.has(normalizedYear)) {
+    console.log(`[PROCUREMENT SYNC] Reutilizando sincronizacao em andamento para ${normalizedYear} (${trigger}).`);
+    return procurementYearSyncPromises.get(normalizedYear);
+  }
+
+  const promise = (async () => {
+    try {
+      return await syncProcurementYear(normalizedYear);
+    } finally {
+      procurementYearSyncPromises.delete(normalizedYear);
+    }
+  })();
+
+  procurementYearSyncPromises.set(normalizedYear, promise);
+  return promise;
+}
+
 async function performAutomaticSync() {
   // Sync PCA data
   const YEARS_MAP = { '2026': '12', '2025': '12', '2024': '15', '2023': '14', '2022': '20' };
@@ -1019,7 +1540,7 @@ async function performAutomaticSync() {
   }
 
   // Sync Procurement/Contracting data
-  await syncProcurementData();
+  await runProcurementSyncShared('automatic');
 }
 
 import { onRequest } from "firebase-functions/v2/https";
@@ -1048,7 +1569,7 @@ app.get('/api/integration/procurement-data', async (req, res) => {
 });
 
 // Endpoint para obter dados de contrataÃ§Ãµes de um ano especÃ­fico
-app.get('/api/procurement/year/:year', async (req, res) => {
+app.get('/api/procurement-legacy/year/:year', async (req, res) => {
   try {
     const { year } = req.params;
     const filePath = path.join(PROCUREMENT_DATA_DIR, `contratacoes_${year}.json`);
@@ -1079,7 +1600,7 @@ app.get('/api/procurement/year/:year', async (req, res) => {
 });
 
 // Endpoint para obter todos os dados de contrataÃ§Ãµes (todos os anos)
-app.get('/api/procurement/all', async (req, res) => {
+app.get('/api/procurement-legacy/all', async (req, res) => {
   try {
     const YEARS = ['2022', '2023', '2024', '2025', '2026'];
     const allData = {
@@ -1112,7 +1633,7 @@ app.get('/api/procurement/all', async (req, res) => {
 });
 
 // Endpoint para forÃ§ar sincronizaÃ§Ã£o manual
-app.post('/api/procurement/sync', async (req, res) => {
+app.post('/api/procurement-legacy/sync', async (req, res) => {
   try {
     console.log('[MANUAL SYNC] Iniciando sincronizaÃ§Ã£o manual de contrataÃ§Ãµes...');
     for (const year of YEARS) {
@@ -1143,6 +1664,368 @@ app.post('/api/procurement/sync', async (req, res) => {
 });
 
 // --- MÃ“DULO GOOGLE DE COMPRAS IFES ---
+
+app.get('/api/procurement/year/:year', async (req, res) => {
+  try {
+    const year = sanitizeYear(req.params.year);
+    if (!year || year.length !== 4) {
+      return res.status(400).json({ error: 'Ano invalido.' });
+    }
+
+    let data = readProcurementYearSnapshot(year, '/api/procurement/year');
+    if (!data && year === getCurrentProcurementYear()) {
+      await runProcurementSyncShared('procurement-year-endpoint');
+      data = readProcurementYearSnapshot(year, '/api/procurement/year');
+    }
+
+    if (data) {
+      return res.json(data);
+    }
+
+    return res.status(404).json({
+      error: `Dados de contratacoes para ${year} nao encontrados`,
+      message: 'Execute a sincronizacao primeiro usando /api/procurement/sync'
+    });
+  } catch (error) {
+    console.error('[PROCUREMENT DATA ERROR]', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/procurement/all', async (req, res) => {
+  try {
+    const years = getProcurementYears();
+    const allData = {
+      metadata: {
+        generatedAt: new Date().toISOString(),
+        cnpj: CNPJ_IFES_BSF,
+        years,
+        skippedYears: []
+      },
+      data: []
+    };
+
+    for (const year of years) {
+      const yearData = readProcurementYearSnapshot(year, '/api/procurement/all');
+      if (Array.isArray(yearData?.data)) {
+        allData.data.push(...yearData.data);
+      } else {
+        allData.metadata.skippedYears.push(year);
+      }
+    }
+
+    return res.json(allData);
+  } catch (error) {
+    console.error('[PROCUREMENT ALL DATA ERROR]', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/procurement/status', async (req, res) => {
+  try {
+    return res.json(getProcurementSyncStatus());
+  } catch (error) {
+    console.error('[PROCUREMENT STATUS ERROR]', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/procurement/sync', async (req, res) => {
+  try {
+    console.log('[MANUAL SYNC] Iniciando sincronizacao manual de contratacoes...');
+    const syncSummary = await runProcurementSyncShared('manual-endpoint');
+    const status = getProcurementSyncStatus();
+    return res.json({
+      ok: true,
+      syncSummary,
+      status
+    });
+  } catch (error) {
+    console.error('[PROCUREMENT MANUAL SYNC ERROR]', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/gov-contracts/modalities', async (req, res) => {
+  try {
+    const requestedYear = sanitizeYear(req.query.year || getCurrentProcurementYear());
+    const year = requestedYear.length === 4 ? requestedYear : getCurrentProcurementYear();
+    const modalityType = String(req.query.type || 'all');
+    const forceSync = String(req.query.sync || '').toLowerCase() === 'true' || String(req.query.sync || '') === '1';
+    let syncWarning = null;
+
+    if (!MODALITY_TYPES.has(modalityType)) {
+      return res.status(400).json({ error: 'Tipo de modalidade invalido.' });
+    }
+
+    if (forceSync) {
+      try {
+        await runProcurementYearSyncShared(year, 'gov-contracts-force-sync');
+      } catch (error) {
+        syncWarning = `Falha ao sincronizar ${year}: ${error?.message || error}`;
+      }
+    }
+
+    let yearData = readProcurementYearSnapshot(year, '/api/gov-contracts/modalities');
+    const isCurrentYear = year === getCurrentProcurementYear();
+    if (!yearData && isCurrentYear && forceSync) {
+      await runProcurementYearSyncShared(year, 'gov-contracts-retry');
+      yearData = readProcurementYearSnapshot(year, '/api/gov-contracts/modalities');
+    }
+
+    if (!yearData) {
+      if (isCurrentYear) {
+        // Avoid hard-failing the dashboard when current-year snapshot is not available yet.
+        runProcurementYearSyncShared(year, 'gov-contracts-background').catch((err) => {
+          console.error('[GOV CONTRACTS BACKGROUND SYNC ERROR]', err?.message || err);
+        });
+        return res.json({
+          metadata: {
+            generatedAt: new Date().toISOString(),
+            year,
+            currentYear: getCurrentProcurementYear(),
+            fixedSnapshot: false,
+            source: null,
+            extractedAt: null,
+            totalRawPurchases: 0,
+            totalModalityRecords: 0,
+            totalHomologado: 0,
+            semHomologacao: 0,
+            modalityType,
+            warning: syncWarning || 'Snapshot do ano atual ainda nao disponivel. Sincronizacao em andamento.'
+          },
+          data: []
+        });
+      }
+
+      if (isFixedProcurementYear(year)) {
+        return res.json({
+          metadata: {
+            generatedAt: new Date().toISOString(),
+            year,
+            currentYear: getCurrentProcurementYear(),
+            fixedSnapshot: true,
+            source: null,
+            extractedAt: null,
+            totalRawPurchases: 0,
+            totalModalityRecords: 0,
+            totalHomologado: 0,
+            semHomologacao: 0,
+            modalityType,
+            warning: syncWarning || `Snapshot historico de ${year} ainda nao disponivel. Use sync=1 para carregar e fixar.`
+          },
+          data: []
+        });
+      }
+
+      return res.status(404).json({ error: `Sem snapshot para o ano ${year}.` });
+    }
+
+    const rawPurchases = Array.isArray(yearData?.data) ? yearData.data : [];
+    const data = buildGovModalityPayload(rawPurchases, modalityType);
+    const totalHomologado = data.reduce((acc, item) => acc + Number(item.valorHomologado || 0), 0);
+    const semHomologacao = data.filter((item) => !item.temValorHomologado).length;
+
+    return res.json({
+      metadata: {
+        generatedAt: new Date().toISOString(),
+        year,
+        currentYear: getCurrentProcurementYear(),
+        fixedSnapshot: isFixedProcurementYear(year),
+        source: yearData?.metadata?.source || null,
+        extractedAt: yearData?.metadata?.extractedAt || null,
+        totalRawPurchases: rawPurchases.length,
+        totalModalityRecords: data.length,
+        totalHomologado,
+        semHomologacao,
+        modalityType,
+        warning: syncWarning || yearData?.metadata?.warning || undefined
+      },
+      data
+    });
+  } catch (error) {
+    console.error('[GOV CONTRACTS MODALITIES ERROR]', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/gov-contracts/detail', async (req, res) => {
+  try {
+    const requestedYear = sanitizeYear(req.query.year || getCurrentProcurementYear());
+    const year = requestedYear.length === 4 ? requestedYear : getCurrentProcurementYear();
+    const numeroControlePNCP = String(req.query.numeroControlePNCP || '').trim();
+    const requestedSequencial = String(req.query.sequencialCompra || '').replace(/[^\d]/g, '');
+    const requestedNumeroProcesso = String(req.query.numeroProcesso || '').trim();
+    const forceSync = String(req.query.sync || '').toLowerCase() === 'true' || String(req.query.sync || '') === '1';
+
+    if (!numeroControlePNCP && !requestedSequencial && !requestedNumeroProcesso) {
+      return res.status(400).json({
+        error: 'Informe numeroControlePNCP, sequencialCompra ou numeroProcesso para buscar o detalhamento.'
+      });
+    }
+
+    if (forceSync) {
+      try {
+        await runProcurementYearSyncShared(year, 'gov-contracts-detail-force-sync');
+      } catch (error) {
+        console.warn(`[GOV CONTRACTS DETAIL] Falha ao sincronizar ${year}: ${error?.message || error}`);
+      }
+    }
+
+    const yearData = readProcurementYearSnapshot(year, '/api/gov-contracts/detail');
+    if (!yearData) {
+      if (year === getCurrentProcurementYear()) {
+        runProcurementYearSyncShared(year, 'gov-contracts-detail-background').catch((err) => {
+          console.error('[GOV CONTRACTS DETAIL BACKGROUND SYNC ERROR]', err?.message || err);
+        });
+      }
+      return res.status(404).json({
+        error: `Snapshot de ${year} nao encontrado.`,
+        message: 'Use sync=1 para sincronizar este ano e tente novamente.'
+      });
+    }
+
+    const purchases = Array.isArray(yearData?.data) ? yearData.data : [];
+    const matchedPurchase = purchases.find((purchase) => {
+      const purchaseControl = String(purchase?.numeroControlePNCP || '').trim();
+      const purchaseSequencial = extractPurchaseSequential(purchase);
+      const purchaseProcesso = String(purchase?.processo || '').trim();
+      if (numeroControlePNCP && purchaseControl === numeroControlePNCP) return true;
+      if (requestedSequencial && purchaseSequencial === requestedSequencial) return true;
+      if (requestedNumeroProcesso && purchaseProcesso === requestedNumeroProcesso) return true;
+      return false;
+    });
+
+    if (!matchedPurchase) {
+      return res.status(404).json({
+        error: 'Contratacao nao encontrada no snapshot informado.',
+        criteria: {
+          year,
+          numeroControlePNCP: numeroControlePNCP || null,
+          sequencialCompra: requestedSequencial || null,
+          numeroProcesso: requestedNumeroProcesso || null
+        }
+      });
+    }
+
+    const lookupYear = extractPurchaseYear(matchedPurchase, year);
+    const lookupSequencial = extractPurchaseSequential(matchedPurchase) || requestedSequencial || null;
+
+    let remoteDetail = null;
+    let remoteDetailError = null;
+    if (lookupYear && lookupSequencial) {
+      try {
+        remoteDetail = await fetchProcurementDetailFromPncp(lookupYear, lookupSequencial);
+      } catch (error) {
+        remoteDetailError = error?.response?.data?.message || error?.message || String(error);
+      }
+    } else {
+      remoteDetailError = 'Nao foi possivel identificar ano/sequencial para consulta de detalhe no PNCP.';
+    }
+
+    return res.json({
+      metadata: {
+        generatedAt: new Date().toISOString(),
+        year,
+        fixedSnapshot: isFixedProcurementYear(year),
+        extractedAt: yearData?.metadata?.extractedAt || null,
+        source: yearData?.metadata?.source || null,
+        remoteDetailUsed: !!remoteDetail,
+        remoteDetailError: remoteDetailError || undefined
+      },
+      data: buildGovContractDetailPayload(matchedPurchase, remoteDetail, year)
+    });
+  } catch (error) {
+    console.error('[GOV CONTRACTS DETAIL ERROR]', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/gov-contracts/summary', async (req, res) => {
+  try {
+    const requestedYear = sanitizeYear(req.query.year || getCurrentProcurementYear());
+    const year = requestedYear.length === 4 ? requestedYear : getCurrentProcurementYear();
+    const forceSync = String(req.query.sync || '').toLowerCase() === 'true' || String(req.query.sync || '') === '1';
+    let syncWarning = null;
+
+    if (forceSync) {
+      try {
+        await runProcurementYearSyncShared(year, 'gov-contracts-summary-force-sync');
+      } catch (error) {
+        syncWarning = `Falha ao sincronizar ${year}: ${error?.message || error}`;
+      }
+    }
+
+    const yearData = readProcurementYearSnapshot(year, '/api/gov-contracts/summary');
+    if (!yearData) {
+      if (year === getCurrentProcurementYear()) {
+        runProcurementYearSyncShared(year, 'gov-contracts-summary-background').catch((err) => {
+          console.error('[GOV CONTRACTS SUMMARY BACKGROUND SYNC ERROR]', err?.message || err);
+        });
+        return res.json({
+          metadata: {
+            generatedAt: new Date().toISOString(),
+            year,
+            fixedSnapshot: false,
+            extractedAt: null,
+            warning: syncWarning || 'Snapshot do ano atual ainda nao disponivel.'
+          },
+          summary: Object.keys(MODALITY_LABELS).map((modalityCode) => ({
+            modalidadeCodigo: modalityCode,
+            modalidade: MODALITY_LABELS[modalityCode],
+            total: 0,
+            totalHomologado: 0
+          }))
+        });
+      }
+
+      if (isFixedProcurementYear(year)) {
+        return res.json({
+          metadata: {
+            generatedAt: new Date().toISOString(),
+            year,
+            fixedSnapshot: true,
+            extractedAt: null,
+            warning: syncWarning || `Snapshot historico de ${year} ainda nao disponivel. Use sync=1 para carregar e fixar.`
+          },
+          summary: Object.keys(MODALITY_LABELS).map((modalityCode) => ({
+            modalidadeCodigo: modalityCode,
+            modalidade: MODALITY_LABELS[modalityCode],
+            total: 0,
+            totalHomologado: 0
+          }))
+        });
+      }
+
+      return res.status(404).json({ error: `Sem snapshot para o ano ${year}.` });
+    }
+
+    const records = buildGovModalityPayload(Array.isArray(yearData?.data) ? yearData.data : [], 'all');
+    const summaryByModality = Object.keys(MODALITY_LABELS).map((modalityCode) => {
+      const filtered = records.filter((item) => item.modalidadeCodigo === modalityCode);
+      return {
+        modalidadeCodigo: modalityCode,
+        modalidade: MODALITY_LABELS[modalityCode],
+        total: filtered.length,
+        totalHomologado: filtered.reduce((acc, item) => acc + Number(item.valorHomologado || 0), 0)
+      };
+    });
+
+    return res.json({
+      metadata: {
+        generatedAt: new Date().toISOString(),
+        year,
+        fixedSnapshot: isFixedProcurementYear(year),
+        extractedAt: yearData?.metadata?.extractedAt || null,
+        warning: syncWarning || yearData?.metadata?.warning || undefined
+      },
+      summary: summaryByModality
+    });
+  } catch (error) {
+    console.error('[GOV CONTRACTS SUMMARY ERROR]', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
 
 const CATALOGO_DOC_PATH = fs.existsSync(path.join(__dirname, 'data', 'historico_compras_ifes_completo.json'))
   ? path.join(__dirname, 'data', 'historico_compras_ifes_completo.json')

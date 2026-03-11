@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import logoIfes from '../logo-ifes.png';
-import { FileText, Wallet, LogOut, ArrowRight, TrendingUp, Wrench, ShieldCheck } from 'lucide-react';
+import { FileText, Wallet, LogOut, ArrowRight, TrendingUp, Wrench, ShieldCheck, Scale } from 'lucide-react';
 import { motion } from 'motion/react';
 
 const Dashboard: React.FC = () => {
@@ -42,6 +42,15 @@ const Dashboard: React.FC = () => {
             route: '/ferramentas',
             color: 'orange-600',
             accent: 'bg-orange-600',
+            showCta: true
+        },
+        {
+            title: 'Licitacoes Governamentais',
+            description: 'Dashboards de pregao, dispensa, inexigibilidade e concorrencia.',
+            icon: <Scale size={26} />,
+            route: '/licitacoes-governo',
+            color: 'teal-600',
+            accent: 'bg-teal-600',
             showCta: true
         }
     ];
@@ -84,7 +93,7 @@ const Dashboard: React.FC = () => {
                     <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">Bem-vindo(a)!</h2>
                 </motion.div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
                     {modules.map((module, index) => (
                         <motion.div
                             key={index}

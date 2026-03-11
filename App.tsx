@@ -10,6 +10,7 @@ import Tools from './components/Tools';
 import CatmatSearch from './components/Catmat/CatmatSearch';
 import DfdTool from './components/DfdTool';
 import PriceMapCreator from './components/PriceMapCreator';
+import GovContractsDashboard from './components/GovContractsDashboard';
 
 const App: React.FC = () => {
   return (
@@ -25,6 +26,7 @@ const App: React.FC = () => {
         <Route path="/catmat" element={<CatmatSearch />} />
         <Route path="/dfd" element={<DfdTool />} />
         <Route path="/mapa-precos" element={<PriceMapCreator />} />
+        <Route path="/licitacoes-governo" element={<GovContractsDashboard />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

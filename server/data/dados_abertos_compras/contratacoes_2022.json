@@ -1,0 +1,117 @@
+{
+  "metadata": {
+    "extractedAt": "2026-03-11T13:03:47.448Z",
+    "cnpj": "10838653000106",
+    "year": "2022",
+    "totalPurchases": 2,
+    "source": "pncp_snapshot_historico"
+  },
+  "data": [
+    {
+      "dataAtualizacao": "2022-06-21T09:40:23",
+      "orgaoEntidade": {
+        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
+        "poderId": "E",
+        "esferaId": "F",
+        "cnpj": "10838653000106"
+      },
+      "anoCompra": 2022,
+      "sequencialCompra": 227,
+      "numeroCompra": "00006",
+      "processo": "23543000551202255",
+      "objetoCompra": "Contratação de empresa fornecedora de equipamentos de irrigação para atender às demandas do curso técnico integrado em  agricultura do Ifes Campus Barra de São Francisco.",
+      "orgaoSubRogado": null,
+      "unidadeOrgao": {
+        "ufNome": "Espírito Santo",
+        "codigoIbge": "3200904",
+        "codigoUnidade": "158886",
+        "ufSigla": "ES",
+        "municipioNome": "Barra de São Francisco",
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO"
+      },
+      "unidadeSubRogada": null,
+      "valorTotalHomologado": 14382.49,
+      "srp": false,
+      "dataInclusao": "2022-06-21T09:40:23",
+      "amparoLegal": {
+        "codigo": 19,
+        "nome": "Lei 14.133/2021, Art. 75, II",
+        "descricao": "Dispensa de Licitação: para contratação que envolva valores inferiores a R$ 50.000,00 (cinquenta mil reais), no caso de outros serviços e compras"
+      },
+      "dataAberturaProposta": "2022-06-21T09:40:22",
+      "dataEncerramentoProposta": "2022-06-27T07:59:59",
+      "informacaoComplementar": "Compra em razão do valor conforme inciso II do art. 75 da lei 14.133/2021.",
+      "linkSistemaOrigem": "https://www.comprasnet.gov.br/acesso.asp?url=/proposta-158886-08-00006-2022",
+      "justificativaPresencial": null,
+      "dataPublicacaoPncp": "2022-06-21T09:40:23",
+      "modalidadeId": 8,
+      "dataAtualizacaoGlobal": "2022-06-21T09:40:23",
+      "linkProcessoEletronico": null,
+      "numeroControlePNCP": "10838653000106-1-000227/2022",
+      "modoDisputaId": 4,
+      "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
+      "tipoInstrumentoConvocatorioCodigo": 2,
+      "valorTotalEstimado": 15013.74,
+      "modalidadeNome": "Dispensa",
+      "modoDisputaNome": "Dispensa Com Disputa",
+      "fontesOrcamentarias": [],
+      "situacaoCompraId": 1,
+      "situacaoCompraNome": "Divulgada no PNCP",
+      "usuarioNome": "Compras.gov.br",
+      "itens": []
+    },
+    {
+      "dataAtualizacao": "2022-10-03T16:19:09",
+      "orgaoEntidade": {
+        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
+        "poderId": "E",
+        "esferaId": "F",
+        "cnpj": "10838653000106"
+      },
+      "anoCompra": 2022,
+      "sequencialCompra": 458,
+      "numeroCompra": "00008",
+      "processo": "23543000307202292",
+      "objetoCompra": "Contratação de empresa prestadora de serviços de manutenção preventiva e corretiva em aparelhos de ar-condicionado, a fim de atender a necessidade do Instituto Federal de Educação, Ciência e Tecnologia – Ifes – Campus Barra de São Francisco, conforme condições, quantidades e exigências estabelecidas no Aviso de Contratação Direta e seus anexos.",
+      "orgaoSubRogado": null,
+      "unidadeOrgao": {
+        "ufNome": "Espírito Santo",
+        "codigoIbge": "3200904",
+        "codigoUnidade": "158886",
+        "ufSigla": "ES",
+        "municipioNome": "Barra de São Francisco",
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO"
+      },
+      "unidadeSubRogada": null,
+      "valorTotalHomologado": 14000,
+      "srp": false,
+      "dataInclusao": "2022-10-03T16:19:09",
+      "amparoLegal": {
+        "codigo": 19,
+        "nome": "Lei 14.133/2021, Art. 75, II",
+        "descricao": "Dispensa de Licitação: para contratação que envolva valores inferiores a R$ 50.000,00 (cinquenta mil reais), no caso de outros serviços e compras"
+      },
+      "dataAberturaProposta": "2022-10-03T16:19:07",
+      "dataEncerramentoProposta": "2022-10-10T07:59:59",
+      "informacaoComplementar": "Compra em razão do valor conforme inciso II do art. 75 da lei 14.133/2021.",
+      "linkSistemaOrigem": "https://www.comprasnet.gov.br/acesso.asp?url=/proposta-158886-06-00008-2022",
+      "justificativaPresencial": null,
+      "dataPublicacaoPncp": "2022-10-03T16:19:09",
+      "modalidadeId": 8,
+      "dataAtualizacaoGlobal": "2022-10-03T16:19:09",
+      "linkProcessoEletronico": null,
+      "numeroControlePNCP": "10838653000106-1-000458/2022",
+      "modoDisputaId": 4,
+      "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
+      "tipoInstrumentoConvocatorioCodigo": 2,
+      "valorTotalEstimado": 18150,
+      "modalidadeNome": "Dispensa",
+      "modoDisputaNome": "Dispensa Com Disputa",
+      "fontesOrcamentarias": [],
+      "situacaoCompraId": 1,
+      "situacaoCompraNome": "Divulgada no PNCP",
+      "usuarioNome": "Compras.gov.br",
+      "itens": []
+    }
+  ]
+}
