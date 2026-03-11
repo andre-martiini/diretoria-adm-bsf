@@ -81,25 +81,42 @@ export async function scrapeSIPACProcess(protocol) {
         console.log(`[SIPAC] Opening portal...`);
         await page.goto('https://sipac.ifes.edu.br/public/jsp/portal.jsf', { waitUntil: 'networkidle2', timeout: 90000 });
 
+        const hasSearchForm = async () => page.evaluate(() =>
+            !!document.querySelector('#n_proc_p, input[name*="RADICAL_PROTOCOLO"]')
+        );
+
+        const tryDirectSearchPage = async () => {
+            await page.goto('https://sipac.ifes.edu.br/public/jsp/processos/processo_consulta.jsf', {
+                waitUntil: 'networkidle2',
+                timeout: 30000
+            }).catch(() => null);
+
+            if (await hasSearchForm()) return true;
+
+            await page.waitForSelector('#n_proc_p, input[name*="RADICAL_PROTOCOLO"]', { timeout: 5000 }).catch(() => null);
+            return hasSearchForm();
+        };
+
         console.log(`[SIPAC] Opening process search page...`);
-        try {
-            await page.goto('https://sipac.ifes.edu.br/public/jsp/processos/processo_consulta.jsf', { waitUntil: 'domcontentloaded', timeout: 15000 });
-            const searchPageReady = await page.evaluate(() =>
-                !!document.querySelector('#n_proc_p, input[name*="RADICAL_PROTOCOLO"]')
-            );
-            if (!searchPageReady) {
-                throw new Error('Search form not available after direct navigation');
-            }
-        } catch (err) {
-            console.warn(`[SIPAC] Direct search page failed: ${err.message}. Trying menu fallback...`);
+        let searchPageReady = await tryDirectSearchPage();
+
+        if (!searchPageReady) {
+            console.warn('[SIPAC] Direct search page failed. Trying menu fallback...');
             await page.goto('https://sipac.ifes.edu.br/public/jsp/portal.jsf', { waitUntil: 'networkidle2', timeout: 60000 });
-            await page.waitForSelector('div#l-processos, span#ext-gen10, .item.sub-item', { timeout: 30000 });
+
             await page.evaluate(() => {
                 const el = document.querySelector('div#l-processos') ||
                     Array.from(document.querySelectorAll('span, div, a')).find(e => e.innerText.trim() === 'Processos');
                 if (el) el.click();
             });
-            await page.waitForSelector('#n_proc_p, input[name*="RADICAL_PROTOCOLO"]', { timeout: 30000 });
+
+            await page.waitForSelector('#n_proc_p, input[name*="RADICAL_PROTOCOLO"]', { timeout: 10000 }).catch(() => null);
+            searchPageReady = await hasSearchForm();
+        }
+
+        if (!searchPageReady) {
+            console.warn('[SIPAC] Menu fallback unavailable. Trying direct recovery...');
+            searchPageReady = await tryDirectSearchPage();
         }
 
         // 3. Ensure "Nº Processo" is selected and fill fields
@@ -498,11 +515,18 @@ export async function scrapeSIPACProcess(protocol) {
     } catch (error) {
         console.error('[SIPAC SCRAPER ERROR]', error);
 
+        const rawError = `${error?.name || ''} ${error?.message || ''}`.toLowerCase();
+
         let errorMessage = "Erro Desconhecido";
         if (error.message.includes('timeout')) errorMessage = "Timeout (Portal Lento)";
         if (error.message.includes('Protocolo não encontrado')) errorMessage = "Processo Não Encontrado";
         if (error.message.includes('formato de protocolo')) errorMessage = "Protocolo Inválido";
         if (error.message.includes('Navigation failed')) errorMessage = "Falha de Rede/Conexão";
+        if (rawError.includes('timeout')) errorMessage = "Timeout (Portal Lento)";
+        if (rawError.includes('protocolo nã') || rawError.includes('protocolo na')) errorMessage = "Processo Nao Encontrado";
+        if (rawError.includes('formato de protocolo')) errorMessage = "Protocolo Invalido";
+        if (rawError.includes('navigation failed')) errorMessage = "Falha de Rede/Conexao";
+        if (rawError.includes('falha ao localizar resultado')) errorMessage = "Falha ao localizar resultado na busca publica";
 
         return {
             numeroProcesso: protocol,
