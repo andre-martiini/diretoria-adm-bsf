@@ -285,6 +285,7 @@ export interface SystemConfig {
 
 export interface GovIntegrationBase {
   numeroProcesso: string;
+  empresa?: string;
   objeto: string;
   valorHomologado: number;
   dataPublicacao?: string;

@@ -503,6 +503,7 @@ export async function scrapeSIPACProcess(protocol) {
 
         console.log(`[SIPAC] Extracting data...`);
         const result = parseSIPACDetailHtml(detailHtml);
+        result.detailUrl = detailUrl;
         result.totalDocumentos = result.documentos.length.toString();
         result.snapshot_hash = generateSnapshotHash(result);
         result.scraping_last_error = null;

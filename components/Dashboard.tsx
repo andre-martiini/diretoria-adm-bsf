@@ -1,25 +1,25 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import logoIfes from '../logo-ifes.png';
-import { FileText, Wallet, LogOut, ArrowRight, TrendingUp, Wrench, ShieldCheck, Scale } from 'lucide-react';
+import { ArrowRight, FileText, LogOut, ScrollText, ShieldCheck, TrendingUp, Wallet, Wrench } from 'lucide-react';
 import { motion } from 'motion/react';
+import logoIfes from '../logo-ifes.png';
 
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
 
     const modules = [
         {
-            title: 'Gestão de Contratações',
-            description: 'Vínculo de processos SIPAC e monitoramento estratégico do PCA.',
+            title: 'Gestao de Contratacoes',
+            description: 'PCA, contratacoes governamentais e contratos/empenhos no mesmo modulo.',
             icon: <FileText size={26} />,
-            route: '/pca',
+            route: '/gestao-contratacoes',
             color: 'ifes-green',
             accent: 'bg-ifes-green',
             showCta: true
         },
         {
-            title: 'Gestão Orçamentária',
-            description: 'Controle de saldo, empenhos e execução financeira em tempo real.',
+            title: 'Gestao Orcamentaria',
+            description: 'Controle de saldo, empenhos e execucao financeira em tempo real.',
             icon: <Wallet size={26} />,
             route: '/gestao-orcamentaria',
             color: 'blue-600',
@@ -27,8 +27,8 @@ const Dashboard: React.FC = () => {
             showCta: false
         },
         {
-            title: 'Painel de Transparência',
-            description: 'Visualização analítica de dados e controle social institucional.',
+            title: 'Painel de Transparencia',
+            description: 'Visualizacao analitica de dados e controle social institucional.',
             icon: <TrendingUp size={26} />,
             route: '/transparencia',
             color: 'emerald-600',
@@ -37,7 +37,7 @@ const Dashboard: React.FC = () => {
         },
         {
             title: 'Ecossistema de Ferramentas',
-            description: 'Utilitários avançados, importação e inteligência de dados.',
+            description: 'Utilitarios avancados, importacao e inteligencia de dados.',
             icon: <Wrench size={26} />,
             route: '/ferramentas',
             color: 'orange-600',
@@ -45,19 +45,18 @@ const Dashboard: React.FC = () => {
             showCta: true
         },
         {
-            title: 'Licitacoes Governamentais',
-            description: 'Dashboards de pregao, dispensa, inexigibilidade e concorrencia.',
-            icon: <Scale size={26} />,
-            route: '/licitacoes-governo',
-            color: 'teal-600',
-            accent: 'bg-teal-600',
+            title: 'Execucao CLC',
+            description: 'Consulta e acompanhamento de processos eletronicos no SIPAC.',
+            icon: <ScrollText size={26} />,
+            route: '/execucao-clc',
+            color: 'indigo-600',
+            accent: 'bg-indigo-600',
             showCta: true
         }
     ];
 
     return (
         <div className="min-h-screen border-t-4 border-ifes-green bg-[#f8fafc] font-sans text-slate-800">
-            {/* Standardized Header */}
             <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 h-24 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3 shrink-0">
@@ -65,7 +64,7 @@ const Dashboard: React.FC = () => {
                         <div className="flex flex-col border-l border-slate-100 pl-3">
                             <span className="text-lg font-black text-ifes-green uppercase leading-none tracking-tight tracking-tighter">Portal DAP</span>
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                                Barra de São Francisco
+                                Barra de Sao Francisco
                             </span>
                         </div>
                     </div>
@@ -96,7 +95,7 @@ const Dashboard: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
                     {modules.map((module, index) => (
                         <motion.div
-                            key={index}
+                            key={module.route}
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: index * 0.1 }}
@@ -104,7 +103,7 @@ const Dashboard: React.FC = () => {
                             className="group bg-white p-8 rounded-[2rem] border border-slate-200 shadow-premium hover:shadow-2xl hover:shadow-ifes-green/5 hover:-translate-y-1 transition-all cursor-pointer flex flex-col justify-between h-64 relative overflow-hidden"
                         >
                             <div className={`absolute top-0 right-0 w-24 h-24 ${module.accent}/5 rounded-bl-full group-hover:scale-150 transition-transform duration-700`}></div>
-                            
+
                             <div>
                                 <div className={`${module.accent} w-14 h-14 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-current/20 group-hover:scale-110 transition-transform`}>
                                     {module.icon}
@@ -115,7 +114,7 @@ const Dashboard: React.FC = () => {
 
                             {module.showCta && (
                                 <div className={`flex items-center text-${module.color} text-[10px] font-black uppercase tracking-[0.2em] mt-6`}>
-                                    <span>Acessar Módulo</span>
+                                    <span>Acessar Modulo</span>
                                     <ArrowRight size={14} className="ml-2 group-hover:translate-x-1 transition-transform" />
                                 </div>
                             )}
@@ -126,7 +125,7 @@ const Dashboard: React.FC = () => {
 
             <footer className="max-w-7xl mx-auto px-4 py-10 opacity-30">
                 <div className="flex justify-center flex-col items-center gap-2">
-                    <p className="text-[9px] text-slate-300 font-bold uppercase">Ifes Barra de São Francisco - 2026</p>
+                    <p className="text-[9px] text-slate-300 font-bold uppercase">Ifes Barra de Sao Francisco - 2026</p>
                 </div>
             </footer>
         </div>

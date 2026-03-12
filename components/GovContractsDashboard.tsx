@@ -15,6 +15,10 @@ import {
 } from '../services/govIntegrationService';
 import { formatCurrency, formatDate } from '../utils/formatters';
 
+interface GovContractsDashboardProps {
+  embedded?: boolean;
+}
+
 const MODALITY_OPTIONS: { value: GovModalityType; label: string }[] = [
   { value: 'all', label: 'Todas' },
   { value: 'pregao_eletronico', label: 'Pregao Eletronico' },
@@ -25,7 +29,7 @@ const MODALITY_OPTIONS: { value: GovModalityType; label: string }[] = [
 
 const currentYear = String(new Date().getFullYear());
 
-const GovContractsDashboard: React.FC = () => {
+const GovContractsDashboard: React.FC<GovContractsDashboardProps> = ({ embedded = false }) => {
   const navigate = useNavigate();
   const [config, setConfig] = useState<SystemConfig | null>(null);
   const [selectedYear, setSelectedYear] = useState<string>(currentYear);
@@ -50,7 +54,7 @@ const GovContractsDashboard: React.FC = () => {
   }, []);
 
   const availableYears = useMemo(() => {
-    const years = new Set<string>(['2022', '2023', '2024', '2025', currentYear]);
+    const years = new Set<string>(['2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025', currentYear]);
     Object.keys(config?.pcaYearsMap || {}).forEach((year) => years.add(String(year)));
     return Array.from(years).sort((a, b) => Number(b) - Number(a));
   }, [config]);
@@ -89,6 +93,8 @@ const GovContractsDashboard: React.FC = () => {
     const normalized = searchTerm.trim().toLowerCase();
     if (!normalized) return source;
     return source.filter((item) =>
+      (item.identificacaoContratacao || '').toLowerCase().includes(normalized) ||
+      (item.empresa || '').toLowerCase().includes(normalized) ||
       item.numeroProcesso.toLowerCase().includes(normalized) ||
       item.objeto.toLowerCase().includes(normalized)
     );
@@ -140,7 +146,8 @@ const GovContractsDashboard: React.FC = () => {
   const detailData = detailPayload?.data || null;
 
   return (
-    <div className="min-h-screen border-t-4 border-ifes-green bg-slate-50 font-sans text-slate-800">
+    <div className={embedded ? 'bg-transparent font-sans text-slate-800' : 'min-h-screen border-t-4 border-ifes-green bg-slate-50 font-sans text-slate-800'}>
+      {!embedded && (
       <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 h-24 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
@@ -162,8 +169,9 @@ const GovContractsDashboard: React.FC = () => {
           </button>
         </div>
       </header>
+      )}
 
-      <main className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+      <main className={embedded ? 'space-y-6' : 'max-w-7xl mx-auto px-4 py-8 space-y-6'}>
         <section className="bg-white border-l-4 border-ifes-green p-6 rounded-2xl shadow-sm space-y-2">
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Pregao, Dispensa, Inexigibilidade e Concorrencia</h1>
           <p className="text-sm text-slate-500 font-medium">
@@ -209,7 +217,7 @@ const GovContractsDashboard: React.FC = () => {
               <input
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Buscar por processo ou objeto..."
+                placeholder="Buscar por contratacao, empresa, processo ou objeto..."
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-sm font-medium text-slate-700 outline-none"
               />
             </div>
@@ -262,11 +270,12 @@ const GovContractsDashboard: React.FC = () => {
             <div className="p-8 text-center text-sm font-bold text-slate-500">Nenhum registro encontrado.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[960px] text-left">
+              <table className="w-full min-w-[1160px] text-left">
                 <thead className="bg-slate-50">
                   <tr>
                     <th className="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Modalidade</th>
-                    <th className="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Processo</th>
+                    <th className="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Contratacao</th>
+                    <th className="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Empresa</th>
                     <th className="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Objeto</th>
                     <th className="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider text-right">Valor Homologado</th>
                     <th className="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Homologacao</th>
@@ -286,7 +295,13 @@ const GovContractsDashboard: React.FC = () => {
                           {item.modalidade}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-sm font-bold text-slate-700">{item.numeroProcesso}</td>
+                      <td className="px-5 py-4">
+                        <div className="text-sm font-bold text-slate-700">{item.identificacaoContratacao || item.numeroProcesso}</div>
+                        <div className="text-[11px] font-medium text-slate-400">{item.numeroProcesso}</div>
+                      </td>
+                      <td className="px-5 py-4 text-sm font-semibold text-slate-600 max-w-[260px]">
+                        <div className="line-clamp-2">{item.empresa || '-'}</div>
+                      </td>
                       <td className="px-5 py-4 text-sm text-slate-600 max-w-[520px]">
                         <div className="line-clamp-2">{item.objeto}</div>
                       </td>
@@ -321,7 +336,7 @@ const GovContractsDashboard: React.FC = () => {
                 <div className="min-w-0">
                   <p className="text-[10px] uppercase tracking-wider font-black text-slate-400">Detalhes da Contratacao</p>
                   <h3 className="text-sm font-black text-slate-900 truncate">
-                    {detailData?.numeroControlePNCP || selectedRecord.numeroControlePNCP || selectedRecord.numeroProcesso}
+                    {detailData?.identificacaoContratacao || selectedRecord.identificacaoContratacao || detailData?.numeroControlePNCP || selectedRecord.numeroControlePNCP || selectedRecord.numeroProcesso}
                   </h3>
                 </div>
                 <button
@@ -341,8 +356,11 @@ const GovContractsDashboard: React.FC = () => {
                   <>
                     <section className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
                       <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">Identificacao</h4>
+                      <p className="text-sm"><span className="font-bold text-slate-700">Contratacao:</span> {detailData.identificacaoContratacao || '-'}</p>
                       <p className="text-sm"><span className="font-bold text-slate-700">Modalidade:</span> {detailData.modalidade || '-'}</p>
+                      <p className="text-sm"><span className="font-bold text-slate-700">Empresa:</span> {detailData.empresa || '-'}</p>
                       <p className="text-sm"><span className="font-bold text-slate-700">Situacao:</span> {detailData.situacaoCompra || '-'}</p>
+                      <p className="text-sm"><span className="font-bold text-slate-700">Numero da compra:</span> {detailData.numeroCompra || '-'}</p>
                       <p className="text-sm"><span className="font-bold text-slate-700">Processo:</span> {detailData.numeroProcesso || '-'}</p>
                       <p className="text-sm"><span className="font-bold text-slate-700">Ano/Sequencial:</span> {detailData.anoCompra || '-'} / {detailData.sequencialCompra || '-'}</p>
                     </section>
@@ -411,20 +429,10 @@ const GovContractsDashboard: React.FC = () => {
                             rel="noreferrer"
                             className="inline-flex items-center gap-2 text-sm font-bold text-ifes-green hover:underline"
                           >
-                            Processo Eletronico <ExternalLink size={14} />
+                            Processo Eletronico SIPAC <ExternalLink size={14} />
                           </a>
                         )}
-                        {detailData.links.sistemaOrigem && (
-                          <a
-                            href={detailData.links.sistemaOrigem}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-2 text-sm font-bold text-ifes-green hover:underline"
-                          >
-                            Sistema de Origem <ExternalLink size={14} />
-                          </a>
-                        )}
-                        {!detailData.links.pncp && !detailData.links.processoEletronico && !detailData.links.sistemaOrigem && (
+                        {!detailData.links.pncp && !detailData.links.processoEletronico && (
                           <p className="text-sm text-slate-500">Sem links disponiveis para esta contratacao.</p>
                         )}
                       </div>

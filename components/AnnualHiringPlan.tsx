@@ -116,7 +116,17 @@ const checklistAiInFlightCache = new Map<string, Promise<Record<string, Document
 // Configuração do Worker do PDF.js localmente
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
-const AnnualHiringPlan: React.FC = () => {
+interface AnnualHiringPlanProps {
+  embedded?: boolean;
+  initialDashboardView?: 'planning' | 'status';
+  lockedDashboardView?: 'planning' | 'status';
+}
+
+const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
+  embedded = false,
+  initialDashboardView = 'planning',
+  lockedDashboardView
+}) => {
   const navigate = useNavigate();
   const [data, setData] = useState<ContractItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -179,7 +189,7 @@ const AnnualHiringPlan: React.FC = () => {
   const [despachosContent, setDespachosContent] = useState<{ tipo: string, data: string, texto: string, ordem: string }[]>([]);
   const [isLoadingDespachos, setIsLoadingDespachos] = useState<boolean>(false);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState<boolean>(false);
-  const [dashboardView, setDashboardView] = useState<'planning' | 'status'>('planning');
+  const [dashboardView, setDashboardView] = useState<'planning' | 'status'>(initialDashboardView);
   const [viewingItem, setViewingItem] = useState<ContractItem | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [chartsReady, setChartsReady] = useState(false);
@@ -238,6 +248,12 @@ const AnnualHiringPlan: React.FC = () => {
   const [lakeDocUrl, setLakeDocUrl] = useState<string | null>(null);
   const [isFetchingUrl, setIsFetchingUrl] = useState(false);
   const [loadingLake, setLoadingLake] = useState(false);
+
+  useEffect(() => {
+    if (lockedDashboardView && dashboardView !== lockedDashboardView) {
+      setDashboardView(lockedDashboardView);
+    }
+  }, [dashboardView, lockedDashboardView]);
 
   // Initialize team/value state when item changes
   useEffect(() => {
@@ -1510,7 +1526,7 @@ const AnnualHiringPlan: React.FC = () => {
   const closeToast = () => setToast(null);
 
   return (
-    <div className="min-h-screen border-t-4 border-ifes-green bg-slate-50/30 relative font-sans">
+    <div className={embedded ? 'bg-transparent relative font-sans' : 'min-h-screen border-t-4 border-ifes-green bg-slate-50/30 relative font-sans'}>
       {toast && <Toast message={toast.message} type={toast.type} onClose={closeToast} />}
       {loading && (
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/70 backdrop-blur-xl animate-in fade-in duration-300">
@@ -1522,6 +1538,7 @@ const AnnualHiringPlan: React.FC = () => {
         </div>
       )}
 
+      {!embedded && (
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
         <div className="w-full px-6 h-20 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 sm:gap-6 min-w-0">
@@ -1550,8 +1567,32 @@ const AnnualHiringPlan: React.FC = () => {
           </div>
         </div>
       </header>
+      )}
 
-      <main className="w-full max-w-[1920px] px-6 mx-auto py-8 space-y-8">
+      <main className={embedded ? 'space-y-8' : 'w-full max-w-[1920px] px-6 mx-auto py-8 space-y-8'}>
+        {embedded && (
+          <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-black text-slate-900 tracking-tight">
+                {dashboardView === 'planning' ? 'Plano de Contratacao Anual' : 'Execucao CLC'}
+              </h2>
+              <p className="text-xs font-medium text-slate-500">
+                {dashboardView === 'planning'
+                  ? 'Controle do PCA com filtro de ano e sincronizacao dentro do modulo.'
+                  : 'Acompanhamento de processos SIPAC com filtro de ano e sincronizacao.'}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <select value={selectedYear} onChange={(e) => { setSelectedYear(e.target.value); setCurrentPage(1); }} className="bg-ifes-green/5 text-ifes-green border border-ifes-green/20 rounded-xl px-3 py-2 text-sm font-black outline-none focus:ring-2 focus:ring-ifes-green/40 transition-all cursor-pointer">
+                {Object.keys(config?.pcaYearsMap || PCA_YEARS_MAP).sort((a, b) => b.localeCompare(a)).map(year => (<option key={year} value={year}>{year}</option>))}
+              </select>
+              <button onClick={() => fetchData(selectedYear, true)} disabled={isSyncing} className="flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl transition-all border border-blue-200 cursor-pointer disabled:opacity-50">
+                <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
+                <span className="text-xs font-black uppercase tracking-wide">Atualizar</span>
+              </button>
+            </div>
+          </section>
+        )}
         {dashboardView === 'planning' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">

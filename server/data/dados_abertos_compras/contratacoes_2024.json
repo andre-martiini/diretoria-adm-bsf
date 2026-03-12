@@ -1,13 +1,14 @@
 {
   "metadata": {
-    "extractedAt": "2026-03-11T13:03:02.433Z",
+    "extractedAt": "2026-03-12T13:29:53.805Z",
     "cnpj": "10838653000106",
     "year": "2024",
-    "totalPurchases": 23,
+    "totalPurchases": 26,
     "source": "pncp_snapshot_historico"
   },
   "data": [
     {
+      "tipoInstrumentoConvocatorioCodigo": 1,
       "dataAtualizacao": "2024-04-16T07:09:58",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
@@ -49,11 +50,10 @@
       "linkProcessoEletronico": null,
       "numeroControlePNCP": "10838653000106-1-000225/2024",
       "modoDisputaId": 1,
-      "tipoInstrumentoConvocatorioNome": "Edital",
-      "tipoInstrumentoConvocatorioCodigo": 1,
       "valorTotalEstimado": 454267.08,
       "modalidadeNome": "Pregão - Eletrônico",
       "modoDisputaNome": "Aberto",
+      "tipoInstrumentoConvocatorioNome": "Edital",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
@@ -63,10 +63,10 @@
     {
       "dataAtualizacao": "2024-01-23T13:05:45",
       "orgaoEntidade": {
+        "cnpj": "10838653000106",
         "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F",
-        "cnpj": "10838653000106"
+        "esferaId": "F"
       },
       "anoCompra": 2024,
       "sequencialCompra": 31,
@@ -76,11 +76,11 @@
       "orgaoSubRogado": null,
       "unidadeOrgao": {
         "ufNome": "Espírito Santo",
-        "codigoIbge": "3200904",
         "codigoUnidade": "158886",
         "ufSigla": "ES",
         "municipioNome": "Barra de São Francisco",
-        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO"
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
       },
       "unidadeSubRogada": null,
       "valorTotalHomologado": 7620,
@@ -116,10 +116,10 @@
     {
       "dataAtualizacao": "2024-04-12T17:20:12",
       "orgaoEntidade": {
+        "cnpj": "10838653000106",
         "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F",
-        "cnpj": "10838653000106"
+        "esferaId": "F"
       },
       "anoCompra": 2024,
       "sequencialCompra": 219,
@@ -129,11 +129,11 @@
       "orgaoSubRogado": null,
       "unidadeOrgao": {
         "ufNome": "Espírito Santo",
-        "codigoIbge": "3200904",
         "codigoUnidade": "158886",
         "ufSigla": "ES",
         "municipioNome": "Barra de São Francisco",
-        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO"
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
       },
       "unidadeSubRogada": null,
       "valorTotalHomologado": 1900,
@@ -169,10 +169,10 @@
     {
       "dataAtualizacao": "2024-04-18T13:01:59",
       "orgaoEntidade": {
+        "cnpj": "10838653000106",
         "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F",
-        "cnpj": "10838653000106"
+        "esferaId": "F"
       },
       "anoCompra": 2024,
       "sequencialCompra": 237,
@@ -182,11 +182,11 @@
       "orgaoSubRogado": null,
       "unidadeOrgao": {
         "ufNome": "Espírito Santo",
-        "codigoIbge": "3200904",
         "codigoUnidade": "158886",
         "ufSigla": "ES",
         "municipioNome": "Barra de São Francisco",
-        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO"
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
       },
       "unidadeSubRogada": null,
       "valorTotalHomologado": null,
@@ -222,10 +222,10 @@
     {
       "dataAtualizacao": "2024-05-07T20:29:04",
       "orgaoEntidade": {
+        "cnpj": "10838653000106",
         "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F",
-        "cnpj": "10838653000106"
+        "esferaId": "F"
       },
       "anoCompra": 2024,
       "sequencialCompra": 290,
@@ -235,11 +235,11 @@
       "orgaoSubRogado": null,
       "unidadeOrgao": {
         "ufNome": "Espírito Santo",
-        "codigoIbge": "3200904",
         "codigoUnidade": "158886",
         "ufSigla": "ES",
         "municipioNome": "Barra de São Francisco",
-        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO"
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
       },
       "unidadeSubRogada": null,
       "valorTotalHomologado": 36165.15,
@@ -275,10 +275,10 @@
     {
       "dataAtualizacao": "2024-05-27T09:25:31",
       "orgaoEntidade": {
+        "cnpj": "10838653000106",
         "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F",
-        "cnpj": "10838653000106"
+        "esferaId": "F"
       },
       "anoCompra": 2024,
       "sequencialCompra": 348,
@@ -288,11 +288,11 @@
       "orgaoSubRogado": null,
       "unidadeOrgao": {
         "ufNome": "Espírito Santo",
-        "codigoIbge": "3200904",
         "codigoUnidade": "158886",
         "ufSigla": "ES",
         "municipioNome": "Barra de São Francisco",
-        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO"
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
       },
       "unidadeSubRogada": null,
       "valorTotalHomologado": 44520,
@@ -328,10 +328,10 @@
     {
       "dataAtualizacao": "2024-06-06T15:39:54",
       "orgaoEntidade": {
+        "cnpj": "10838653000106",
         "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F",
-        "cnpj": "10838653000106"
+        "esferaId": "F"
       },
       "anoCompra": 2024,
       "sequencialCompra": 377,
@@ -341,11 +341,11 @@
       "orgaoSubRogado": null,
       "unidadeOrgao": {
         "ufNome": "Espírito Santo",
-        "codigoIbge": "3200904",
         "codigoUnidade": "158886",
         "ufSigla": "ES",
         "municipioNome": "Barra de São Francisco",
-        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO"
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
       },
       "unidadeSubRogada": null,
       "valorTotalHomologado": 40197,
@@ -381,10 +381,10 @@
     {
       "dataAtualizacao": "2024-06-18T18:23:10",
       "orgaoEntidade": {
+        "cnpj": "10838653000106",
         "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F",
-        "cnpj": "10838653000106"
+        "esferaId": "F"
       },
       "anoCompra": 2024,
       "sequencialCompra": 408,
@@ -394,11 +394,11 @@
       "orgaoSubRogado": null,
       "unidadeOrgao": {
         "ufNome": "Espírito Santo",
-        "codigoIbge": "3200904",
         "codigoUnidade": "158886",
         "ufSigla": "ES",
         "municipioNome": "Barra de São Francisco",
-        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO"
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
       },
       "unidadeSubRogada": null,
       "valorTotalHomologado": null,
@@ -434,10 +434,10 @@
     {
       "dataAtualizacao": "2024-07-02T16:06:41",
       "orgaoEntidade": {
+        "cnpj": "10838653000106",
         "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F",
-        "cnpj": "10838653000106"
+        "esferaId": "F"
       },
       "anoCompra": 2024,
       "sequencialCompra": 463,
@@ -447,11 +447,11 @@
       "orgaoSubRogado": null,
       "unidadeOrgao": {
         "ufNome": "Espírito Santo",
-        "codigoIbge": "3200904",
         "codigoUnidade": "158886",
         "ufSigla": "ES",
         "municipioNome": "Barra de São Francisco",
-        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO"
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
       },
       "unidadeSubRogada": null,
       "valorTotalHomologado": 12514,
@@ -487,10 +487,10 @@
     {
       "dataAtualizacao": "2024-07-03T19:30:35",
       "orgaoEntidade": {
+        "cnpj": "10838653000106",
         "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F",
-        "cnpj": "10838653000106"
+        "esferaId": "F"
       },
       "anoCompra": 2024,
       "sequencialCompra": 468,
@@ -500,11 +500,11 @@
       "orgaoSubRogado": null,
       "unidadeOrgao": {
         "ufNome": "Espírito Santo",
-        "codigoIbge": "3200904",
         "codigoUnidade": "158886",
         "ufSigla": "ES",
         "municipioNome": "Barra de São Francisco",
-        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO"
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
       },
       "unidadeSubRogada": null,
       "valorTotalHomologado": 8280,
@@ -540,10 +540,10 @@
     {
       "dataAtualizacao": "2024-07-26T18:52:38",
       "orgaoEntidade": {
+        "cnpj": "10838653000106",
         "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F",
-        "cnpj": "10838653000106"
+        "esferaId": "F"
       },
       "anoCompra": 2024,
       "sequencialCompra": 536,
@@ -553,11 +553,11 @@
       "orgaoSubRogado": null,
       "unidadeOrgao": {
         "ufNome": "Espírito Santo",
-        "codigoIbge": "3200904",
         "codigoUnidade": "158886",
         "ufSigla": "ES",
         "municipioNome": "Barra de São Francisco",
-        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO"
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
       },
       "unidadeSubRogada": null,
       "valorTotalHomologado": 28635.5,
@@ -593,10 +593,10 @@
     {
       "dataAtualizacao": "2024-09-10T22:05:31",
       "orgaoEntidade": {
+        "cnpj": "10838653000106",
         "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F",
-        "cnpj": "10838653000106"
+        "esferaId": "F"
       },
       "anoCompra": 2024,
       "sequencialCompra": 685,
@@ -606,11 +606,11 @@
       "orgaoSubRogado": null,
       "unidadeOrgao": {
         "ufNome": "Espírito Santo",
-        "codigoIbge": "3200904",
         "codigoUnidade": "158886",
         "ufSigla": "ES",
         "municipioNome": "Barra de São Francisco",
-        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO"
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
       },
       "unidadeSubRogada": null,
       "valorTotalHomologado": null,
@@ -646,10 +646,10 @@
     {
       "dataAtualizacao": "2024-10-24T10:09:07",
       "orgaoEntidade": {
+        "cnpj": "10838653000106",
         "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F",
-        "cnpj": "10838653000106"
+        "esferaId": "F"
       },
       "anoCompra": 2024,
       "sequencialCompra": 825,
@@ -659,11 +659,11 @@
       "orgaoSubRogado": null,
       "unidadeOrgao": {
         "ufNome": "Espírito Santo",
-        "codigoIbge": "3200904",
         "codigoUnidade": "158886",
         "ufSigla": "ES",
         "municipioNome": "Barra de São Francisco",
-        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO"
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
       },
       "unidadeSubRogada": null,
       "valorTotalHomologado": 4479.86,
@@ -699,10 +699,10 @@
     {
       "dataAtualizacao": "2024-10-24T16:47:26",
       "orgaoEntidade": {
+        "cnpj": "10838653000106",
         "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F",
-        "cnpj": "10838653000106"
+        "esferaId": "F"
       },
       "anoCompra": 2024,
       "sequencialCompra": 830,
@@ -712,11 +712,11 @@
       "orgaoSubRogado": null,
       "unidadeOrgao": {
         "ufNome": "Espírito Santo",
-        "codigoIbge": "3200904",
         "codigoUnidade": "158886",
         "ufSigla": "ES",
         "municipioNome": "Barra de São Francisco",
-        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO"
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
       },
       "unidadeSubRogada": null,
       "valorTotalHomologado": null,
@@ -752,10 +752,10 @@
     {
       "dataAtualizacao": "2024-11-04T07:19:01",
       "orgaoEntidade": {
+        "cnpj": "10838653000106",
         "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F",
-        "cnpj": "10838653000106"
+        "esferaId": "F"
       },
       "anoCompra": 2024,
       "sequencialCompra": 853,
@@ -765,11 +765,11 @@
       "orgaoSubRogado": null,
       "unidadeOrgao": {
         "ufNome": "Espírito Santo",
-        "codigoIbge": "3200904",
         "codigoUnidade": "158886",
         "ufSigla": "ES",
         "municipioNome": "Barra de São Francisco",
-        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO"
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
       },
       "unidadeSubRogada": null,
       "valorTotalHomologado": 18440,
@@ -805,10 +805,10 @@
     {
       "dataAtualizacao": "2024-11-04T11:56:04",
       "orgaoEntidade": {
+        "cnpj": "10838653000106",
         "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F",
-        "cnpj": "10838653000106"
+        "esferaId": "F"
       },
       "anoCompra": 2024,
       "sequencialCompra": 859,
@@ -818,11 +818,11 @@
       "orgaoSubRogado": null,
       "unidadeOrgao": {
         "ufNome": "Espírito Santo",
-        "codigoIbge": "3200904",
         "codigoUnidade": "158886",
         "ufSigla": "ES",
         "municipioNome": "Barra de São Francisco",
-        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO"
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
       },
       "unidadeSubRogada": null,
       "valorTotalHomologado": null,
@@ -858,10 +858,10 @@
     {
       "dataAtualizacao": "2024-11-04T16:10:54",
       "orgaoEntidade": {
+        "cnpj": "10838653000106",
         "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F",
-        "cnpj": "10838653000106"
+        "esferaId": "F"
       },
       "anoCompra": 2024,
       "sequencialCompra": 863,
@@ -871,11 +871,11 @@
       "orgaoSubRogado": null,
       "unidadeOrgao": {
         "ufNome": "Espírito Santo",
-        "codigoIbge": "3200904",
         "codigoUnidade": "158886",
         "ufSigla": "ES",
         "municipioNome": "Barra de São Francisco",
-        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO"
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
       },
       "unidadeSubRogada": null,
       "valorTotalHomologado": 5593,
@@ -911,10 +911,10 @@
     {
       "dataAtualizacao": "2024-11-05T11:34:14",
       "orgaoEntidade": {
+        "cnpj": "10838653000106",
         "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F",
-        "cnpj": "10838653000106"
+        "esferaId": "F"
       },
       "anoCompra": 2024,
       "sequencialCompra": 868,
@@ -924,11 +924,11 @@
       "orgaoSubRogado": null,
       "unidadeOrgao": {
         "ufNome": "Espírito Santo",
-        "codigoIbge": "3200904",
         "codigoUnidade": "158886",
         "ufSigla": "ES",
         "municipioNome": "Barra de São Francisco",
-        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO"
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
       },
       "unidadeSubRogada": null,
       "valorTotalHomologado": 15000,
@@ -964,10 +964,10 @@
     {
       "dataAtualizacao": "2024-11-14T15:22:34",
       "orgaoEntidade": {
+        "cnpj": "10838653000106",
         "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F",
-        "cnpj": "10838653000106"
+        "esferaId": "F"
       },
       "anoCompra": 2024,
       "sequencialCompra": 919,
@@ -977,11 +977,11 @@
       "orgaoSubRogado": null,
       "unidadeOrgao": {
         "ufNome": "Espírito Santo",
-        "codigoIbge": "3200904",
         "codigoUnidade": "158886",
         "ufSigla": "ES",
         "municipioNome": "Barra de São Francisco",
-        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO"
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
       },
       "unidadeSubRogada": null,
       "valorTotalHomologado": 470,
@@ -1017,10 +1017,10 @@
     {
       "dataAtualizacao": "2024-11-27T20:44:18",
       "orgaoEntidade": {
+        "cnpj": "10838653000106",
         "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F",
-        "cnpj": "10838653000106"
+        "esferaId": "F"
       },
       "anoCompra": 2024,
       "sequencialCompra": 967,
@@ -1030,11 +1030,11 @@
       "orgaoSubRogado": null,
       "unidadeOrgao": {
         "ufNome": "Espírito Santo",
-        "codigoIbge": "3200904",
         "codigoUnidade": "158886",
         "ufSigla": "ES",
         "municipioNome": "Barra de São Francisco",
-        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO"
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
       },
       "unidadeSubRogada": null,
       "valorTotalHomologado": 23695,
@@ -1070,10 +1070,10 @@
     {
       "dataAtualizacao": "2024-12-11T10:16:19",
       "orgaoEntidade": {
+        "cnpj": "10838653000106",
         "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F",
-        "cnpj": "10838653000106"
+        "esferaId": "F"
       },
       "anoCompra": 2024,
       "sequencialCompra": 1002,
@@ -1083,11 +1083,11 @@
       "orgaoSubRogado": null,
       "unidadeOrgao": {
         "ufNome": "Espírito Santo",
-        "codigoIbge": "3200904",
         "codigoUnidade": "158886",
         "ufSigla": "ES",
         "municipioNome": "Barra de São Francisco",
-        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO"
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
       },
       "unidadeSubRogada": null,
       "valorTotalHomologado": null,
@@ -1123,10 +1123,10 @@
     {
       "dataAtualizacao": "2024-12-17T16:12:00",
       "orgaoEntidade": {
+        "cnpj": "10838653000106",
         "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F",
-        "cnpj": "10838653000106"
+        "esferaId": "F"
       },
       "anoCompra": 2024,
       "sequencialCompra": 1047,
@@ -1136,11 +1136,11 @@
       "orgaoSubRogado": null,
       "unidadeOrgao": {
         "ufNome": "Espírito Santo",
-        "codigoIbge": "3200904",
         "codigoUnidade": "158886",
         "ufSigla": "ES",
         "municipioNome": "Barra de São Francisco",
-        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO"
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
       },
       "unidadeSubRogada": null,
       "valorTotalHomologado": null,
@@ -1176,10 +1176,10 @@
     {
       "dataAtualizacao": "2024-12-30T11:47:18",
       "orgaoEntidade": {
+        "cnpj": "10838653000106",
         "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F",
-        "cnpj": "10838653000106"
+        "esferaId": "F"
       },
       "anoCompra": 2024,
       "sequencialCompra": 1116,
@@ -1189,11 +1189,11 @@
       "orgaoSubRogado": null,
       "unidadeOrgao": {
         "ufNome": "Espírito Santo",
-        "codigoIbge": "3200904",
         "codigoUnidade": "158886",
         "ufSigla": "ES",
         "municipioNome": "Barra de São Francisco",
-        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO"
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
       },
       "unidadeSubRogada": null,
       "valorTotalHomologado": 14139.44,
@@ -1224,6 +1224,165 @@
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
       "usuarioNome": "Compras.gov.br",
+      "itens": []
+    },
+    {
+      "valorTotalEstimado": 202.64,
+      "modalidadeNome": "Inexigibilidade",
+      "modoDisputaNome": "Não se aplica",
+      "fontesOrcamentarias": [],
+      "situacaoCompraId": 1,
+      "situacaoCompraNome": "Divulgada no PNCP",
+      "usuarioNome": "Compras.gov.br",
+      "dataAtualizacao": "2024-03-14T14:51:38",
+      "orgaoEntidade": {
+        "cnpj": "10838653000106",
+        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
+        "poderId": "E",
+        "esferaId": "F"
+      },
+      "anoCompra": 2024,
+      "sequencialCompra": 142,
+      "numeroCompra": "10",
+      "processo": "23543.000057/2024-52",
+      "objetoCompra": "Contratação de serviços de emplacamento (confecção e estampagem) para o veículo oficial pertencente a frota do Ifes Campus Barra de São Francisco.",
+      "orgaoSubRogado": null,
+      "unidadeOrgao": {
+        "ufNome": "Espírito Santo",
+        "codigoUnidade": "158886",
+        "ufSigla": "ES",
+        "municipioNome": "Barra de São Francisco",
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
+      },
+      "unidadeSubRogada": null,
+      "valorTotalHomologado": 202.64,
+      "srp": false,
+      "dataInclusao": "2024-03-14T14:51:38",
+      "amparoLegal": {
+        "codigo": 50,
+        "nome": "Lei 14.133/2021, Art. 74, caput",
+        "descricao": "Inexigibilidade de Licitação: Todas as formas de inexigibilidade não previstas no art. 74"
+      },
+      "dataAberturaProposta": null,
+      "dataEncerramentoProposta": null,
+      "informacaoComplementar": null,
+      "linkSistemaOrigem": null,
+      "justificativaPresencial": null,
+      "dataPublicacaoPncp": "2024-03-14T14:51:38",
+      "modalidadeId": 9,
+      "dataAtualizacaoGlobal": "2024-03-14T14:51:38",
+      "linkProcessoEletronico": null,
+      "numeroControlePNCP": "10838653000106-1-000142/2024",
+      "modoDisputaId": 5,
+      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
+      "tipoInstrumentoConvocatorioCodigo": 3,
+      "itens": []
+    },
+    {
+      "valorTotalEstimado": 1000,
+      "modalidadeNome": "Inexigibilidade",
+      "modoDisputaNome": "Não se aplica",
+      "fontesOrcamentarias": [],
+      "situacaoCompraId": 1,
+      "situacaoCompraNome": "Divulgada no PNCP",
+      "usuarioNome": "Compras.gov.br",
+      "dataAtualizacao": "2024-05-14T21:08:02",
+      "orgaoEntidade": {
+        "cnpj": "10838653000106",
+        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
+        "poderId": "E",
+        "esferaId": "F"
+      },
+      "anoCompra": 2024,
+      "sequencialCompra": 317,
+      "numeroCompra": "12",
+      "processo": "23543.000055/2024-63",
+      "objetoCompra": "Contratação da Empresa Brasileira de Correios e Telégrafos - CORREIOS, para a prestação de serviços postais para atendimento das necessidades do Ifes- Campus Barra de São Francisco.",
+      "orgaoSubRogado": null,
+      "unidadeOrgao": {
+        "ufNome": "Espírito Santo",
+        "codigoUnidade": "158886",
+        "ufSigla": "ES",
+        "municipioNome": "Barra de São Francisco",
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
+      },
+      "unidadeSubRogada": null,
+      "valorTotalHomologado": 1000,
+      "srp": false,
+      "dataInclusao": "2024-05-14T21:08:02",
+      "amparoLegal": {
+        "codigo": 50,
+        "nome": "Lei 14.133/2021, Art. 74, caput",
+        "descricao": "Inexigibilidade de Licitação: Todas as formas de inexigibilidade não previstas no art. 74"
+      },
+      "dataAberturaProposta": null,
+      "dataEncerramentoProposta": null,
+      "informacaoComplementar": null,
+      "linkSistemaOrigem": null,
+      "justificativaPresencial": null,
+      "dataPublicacaoPncp": "2024-05-14T21:08:02",
+      "modalidadeId": 9,
+      "dataAtualizacaoGlobal": "2024-05-14T21:08:02",
+      "linkProcessoEletronico": null,
+      "numeroControlePNCP": "10838653000106-1-000317/2024",
+      "modoDisputaId": 5,
+      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
+      "tipoInstrumentoConvocatorioCodigo": 3,
+      "itens": []
+    },
+    {
+      "valorTotalEstimado": 170000,
+      "modalidadeNome": "Inexigibilidade",
+      "modoDisputaNome": "Não se aplica",
+      "fontesOrcamentarias": [],
+      "situacaoCompraId": 1,
+      "situacaoCompraNome": "Divulgada no PNCP",
+      "usuarioNome": "Compras.gov.br",
+      "dataAtualizacao": "2024-08-27T14:51:47",
+      "orgaoEntidade": {
+        "cnpj": "10838653000106",
+        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
+        "poderId": "E",
+        "esferaId": "F"
+      },
+      "anoCompra": 2023,
+      "sequencialCompra": 970,
+      "numeroCompra": "90022",
+      "processo": "23543.000949/2024-53",
+      "objetoCompra": "Contratação de fornecimento de energia elétrica para o funcionamento do IFES Campus Barra de São Francisco e suas finalidades educacionais, situado à Rodovia ES 320, km 118, Zona Rural, Valão Fundo, Barra de São Francisco-ES, CEP: 29.800-000.",
+      "orgaoSubRogado": null,
+      "unidadeOrgao": {
+        "ufNome": "Espírito Santo",
+        "codigoUnidade": "158886",
+        "ufSigla": "ES",
+        "municipioNome": "Barra de São Francisco",
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
+      },
+      "unidadeSubRogada": null,
+      "valorTotalHomologado": 170000,
+      "srp": false,
+      "dataInclusao": "2024-08-27T14:51:47",
+      "amparoLegal": {
+        "codigo": 50,
+        "nome": "Lei 14.133/2021, Art. 74, caput",
+        "descricao": "Inexigibilidade de Licitação: Todas as formas de inexigibilidade não previstas no art. 74"
+      },
+      "dataAberturaProposta": null,
+      "dataEncerramentoProposta": null,
+      "informacaoComplementar": null,
+      "linkSistemaOrigem": null,
+      "justificativaPresencial": null,
+      "dataPublicacaoPncp": "2024-08-27T14:51:47",
+      "modalidadeId": 9,
+      "dataAtualizacaoGlobal": "2024-08-27T14:51:47",
+      "linkProcessoEletronico": null,
+      "numeroControlePNCP": "10838653000106-1-000970/2023",
+      "modoDisputaId": 5,
+      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
+      "tipoInstrumentoConvocatorioCodigo": 3,
       "itens": []
     }
   ]

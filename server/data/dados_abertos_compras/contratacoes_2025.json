@@ -1,13 +1,20 @@
 {
   "metadata": {
-    "extractedAt": "2026-03-11T13:01:27.256Z",
+    "extractedAt": "2026-03-12T13:29:58.999Z",
     "cnpj": "10838653000106",
     "year": "2025",
-    "totalPurchases": 22,
+    "totalPurchases": 29,
     "source": "pncp_snapshot_historico"
   },
   "data": [
     {
+      "valorTotalEstimado": 117046.47,
+      "modalidadeNome": "Pregão - Eletrônico",
+      "modoDisputaNome": "Aberto",
+      "fontesOrcamentarias": [],
+      "situacaoCompraId": 1,
+      "situacaoCompraNome": "Divulgada no PNCP",
+      "usuarioNome": "Compras.gov.br",
       "dataAtualizacao": "2025-03-14T07:27:49",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
@@ -34,9 +41,9 @@
       "srp": false,
       "dataInclusao": "2025-03-14T07:27:49",
       "amparoLegal": {
-        "descricao": "pregão: modalidade de licitação obrigatória para aquisição de bens e serviços comuns",
         "codigo": 1,
-        "nome": "Lei 14.133/2021, Art. 28, I"
+        "nome": "Lei 14.133/2021, Art. 28, I",
+        "descricao": "pregão: modalidade de licitação obrigatória para aquisição de bens e serviços comuns"
       },
       "dataAberturaProposta": "2025-03-14T08:00:00",
       "dataEncerramentoProposta": "2025-03-31T09:00:00",
@@ -49,18 +56,18 @@
       "linkProcessoEletronico": null,
       "numeroControlePNCP": "10838653000106-1-000158/2025",
       "modoDisputaId": 1,
-      "valorTotalEstimado": 117046.47,
+      "tipoInstrumentoConvocatorioNome": "Edital",
+      "tipoInstrumentoConvocatorioCodigo": 1,
+      "itens": []
+    },
+    {
+      "valorTotalEstimado": 77.73,
       "modalidadeNome": "Pregão - Eletrônico",
       "modoDisputaNome": "Aberto",
-      "tipoInstrumentoConvocatorioCodigo": 1,
-      "tipoInstrumentoConvocatorioNome": "Edital",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
       "usuarioNome": "Compras.gov.br",
-      "itens": []
-    },
-    {
       "dataAtualizacao": "2025-12-24T07:03:21",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
@@ -87,9 +94,9 @@
       "srp": false,
       "dataInclusao": "2025-12-24T07:03:21",
       "amparoLegal": {
-        "descricao": "pregão: modalidade de licitação obrigatória para aquisição de bens e serviços comuns",
         "codigo": 1,
-        "nome": "Lei 14.133/2021, Art. 28, I"
+        "nome": "Lei 14.133/2021, Art. 28, I",
+        "descricao": "pregão: modalidade de licitação obrigatória para aquisição de bens e serviços comuns"
       },
       "dataAberturaProposta": "2025-12-24T08:00:00",
       "dataEncerramentoProposta": "2026-01-12T09:00:00",
@@ -102,19 +109,11 @@
       "linkProcessoEletronico": null,
       "numeroControlePNCP": "10838653000106-1-000943/2025",
       "modoDisputaId": 1,
-      "valorTotalEstimado": 77.73,
-      "modalidadeNome": "Pregão - Eletrônico",
-      "modoDisputaNome": "Aberto",
-      "tipoInstrumentoConvocatorioCodigo": 1,
       "tipoInstrumentoConvocatorioNome": "Edital",
-      "fontesOrcamentarias": [],
-      "situacaoCompraId": 1,
-      "situacaoCompraNome": "Divulgada no PNCP",
-      "usuarioNome": "Compras.gov.br",
+      "tipoInstrumentoConvocatorioCodigo": 1,
       "itens": []
     },
     {
-      "tipoInstrumentoConvocatorioCodigo": 3,
       "dataAtualizacao": "2025-01-24T17:02:47",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
@@ -156,10 +155,11 @@
       "linkProcessoEletronico": null,
       "numeroControlePNCP": "10838653000106-1-000043/2025",
       "modoDisputaId": 5,
+      "tipoInstrumentoConvocatorioCodigo": 3,
+      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
       "valorTotalEstimado": 1085.8,
       "modalidadeNome": "Dispensa",
       "modoDisputaNome": "Não se aplica",
-      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
@@ -167,7 +167,6 @@
       "itens": []
     },
     {
-      "tipoInstrumentoConvocatorioCodigo": 3,
       "dataAtualizacao": "2025-02-21T15:03:46",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
@@ -209,10 +208,11 @@
       "linkProcessoEletronico": null,
       "numeroControlePNCP": "10838653000106-1-001127/2024",
       "modoDisputaId": 5,
+      "tipoInstrumentoConvocatorioCodigo": 3,
+      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
       "valorTotalEstimado": 21316.67,
       "modalidadeNome": "Dispensa",
       "modoDisputaNome": "Não se aplica",
-      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
@@ -220,7 +220,6 @@
       "itens": []
     },
     {
-      "tipoInstrumentoConvocatorioCodigo": 3,
       "dataAtualizacao": "2025-03-12T15:40:20",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
@@ -262,10 +261,11 @@
       "linkProcessoEletronico": null,
       "numeroControlePNCP": "10838653000106-1-000151/2025",
       "modoDisputaId": 5,
+      "tipoInstrumentoConvocatorioCodigo": 3,
+      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
       "valorTotalEstimado": 3870.24,
       "modalidadeNome": "Dispensa",
       "modoDisputaNome": "Não se aplica",
-      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
@@ -273,7 +273,6 @@
       "itens": []
     },
     {
-      "tipoInstrumentoConvocatorioCodigo": 2,
       "dataAtualizacao": "2025-04-14T17:45:59",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
@@ -315,10 +314,11 @@
       "linkProcessoEletronico": null,
       "numeroControlePNCP": "10838653000106-1-000248/2025",
       "modoDisputaId": 4,
+      "tipoInstrumentoConvocatorioCodigo": 2,
+      "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
       "valorTotalEstimado": 26020.88,
       "modalidadeNome": "Dispensa",
       "modoDisputaNome": "Dispensa Com Disputa",
-      "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
@@ -326,7 +326,6 @@
       "itens": []
     },
     {
-      "tipoInstrumentoConvocatorioCodigo": 3,
       "dataAtualizacao": "2025-05-05T14:06:29",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
@@ -368,10 +367,11 @@
       "linkProcessoEletronico": null,
       "numeroControlePNCP": "10838653000106-1-000283/2025",
       "modoDisputaId": 5,
+      "tipoInstrumentoConvocatorioCodigo": 3,
+      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
       "valorTotalEstimado": 1639.83,
       "modalidadeNome": "Dispensa",
       "modoDisputaNome": "Não se aplica",
-      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
@@ -379,7 +379,6 @@
       "itens": []
     },
     {
-      "tipoInstrumentoConvocatorioCodigo": 2,
       "dataAtualizacao": "2025-05-15T16:35:40",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
@@ -421,10 +420,11 @@
       "linkProcessoEletronico": null,
       "numeroControlePNCP": "10838653000106-1-000313/2025",
       "modoDisputaId": 4,
+      "tipoInstrumentoConvocatorioCodigo": 2,
+      "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
       "valorTotalEstimado": 29446.67,
       "modalidadeNome": "Dispensa",
       "modoDisputaNome": "Dispensa Com Disputa",
-      "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
@@ -432,7 +432,6 @@
       "itens": []
     },
     {
-      "tipoInstrumentoConvocatorioCodigo": 2,
       "dataAtualizacao": "2025-06-11T15:36:23",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
@@ -474,10 +473,11 @@
       "linkProcessoEletronico": null,
       "numeroControlePNCP": "10838653000106-1-000368/2025",
       "modoDisputaId": 4,
+      "tipoInstrumentoConvocatorioCodigo": 2,
+      "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
       "valorTotalEstimado": 32377.13,
       "modalidadeNome": "Dispensa",
       "modoDisputaNome": "Dispensa Com Disputa",
-      "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
@@ -485,7 +485,6 @@
       "itens": []
     },
     {
-      "tipoInstrumentoConvocatorioCodigo": 2,
       "dataAtualizacao": "2025-06-13T17:55:54",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
@@ -527,10 +526,11 @@
       "linkProcessoEletronico": null,
       "numeroControlePNCP": "10838653000106-1-000375/2025",
       "modoDisputaId": 4,
+      "tipoInstrumentoConvocatorioCodigo": 2,
+      "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
       "valorTotalEstimado": 41231.29,
       "modalidadeNome": "Dispensa",
       "modoDisputaNome": "Dispensa Com Disputa",
-      "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
@@ -538,7 +538,6 @@
       "itens": []
     },
     {
-      "tipoInstrumentoConvocatorioCodigo": 2,
       "dataAtualizacao": "2025-07-22T18:08:44",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
@@ -580,10 +579,11 @@
       "linkProcessoEletronico": null,
       "numeroControlePNCP": "10838653000106-1-000504/2025",
       "modoDisputaId": 4,
+      "tipoInstrumentoConvocatorioCodigo": 2,
+      "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
       "valorTotalEstimado": 59550,
       "modalidadeNome": "Dispensa",
       "modoDisputaNome": "Dispensa Com Disputa",
-      "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
@@ -591,7 +591,6 @@
       "itens": []
     },
     {
-      "tipoInstrumentoConvocatorioCodigo": 2,
       "dataAtualizacao": "2025-07-23T17:19:46",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
@@ -633,10 +632,11 @@
       "linkProcessoEletronico": null,
       "numeroControlePNCP": "10838653000106-1-000511/2025",
       "modoDisputaId": 4,
+      "tipoInstrumentoConvocatorioCodigo": 2,
+      "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
       "valorTotalEstimado": 19409.3,
       "modalidadeNome": "Dispensa",
       "modoDisputaNome": "Dispensa Com Disputa",
-      "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
@@ -644,7 +644,6 @@
       "itens": []
     },
     {
-      "tipoInstrumentoConvocatorioCodigo": 3,
       "dataAtualizacao": "2025-08-14T17:10:37",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
@@ -686,10 +685,11 @@
       "linkProcessoEletronico": null,
       "numeroControlePNCP": "10838653000106-1-000564/2025",
       "modoDisputaId": 5,
+      "tipoInstrumentoConvocatorioCodigo": 3,
+      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
       "valorTotalEstimado": 8633.3,
       "modalidadeNome": "Dispensa",
       "modoDisputaNome": "Não se aplica",
-      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
@@ -697,7 +697,6 @@
       "itens": []
     },
     {
-      "tipoInstrumentoConvocatorioCodigo": 2,
       "dataAtualizacao": "2025-08-18T20:13:28",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
@@ -739,10 +738,11 @@
       "linkProcessoEletronico": null,
       "numeroControlePNCP": "10838653000106-1-000572/2025",
       "modoDisputaId": 4,
+      "tipoInstrumentoConvocatorioCodigo": 2,
+      "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
       "valorTotalEstimado": 23137.16,
       "modalidadeNome": "Dispensa",
       "modoDisputaNome": "Dispensa Com Disputa",
-      "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
@@ -750,7 +750,6 @@
       "itens": []
     },
     {
-      "tipoInstrumentoConvocatorioCodigo": 2,
       "dataAtualizacao": "2025-10-24T16:28:49",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
@@ -792,10 +791,11 @@
       "linkProcessoEletronico": null,
       "numeroControlePNCP": "10838653000106-1-000770/2025",
       "modoDisputaId": 4,
+      "tipoInstrumentoConvocatorioCodigo": 2,
+      "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
       "valorTotalEstimado": 0,
       "modalidadeNome": "Dispensa",
       "modoDisputaNome": "Dispensa Com Disputa",
-      "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
@@ -803,7 +803,6 @@
       "itens": []
     },
     {
-      "tipoInstrumentoConvocatorioCodigo": 2,
       "dataAtualizacao": "2025-11-12T14:21:39",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
@@ -845,10 +844,11 @@
       "linkProcessoEletronico": null,
       "numeroControlePNCP": "10838653000106-1-000816/2025",
       "modoDisputaId": 4,
+      "tipoInstrumentoConvocatorioCodigo": 2,
+      "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
       "valorTotalEstimado": 10439.1,
       "modalidadeNome": "Dispensa",
       "modoDisputaNome": "Dispensa Com Disputa",
-      "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
@@ -856,7 +856,6 @@
       "itens": []
     },
     {
-      "tipoInstrumentoConvocatorioCodigo": 2,
       "dataAtualizacao": "2025-11-13T11:56:13",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
@@ -898,10 +897,11 @@
       "linkProcessoEletronico": null,
       "numeroControlePNCP": "10838653000106-1-000819/2025",
       "modoDisputaId": 4,
+      "tipoInstrumentoConvocatorioCodigo": 2,
+      "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
       "valorTotalEstimado": 6831.78,
       "modalidadeNome": "Dispensa",
       "modoDisputaNome": "Dispensa Com Disputa",
-      "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
@@ -909,7 +909,6 @@
       "itens": []
     },
     {
-      "tipoInstrumentoConvocatorioCodigo": 3,
       "dataAtualizacao": "2025-12-04T14:39:08",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
@@ -951,10 +950,11 @@
       "linkProcessoEletronico": null,
       "numeroControlePNCP": "10838653000106-1-000877/2025",
       "modoDisputaId": 5,
+      "tipoInstrumentoConvocatorioCodigo": 3,
+      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
       "valorTotalEstimado": 9600,
       "modalidadeNome": "Dispensa",
       "modoDisputaNome": "Não se aplica",
-      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
@@ -962,7 +962,6 @@
       "itens": []
     },
     {
-      "tipoInstrumentoConvocatorioCodigo": 3,
       "dataAtualizacao": "2025-12-05T16:10:25",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
@@ -1004,10 +1003,11 @@
       "linkProcessoEletronico": null,
       "numeroControlePNCP": "10838653000106-1-000882/2025",
       "modoDisputaId": 5,
+      "tipoInstrumentoConvocatorioCodigo": 3,
+      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
       "valorTotalEstimado": 5851.87,
       "modalidadeNome": "Dispensa",
       "modoDisputaNome": "Não se aplica",
-      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
@@ -1015,7 +1015,6 @@
       "itens": []
     },
     {
-      "tipoInstrumentoConvocatorioCodigo": 2,
       "dataAtualizacao": "2025-12-09T15:24:34",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
@@ -1057,10 +1056,11 @@
       "linkProcessoEletronico": null,
       "numeroControlePNCP": "10838653000106-1-000890/2025",
       "modoDisputaId": 4,
+      "tipoInstrumentoConvocatorioCodigo": 2,
+      "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
       "valorTotalEstimado": 15295,
       "modalidadeNome": "Dispensa",
       "modoDisputaNome": "Dispensa Com Disputa",
-      "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
@@ -1068,7 +1068,6 @@
       "itens": []
     },
     {
-      "tipoInstrumentoConvocatorioCodigo": 3,
       "dataAtualizacao": "2025-12-19T14:25:34",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
@@ -1110,10 +1109,382 @@
       "linkProcessoEletronico": null,
       "numeroControlePNCP": "10838653000106-1-000929/2025",
       "modoDisputaId": 5,
+      "tipoInstrumentoConvocatorioCodigo": 3,
+      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
       "valorTotalEstimado": 15295,
       "modalidadeNome": "Dispensa",
       "modoDisputaNome": "Não se aplica",
+      "fontesOrcamentarias": [],
+      "situacaoCompraId": 1,
+      "situacaoCompraNome": "Divulgada no PNCP",
+      "usuarioNome": "Compras.gov.br",
+      "itens": []
+    },
+    {
+      "dataAtualizacao": "2025-02-17T14:40:07",
+      "orgaoEntidade": {
+        "cnpj": "10838653000106",
+        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
+        "poderId": "E",
+        "esferaId": "F"
+      },
+      "anoCompra": 2025,
+      "sequencialCompra": 96,
+      "numeroCompra": "28",
+      "processo": "23543.000081/2023-19",
+      "objetoCompra": "Contratação do serviço continuado de distribuição de publicidade legal impressa e/ou eletrônica em jornais de grande circulação a fim de atender as necessidades do Ifes Campus Barra de São Francisco.",
+      "orgaoSubRogado": null,
+      "unidadeOrgao": {
+        "ufNome": "Espírito Santo",
+        "codigoUnidade": "158886",
+        "ufSigla": "ES",
+        "municipioNome": "Barra de São Francisco",
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
+      },
+      "unidadeSubRogada": null,
+      "valorTotalHomologado": 44757.5,
+      "srp": false,
+      "dataInclusao": "2025-02-17T14:40:07",
+      "amparoLegal": {
+        "codigo": 50,
+        "nome": "Lei 14.133/2021, Art. 74, caput",
+        "descricao": "Inexigibilidade de Licitação: Todas as formas de inexigibilidade não previstas no art. 74"
+      },
+      "dataAberturaProposta": null,
+      "dataEncerramentoProposta": null,
+      "informacaoComplementar": null,
+      "linkSistemaOrigem": null,
+      "justificativaPresencial": null,
+      "dataPublicacaoPncp": "2025-02-17T14:40:07",
+      "modalidadeId": 9,
+      "dataAtualizacaoGlobal": "2025-02-17T14:47:15",
+      "linkProcessoEletronico": null,
+      "numeroControlePNCP": "10838653000106-1-000096/2025",
+      "modoDisputaId": 5,
       "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
+      "tipoInstrumentoConvocatorioCodigo": 3,
+      "valorTotalEstimado": 44757.5,
+      "modalidadeNome": "Inexigibilidade",
+      "modoDisputaNome": "Não se aplica",
+      "fontesOrcamentarias": [],
+      "situacaoCompraId": 1,
+      "situacaoCompraNome": "Divulgada no PNCP",
+      "usuarioNome": "Compras.gov.br",
+      "itens": []
+    },
+    {
+      "dataAtualizacao": "2025-03-18T16:12:11",
+      "orgaoEntidade": {
+        "cnpj": "10838653000106",
+        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
+        "poderId": "E",
+        "esferaId": "F"
+      },
+      "anoCompra": 2025,
+      "sequencialCompra": 167,
+      "numeroCompra": "34",
+      "processo": "23543.000035/2025-73",
+      "objetoCompra": "Pagamento de taxa ao Conselho Regional de Química 21 Região - CRQ-ES, referente a Anotação de Função Técnica do laboratório de solos do Ifes - Campus Barra de São Francisco, para o ano de 2025",
+      "orgaoSubRogado": null,
+      "unidadeOrgao": {
+        "ufNome": "Espírito Santo",
+        "codigoUnidade": "158886",
+        "ufSigla": "ES",
+        "municipioNome": "Barra de São Francisco",
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
+      },
+      "unidadeSubRogada": null,
+      "valorTotalHomologado": 269.35,
+      "srp": false,
+      "dataInclusao": "2025-03-18T16:12:11",
+      "amparoLegal": {
+        "codigo": 50,
+        "nome": "Lei 14.133/2021, Art. 74, caput",
+        "descricao": "Inexigibilidade de Licitação: Todas as formas de inexigibilidade não previstas no art. 74"
+      },
+      "dataAberturaProposta": null,
+      "dataEncerramentoProposta": null,
+      "informacaoComplementar": null,
+      "linkSistemaOrigem": null,
+      "justificativaPresencial": null,
+      "dataPublicacaoPncp": "2025-03-18T16:12:11",
+      "modalidadeId": 9,
+      "dataAtualizacaoGlobal": "2025-03-18T16:15:13",
+      "linkProcessoEletronico": null,
+      "numeroControlePNCP": "10838653000106-1-000167/2025",
+      "modoDisputaId": 5,
+      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
+      "tipoInstrumentoConvocatorioCodigo": 3,
+      "valorTotalEstimado": 269.35,
+      "modalidadeNome": "Inexigibilidade",
+      "modoDisputaNome": "Não se aplica",
+      "fontesOrcamentarias": [],
+      "situacaoCompraId": 1,
+      "situacaoCompraNome": "Divulgada no PNCP",
+      "usuarioNome": "Compras.gov.br",
+      "itens": []
+    },
+    {
+      "dataAtualizacao": "2025-04-15T14:54:45",
+      "orgaoEntidade": {
+        "cnpj": "10838653000106",
+        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
+        "poderId": "E",
+        "esferaId": "F"
+      },
+      "anoCompra": 2025,
+      "sequencialCompra": 251,
+      "numeroCompra": "18",
+      "processo": "23543.000468/2025-29",
+      "objetoCompra": "Serviço de Fornecimento de Água Potável, coleta e tratamento de Esgoto Sanitário para o Ifes Campus Barra de São Francisco.",
+      "orgaoSubRogado": null,
+      "unidadeOrgao": {
+        "ufNome": "Espírito Santo",
+        "codigoUnidade": "158886",
+        "ufSigla": "ES",
+        "municipioNome": "Barra de São Francisco",
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
+      },
+      "unidadeSubRogada": null,
+      "valorTotalHomologado": 19767.24,
+      "srp": false,
+      "dataInclusao": "2025-04-15T14:54:45",
+      "amparoLegal": {
+        "codigo": 50,
+        "nome": "Lei 14.133/2021, Art. 74, caput",
+        "descricao": "Inexigibilidade de Licitação: Todas as formas de inexigibilidade não previstas no art. 74"
+      },
+      "dataAberturaProposta": null,
+      "dataEncerramentoProposta": null,
+      "informacaoComplementar": null,
+      "linkSistemaOrigem": null,
+      "justificativaPresencial": null,
+      "dataPublicacaoPncp": "2025-04-15T14:54:45",
+      "modalidadeId": 9,
+      "dataAtualizacaoGlobal": "2025-04-15T14:57:47",
+      "linkProcessoEletronico": null,
+      "numeroControlePNCP": "10838653000106-1-000251/2025",
+      "modoDisputaId": 5,
+      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
+      "tipoInstrumentoConvocatorioCodigo": 3,
+      "valorTotalEstimado": 19767.24,
+      "modalidadeNome": "Inexigibilidade",
+      "modoDisputaNome": "Não se aplica",
+      "fontesOrcamentarias": [],
+      "situacaoCompraId": 1,
+      "situacaoCompraNome": "Divulgada no PNCP",
+      "usuarioNome": "Compras.gov.br",
+      "itens": []
+    },
+    {
+      "dataAtualizacao": "2025-04-16T14:05:54",
+      "orgaoEntidade": {
+        "cnpj": "10838653000106",
+        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
+        "poderId": "E",
+        "esferaId": "F"
+      },
+      "anoCompra": 2025,
+      "sequencialCompra": 253,
+      "numeroCompra": "19",
+      "processo": "23543.000347/2025-87",
+      "objetoCompra": "Serviço de fornecimento de energia elétrica para as dependências do Ifes Campus Barra de São Francisco.",
+      "orgaoSubRogado": null,
+      "unidadeOrgao": {
+        "ufNome": "Espírito Santo",
+        "codigoUnidade": "158886",
+        "ufSigla": "ES",
+        "municipioNome": "Barra de São Francisco",
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
+      },
+      "unidadeSubRogada": null,
+      "valorTotalHomologado": 121620.96,
+      "srp": false,
+      "dataInclusao": "2025-04-16T14:05:54",
+      "amparoLegal": {
+        "codigo": 6,
+        "nome": "Lei 14.133/2021, Art. 74, I",
+        "descricao": "Inexigibilidade de Licitação: aquisição de materiais, de equipamentos ou de gêneros ou contratação de serviços que só possam ser fornecidos por produtor, empresa ou representante comercial exclusivos"
+      },
+      "dataAberturaProposta": null,
+      "dataEncerramentoProposta": null,
+      "informacaoComplementar": null,
+      "linkSistemaOrigem": null,
+      "justificativaPresencial": null,
+      "dataPublicacaoPncp": "2025-04-16T14:05:54",
+      "modalidadeId": 9,
+      "dataAtualizacaoGlobal": "2025-04-16T14:09:00",
+      "linkProcessoEletronico": null,
+      "numeroControlePNCP": "10838653000106-1-000253/2025",
+      "modoDisputaId": 5,
+      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
+      "tipoInstrumentoConvocatorioCodigo": 3,
+      "valorTotalEstimado": 121620.96,
+      "modalidadeNome": "Inexigibilidade",
+      "modoDisputaNome": "Não se aplica",
+      "fontesOrcamentarias": [],
+      "situacaoCompraId": 1,
+      "situacaoCompraNome": "Divulgada no PNCP",
+      "usuarioNome": "Compras.gov.br",
+      "itens": []
+    },
+    {
+      "dataAtualizacao": "2025-06-26T17:30:16",
+      "orgaoEntidade": {
+        "cnpj": "10838653000106",
+        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
+        "poderId": "E",
+        "esferaId": "F"
+      },
+      "anoCompra": 2025,
+      "sequencialCompra": 412,
+      "numeroCompra": "46",
+      "processo": "23543.000657/2025-00",
+      "objetoCompra": "Inscrição em evento de capacitação de servidores para a eficiência dos serviços públicos.",
+      "orgaoSubRogado": null,
+      "unidadeOrgao": {
+        "ufNome": "Espírito Santo",
+        "codigoUnidade": "158886",
+        "ufSigla": "ES",
+        "municipioNome": "Barra de São Francisco",
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
+      },
+      "unidadeSubRogada": null,
+      "valorTotalHomologado": 1690,
+      "srp": false,
+      "dataInclusao": "2025-06-26T17:30:16",
+      "amparoLegal": {
+        "codigo": 8,
+        "nome": "Lei 14.133/2021, Art. 74, III, a",
+        "descricao": "Inexigibilidade de Licitação: a) estudos técnicos, planejamentos, projetos básicos ou projetos executivos."
+      },
+      "dataAberturaProposta": null,
+      "dataEncerramentoProposta": null,
+      "informacaoComplementar": null,
+      "linkSistemaOrigem": null,
+      "justificativaPresencial": null,
+      "dataPublicacaoPncp": "2025-06-26T17:30:16",
+      "modalidadeId": 9,
+      "dataAtualizacaoGlobal": "2025-06-26T17:33:21",
+      "linkProcessoEletronico": null,
+      "numeroControlePNCP": "10838653000106-1-000412/2025",
+      "modoDisputaId": 5,
+      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
+      "tipoInstrumentoConvocatorioCodigo": 3,
+      "valorTotalEstimado": 2000,
+      "modalidadeNome": "Inexigibilidade",
+      "modoDisputaNome": "Não se aplica",
+      "fontesOrcamentarias": [],
+      "situacaoCompraId": 1,
+      "situacaoCompraNome": "Divulgada no PNCP",
+      "usuarioNome": "Compras.gov.br",
+      "itens": []
+    },
+    {
+      "dataAtualizacao": "2025-10-07T16:12:01",
+      "orgaoEntidade": {
+        "cnpj": "10838653000106",
+        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
+        "poderId": "E",
+        "esferaId": "F"
+      },
+      "anoCompra": 2025,
+      "sequencialCompra": 713,
+      "numeroCompra": "55",
+      "processo": "23543.001267/2025-49",
+      "objetoCompra": "Contratação de empresa credenciada ao Detran/ES para realizar o serviço de emplacamento de veículo oficial, uma motocicleta Honda XR 250 Tornado (placa MQL-5C94). O procedimento é necessário para a regularização do veículo conforme as exigências do Código de Trânsito Brasileiro (Lei nº 9.503/97), garantindo sua utilização legal e segura nas atividades institucionais do campus.",
+      "orgaoSubRogado": null,
+      "unidadeOrgao": {
+        "ufNome": "Espírito Santo",
+        "codigoUnidade": "158886",
+        "ufSigla": "ES",
+        "municipioNome": "Barra de São Francisco",
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
+      },
+      "unidadeSubRogada": null,
+      "valorTotalHomologado": 136.8,
+      "srp": false,
+      "dataInclusao": "2025-10-07T16:12:01",
+      "amparoLegal": {
+        "codigo": 50,
+        "nome": "Lei 14.133/2021, Art. 74, caput",
+        "descricao": "Inexigibilidade de Licitação: Todas as formas de inexigibilidade não previstas no art. 74"
+      },
+      "dataAberturaProposta": null,
+      "dataEncerramentoProposta": null,
+      "informacaoComplementar": null,
+      "linkSistemaOrigem": null,
+      "justificativaPresencial": null,
+      "dataPublicacaoPncp": "2025-10-07T16:12:01",
+      "modalidadeId": 9,
+      "dataAtualizacaoGlobal": "2025-10-07T16:15:02",
+      "linkProcessoEletronico": null,
+      "numeroControlePNCP": "10838653000106-1-000713/2025",
+      "modoDisputaId": 5,
+      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
+      "tipoInstrumentoConvocatorioCodigo": 3,
+      "valorTotalEstimado": 136.8,
+      "modalidadeNome": "Inexigibilidade",
+      "modoDisputaNome": "Não se aplica",
+      "fontesOrcamentarias": [],
+      "situacaoCompraId": 1,
+      "situacaoCompraNome": "Divulgada no PNCP",
+      "usuarioNome": "Compras.gov.br",
+      "itens": []
+    },
+    {
+      "dataAtualizacao": "2025-12-09T17:52:05",
+      "orgaoEntidade": {
+        "cnpj": "10838653000106",
+        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
+        "poderId": "E",
+        "esferaId": "F"
+      },
+      "anoCompra": 2025,
+      "sequencialCompra": 892,
+      "numeroCompra": "65",
+      "processo": "23543.001604/2025-06",
+      "objetoCompra": "Contratação de serviço de fornecimento de água e coleta de esgoto para o IFES Campus Barra de São Francisco. Fundamental para a saúde pública, gestão de resíduos e manutenção das atividades do campus.",
+      "orgaoSubRogado": null,
+      "unidadeOrgao": {
+        "ufNome": "Espírito Santo",
+        "codigoUnidade": "158886",
+        "ufSigla": "ES",
+        "municipioNome": "Barra de São Francisco",
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
+      },
+      "unidadeSubRogada": null,
+      "valorTotalHomologado": 30000,
+      "srp": false,
+      "dataInclusao": "2025-12-09T17:52:05",
+      "amparoLegal": {
+        "codigo": 6,
+        "nome": "Lei 14.133/2021, Art. 74, I",
+        "descricao": "Inexigibilidade de Licitação: aquisição de materiais, de equipamentos ou de gêneros ou contratação de serviços que só possam ser fornecidos por produtor, empresa ou representante comercial exclusivos"
+      },
+      "dataAberturaProposta": null,
+      "dataEncerramentoProposta": null,
+      "informacaoComplementar": "Inexigibilidade de Licitação com fundamento no Art. 74, caput, da Lei nº 14.133/2021. Justifica-se pela inviabilidade de competição, visto que a COMPANHIA ESPÍRITO SANTENSE DE SANEAMENTO (CESAN) é a única concessionária detentora dos serviços públicos de abastecimento de água e esgoto no município de Barra de São Francisco/ES, conforme Lei Estadual nº 2.282/1967 e Contrato de Programa vigente. Processo nº 23543.001604/2025-06.",
+      "linkSistemaOrigem": null,
+      "justificativaPresencial": null,
+      "dataPublicacaoPncp": "2025-12-09T17:52:05",
+      "modalidadeId": 9,
+      "dataAtualizacaoGlobal": "2025-12-09T17:55:06",
+      "linkProcessoEletronico": null,
+      "numeroControlePNCP": "10838653000106-1-000892/2025",
+      "modoDisputaId": 5,
+      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
+      "tipoInstrumentoConvocatorioCodigo": 3,
+      "valorTotalEstimado": 30000,
+      "modalidadeNome": "Inexigibilidade",
+      "modoDisputaNome": "Não se aplica",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
@@ -1123,10 +1494,10 @@
     {
       "dataAtualizacao": "2025-06-06T08:34:26",
       "orgaoEntidade": {
+        "cnpj": "10838653000106",
         "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F",
-        "cnpj": "10838653000106"
+        "esferaId": "F"
       },
       "anoCompra": 2025,
       "sequencialCompra": 354,
@@ -1136,11 +1507,11 @@
       "orgaoSubRogado": null,
       "unidadeOrgao": {
         "ufNome": "Espírito Santo",
-        "codigoIbge": "3200904",
         "codigoUnidade": "158886",
         "ufSigla": "ES",
         "municipioNome": "Barra de São Francisco",
-        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO"
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
       },
       "unidadeSubRogada": null,
       "valorTotalHomologado": 2273423.18,
@@ -1162,11 +1533,11 @@
       "linkProcessoEletronico": null,
       "numeroControlePNCP": "10838653000106-1-000354/2025",
       "modoDisputaId": 1,
-      "tipoInstrumentoConvocatorioNome": "Edital",
-      "tipoInstrumentoConvocatorioCodigo": 1,
-      "valorTotalEstimado": 3031230.9,
       "modalidadeNome": "Concorrência - Eletrônica",
+      "valorTotalEstimado": 3031230.9,
       "modoDisputaNome": "Aberto",
+      "tipoInstrumentoConvocatorioCodigo": 1,
+      "tipoInstrumentoConvocatorioNome": "Edital",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",

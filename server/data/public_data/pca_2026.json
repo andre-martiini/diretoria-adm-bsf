@@ -2495,7 +2495,39 @@
       "catalogoId": 1,
       "categoriaItemPcaNome": "Serviço",
       "classificacaoCatalogoId": 2
+    },
+    {
+      "pdmCodigo": null,
+      "dataAtualizacao": "2026-03-11T17:04:22",
+      "cnpj": "10838653000106",
+      "dataInclusao": "2026-03-11T17:04:22",
+      "numeroItem": 80,
+      "dataPublicacaoPncp": "2025-05-27T15:59:53",
+      "codigoUnidade": "158886",
+      "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+      "descricao": null,
+      "anoPca": 2026,
+      "valorTotal": 36000,
+      "sequencialPca": 12,
+      "pdmDescricao": null,
+      "codigoItem": null,
+      "unidadeRequisitante": null,
+      "grupoContratacaoCodigo": "158886-48/2026",
+      "grupoContratacaoNome": "Contratação de serviços de fornecimento de água potável e esgotamento sanitário",
+      "classificacaoSuperiorCodigo": "692",
+      "classificacaoSuperiorNome": "SERVIÇOS DE DISTRIBUIÇÃO DE ÁGUA ATRAVÉS DE TUBULAÇÃO",
+      "unidadeFornecimento": "-",
+      "quantidade": 0,
+      "valorUnitario": 0,
+      "valorOrcamentoExercicio": 0,
+      "dataDesejada": "2026-05-11",
+      "categoriaItemPcaid": 2,
+      "nomeCatalogo": "Catálogo do Compras.gov.br",
+      "nomeClassificacao": "Serviço",
+      "catalogoId": 1,
+      "categoriaItemPcaNome": "Serviço",
+      "classificacaoCatalogoId": 2
     }
   ],
-  "updatedAt": "2026-03-11T13:15:25.217Z"
+  "updatedAt": "2026-03-12T15:37:15.479Z"
 }

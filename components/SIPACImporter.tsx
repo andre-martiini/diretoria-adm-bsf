@@ -126,7 +126,7 @@ export const SIPACImporter: React.FC = () => {
                     <div className="flex items-center gap-3 shrink-0">
                         <img src={logoIfes} alt="Logo IFES" className="h-12 w-auto object-contain" />
                         <div className="flex flex-col border-l border-slate-100 pl-3">
-                            <span className="text-lg font-black text-ifes-green uppercase leading-none tracking-tight">Importador SIPAC</span>
+                            <span className="text-lg font-black text-ifes-green uppercase leading-none tracking-tight">Extrator SIPAC</span>
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
                                 {config?.unidadeGestora.nome || 'Campus Barra de São Francisco'}
                             </span>

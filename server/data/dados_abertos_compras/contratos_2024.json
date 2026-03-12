@@ -1,0 +1,239 @@
+{
+  "metadata": {
+    "extractedAt": "2026-03-12T15:01:44Z",
+    "cnpj": "10838653000106",
+    "year": "2024",
+    "totalContracts": 4,
+    "source": "pncp_contracts_snapshot_historico"
+  },
+  "data": [
+    {
+      "numeroControlePncpCompra": "10838653000106-1-000225/2024",
+      "codigoPaisFornecedor": "BRA",
+      "dataAtualizacao": "2024-07-24T12:13:08",
+      "orgaoEntidade": {
+        "cnpj": "10838653000106",
+        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
+        "poderId": "E",
+        "esferaId": "F"
+      },
+      "dataAssinatura": "2024-07-01",
+      "dataVigenciaInicio": "2024-07-10",
+      "dataVigenciaFim": "2025-07-09",
+      "niFornecedor": "08704691000116",
+      "tipoPessoa": "PJ",
+      "processo": "23543.000237/2024-34",
+      "orgaoSubRogado": null,
+      "unidadeOrgao": {
+        "ufNome": "Espírito Santo",
+        "codigoUnidade": "158886",
+        "ufSigla": "ES",
+        "municipioNome": "Barra de São Francisco",
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
+      },
+      "unidadeSubRogada": null,
+      "nomeRazaoSocialFornecedor": "CORESE SERVICOS ESPECIALIZADOS LTDA",
+      "informacaoComplementar": null,
+      "numeroContratoEmpenho": "00001",
+      "categoriaProcesso": {
+        "id": 6,
+        "nome": "Mão de Obra"
+      },
+      "anoContrato": 2024,
+      "tipoContrato": {
+        "id": 1,
+        "nome": "Contrato (termo inicial)"
+      },
+      "sequencialContrato": 118,
+      "dataPublicacaoPncp": "2024-07-24T12:13:08",
+      "niFornecedorSubContratado": null,
+      "nomeFornecedorSubContratado": null,
+      "dataAtualizacaoGlobal": "2025-08-12T15:41:46",
+      "numeroControlePNCP": "10838653000106-2-000118/2024",
+      "receita": false,
+      "numeroParcelas": 12,
+      "numeroRetificacao": 0,
+      "tipoPessoaSubContratada": null,
+      "objetoContrato": "CONTRATAÇÃO DE SERVIÇOS CONTÍNUOS DE LIMPEZA E CONSERVAÇÃO, A SEREM EXECUTADOS COM REGIME DE DEDICAÇÃO EXCLUSIVA DE MÃO DE OBRA, NAS CONDIÇÕES ESTABELECIDAS NO TERMO DE REFERÊNCIA",
+      "valorInicial": 343798.68,
+      "valorParcela": 28649.89,
+      "valorGlobal": 343798.68,
+      "valorAcumulado": null,
+      "identificadorCipi": null,
+      "urlCipi": null,
+      "usuarioNome": "Contratos.gov.br"
+    },
+    {
+      "numeroControlePncpCompra": "10838653000106-1-000404/2024",
+      "codigoPaisFornecedor": "BRA",
+      "dataAtualizacao": "2024-10-09T22:45:30",
+      "orgaoEntidade": {
+        "cnpj": "10838653000106",
+        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
+        "poderId": "E",
+        "esferaId": "F"
+      },
+      "dataAssinatura": "2024-08-22",
+      "dataVigenciaInicio": "2024-08-22",
+      "dataVigenciaFim": "2025-08-21",
+      "niFornecedor": "90180605000102",
+      "tipoPessoa": "PJ",
+      "processo": "23543.000762/2024-50",
+      "orgaoSubRogado": null,
+      "unidadeOrgao": {
+        "ufNome": "Espírito Santo",
+        "codigoUnidade": "158886",
+        "ufSigla": "ES",
+        "municipioNome": "Barra de São Francisco",
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
+      },
+      "unidadeSubRogada": null,
+      "nomeRazaoSocialFornecedor": "GENTE SEGURADORA SA",
+      "informacaoComplementar": null,
+      "numeroContratoEmpenho": "00002",
+      "categoriaProcesso": {
+        "id": 8,
+        "nome": "Serviços"
+      },
+      "anoContrato": 2024,
+      "tipoContrato": {
+        "id": 1,
+        "nome": "Contrato (termo inicial)"
+      },
+      "sequencialContrato": 182,
+      "dataPublicacaoPncp": "2024-10-09T22:45:30",
+      "niFornecedorSubContratado": null,
+      "nomeFornecedorSubContratado": null,
+      "dataAtualizacaoGlobal": "2025-10-08T16:23:17",
+      "numeroControlePNCP": "10838653000106-2-000182/2024",
+      "receita": false,
+      "numeroParcelas": 1,
+      "numeroRetificacao": 0,
+      "tipoPessoaSubContratada": null,
+      "objetoContrato": "CONTRATAÇÃO DE SERVIÇOS COMUNS DE SEGURO VEICULAR PARA OS VEÍCULOS PERTENCENTES AO IFES CAMPUS BARRA DE SÃO FRANCISCO CONFORME TERMO DE REFERÊNCIA.",
+      "valorInicial": 8546.38,
+      "valorParcela": 8546.38,
+      "valorGlobal": 8546.38,
+      "valorAcumulado": null,
+      "identificadorCipi": null,
+      "urlCipi": null,
+      "usuarioNome": "Contratos.gov.br"
+    },
+    {
+      "numeroControlePncpCompra": "10792928000100-1-000018/2024",
+      "codigoPaisFornecedor": "BRA",
+      "dataAtualizacao": "2024-10-09T23:06:51",
+      "orgaoEntidade": {
+        "cnpj": "10838653000106",
+        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
+        "poderId": "E",
+        "esferaId": "F"
+      },
+      "dataAssinatura": "2024-10-09",
+      "dataVigenciaInicio": "2024-10-09",
+      "dataVigenciaFim": "2025-10-08",
+      "niFornecedor": "09176584000125",
+      "tipoPessoa": "PJ",
+      "processo": "23543.001351/2023-09",
+      "orgaoSubRogado": null,
+      "unidadeOrgao": {
+        "ufNome": "Espírito Santo",
+        "codigoUnidade": "158886",
+        "ufSigla": "ES",
+        "municipioNome": "Barra de São Francisco",
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
+      },
+      "unidadeSubRogada": null,
+      "nomeRazaoSocialFornecedor": "ITP INDUSTRIA, COMERCIO E SERVICOS DE TUBOS & PERFIS LTDA",
+      "informacaoComplementar": null,
+      "numeroContratoEmpenho": "00004",
+      "categoriaProcesso": {
+        "id": 2,
+        "nome": "Compras"
+      },
+      "anoContrato": 2024,
+      "tipoContrato": {
+        "id": 1,
+        "nome": "Contrato (termo inicial)"
+      },
+      "sequencialContrato": 183,
+      "dataPublicacaoPncp": "2024-10-09T23:06:51",
+      "niFornecedorSubContratado": null,
+      "nomeFornecedorSubContratado": null,
+      "dataAtualizacaoGlobal": "2025-10-16T14:59:35",
+      "numeroControlePNCP": "10838653000106-2-000183/2024",
+      "receita": false,
+      "numeroParcelas": 1,
+      "numeroRetificacao": 0,
+      "tipoPessoaSubContratada": null,
+      "objetoContrato": "INSTRUMENTO É A AQUISIÇÃO E INSTALAÇÃO DE SALAS MODULARES PARA ATENDER AS DEMANDAS DO INSTITUTO FEDERAL DE CIÊNCIA, TECNOLOGIA DO ESPÍRITO SANTO, CAMPUS BARRA DE SÃO FRANCISCO, NAS CONDIÇÕES ESTABELECIDAS NO TERMO DE REFERÊNCIA.",
+      "valorInicial": 1038800.0,
+      "valorParcela": 1038800.0,
+      "valorGlobal": 1038800.0,
+      "valorAcumulado": null,
+      "identificadorCipi": null,
+      "urlCipi": null,
+      "usuarioNome": "Contratos.gov.br"
+    },
+    {
+      "numeroControlePncpCompra": "10838653000106-1-000491/2024",
+      "codigoPaisFornecedor": "BRA",
+      "dataAtualizacao": "2024-12-23T12:00:56",
+      "orgaoEntidade": {
+        "cnpj": "10838653000106",
+        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
+        "poderId": "E",
+        "esferaId": "F"
+      },
+      "dataAssinatura": "2024-12-10",
+      "dataVigenciaInicio": "2025-02-10",
+      "dataVigenciaFim": "2030-02-10",
+      "niFornecedor": "07432517000107",
+      "tipoPessoa": "PJ",
+      "processo": "23543.000096/2024-50",
+      "orgaoSubRogado": null,
+      "unidadeOrgao": {
+        "ufNome": "Espírito Santo",
+        "codigoUnidade": "158886",
+        "ufSigla": "ES",
+        "municipioNome": "Barra de São Francisco",
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
+      },
+      "unidadeSubRogada": null,
+      "nomeRazaoSocialFornecedor": "SIMPRESS COMERCIO LOCACAO E SERVICOS LTDA",
+      "informacaoComplementar": "O OBJETO DO PRESENTE INSTRUMENTO É A CONTRATAÇÃO DE SERVIÇOS DE OUTSOURCING DE IMPRESSÃO PARA ATENDER ÀS DEMANDAS DO IFES - CAMPUS BARRA DE SÃO FRANCISCO E DEMAIS ÓRGÃOS PARTICIPANTES, NOS TERMOS DA TABELA ABAIXO, CONFORME CONDIÇÕES E EXIGÊNCIAS ESTABELECIDAS NO TERMO DE REFERÊNCIA.",
+      "numeroContratoEmpenho": "00005",
+      "categoriaProcesso": {
+        "id": 3,
+        "nome": "Informática (TIC)"
+      },
+      "anoContrato": 2024,
+      "tipoContrato": {
+        "id": 1,
+        "nome": "Contrato (termo inicial)"
+      },
+      "sequencialContrato": 340,
+      "dataPublicacaoPncp": "2024-12-23T12:00:56",
+      "niFornecedorSubContratado": null,
+      "nomeFornecedorSubContratado": null,
+      "dataAtualizacaoGlobal": "2024-12-23T12:00:56",
+      "numeroControlePNCP": "10838653000106-2-000340/2024",
+      "receita": false,
+      "numeroParcelas": 60,
+      "numeroRetificacao": 0,
+      "tipoPessoaSubContratada": null,
+      "objetoContrato": "O OBJETO DO PRESENTE INSTRUMENTO É A CONTRATAÇÃO DE SERVIÇOS DE OUTSOURCING DE IMPRESSÃO PARA ATENDER ÀS DEMANDAS DO IFES - CAMPUS BARRA DE SÃO FRANCISCO E DEMAIS ÓRGÃOS PARTICIPANTES, NOS TERMOS DA TABELA ABAIXO, CONFORME CONDIÇÕES E EXIGÊNCIAS ESTABELECIDAS NO TERMO DE REFERÊNCIA.",
+      "valorInicial": 72079.54,
+      "valorParcela": 1201.3256,
+      "valorGlobal": 72079.54,
+      "valorAcumulado": null,
+      "identificadorCipi": null,
+      "urlCipi": null,
+      "usuarioNome": "Contratos.gov.br"
+    }
+  ]
+}

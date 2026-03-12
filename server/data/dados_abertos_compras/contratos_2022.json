@@ -1,0 +1,68 @@
+{
+  "metadata": {
+    "extractedAt": "2026-03-12T15:01:37Z",
+    "cnpj": "10838653000106",
+    "year": "2022",
+    "totalContracts": 1,
+    "source": "pncp_contracts_snapshot_historico"
+  },
+  "data": [
+    {
+      "numeroControlePncpCompra": "10838653000106-1-000458/2022",
+      "codigoPaisFornecedor": "BRA",
+      "dataAtualizacao": "2022-10-24T16:20:03",
+      "orgaoEntidade": {
+        "cnpj": "10838653000106",
+        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
+        "poderId": "E",
+        "esferaId": "F"
+      },
+      "dataAssinatura": "2022-10-24",
+      "dataVigenciaInicio": "2022-10-24",
+      "dataVigenciaFim": "2022-12-31",
+      "niFornecedor": "17891852000119",
+      "tipoPessoa": "PJ",
+      "processo": "23543.000307/2022-92",
+      "orgaoSubRogado": null,
+      "unidadeOrgao": {
+        "ufNome": "Espírito Santo",
+        "codigoUnidade": "158886",
+        "ufSigla": "ES",
+        "municipioNome": "Barra de São Francisco",
+        "nomeUnidade": "IFES - CAMPUS BARRA DE SãO FRANCISCO",
+        "codigoIbge": "3200904"
+      },
+      "unidadeSubRogada": null,
+      "nomeRazaoSocialFornecedor": "THERMOVIXAR REFRIGERACAO E AR CONDICIONADO EIRELI",
+      "informacaoComplementar": "15888606000082022 - UASG Minuta: 158886",
+      "numeroContratoEmpenho": "2022NE000060",
+      "categoriaProcesso": {
+        "id": 8,
+        "nome": "Serviços"
+      },
+      "anoContrato": 2022,
+      "tipoContrato": {
+        "id": 7,
+        "nome": "Empenho"
+      },
+      "sequencialContrato": 527,
+      "dataPublicacaoPncp": "2022-10-24T16:20:03",
+      "niFornecedorSubContratado": null,
+      "nomeFornecedorSubContratado": null,
+      "dataAtualizacaoGlobal": "2022-10-24T16:20:03",
+      "numeroControlePNCP": "10838653000106-2-000527/2022",
+      "receita": false,
+      "numeroParcelas": 1,
+      "numeroRetificacao": 0,
+      "tipoPessoaSubContratada": null,
+      "objetoContrato": "EMPENHO COM SERVIÇO DE MANUTENÇÃO DOS APARELHOS DE AR CONDICIONADO DO IFES CAMPUS BARRA DE SÃO FRANCISCO CONFORME DISPENSA ELETRÔNICA N.08/2022 PROC. 23543.000307/2022-92.",
+      "valorInicial": 14000.0,
+      "valorParcela": 14000.0,
+      "valorGlobal": 14000.0,
+      "valorAcumulado": 14000.0,
+      "identificadorCipi": null,
+      "urlCipi": null,
+      "usuarioNome": "Contratos.gov.br"
+    }
+  ]
+}
