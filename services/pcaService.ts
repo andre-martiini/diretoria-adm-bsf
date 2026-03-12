@@ -13,6 +13,7 @@ import {
 import {
     ContractItem,
     Category,
+    GovProcessRegistryEntry,
     PCAMetadata
 } from '../types';
 import {
@@ -29,11 +30,99 @@ const inMemoryCache: Record<string, {
     pcaMeta: { id: string, dataPublicacao: string } | null;
 }> = {};
 
+let govProcessRegistryCache: {
+    loadedAt: number;
+    lookup: Map<string, GovProcessRegistryEntry>;
+} | null = null;
+
 export const hasPcaInMemoryCache = (year: string) => !!inMemoryCache[year];
+
+const DEFAULT_FETCH_TIMEOUT_MS = 8000;
 
 const normalizeProcessNumber = (processNumber: string | undefined | null): string => {
     if (!processNumber) return '';
     return processNumber.replace(/[\.\/\-\s]/g, '');
+};
+
+const GOV_PROCESS_REGISTRY_CACHE_TTL_MS = 5 * 60 * 1000;
+const GOV_PROCESS_REGISTRY_ERROR_CACHE_TTL_MS = 30 * 1000;
+
+const fetchWithTimeout = async (input: string, init?: RequestInit, timeoutMs: number = DEFAULT_FETCH_TIMEOUT_MS) => {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+        return await fetch(input, {
+            ...init,
+            signal: controller.signal
+        });
+    } finally {
+        window.clearTimeout(timeoutId);
+    }
+};
+
+const isAbortError = (error: unknown) =>
+    error instanceof DOMException
+        ? error.name === 'AbortError'
+        : (error as { name?: string } | null | undefined)?.name === 'AbortError';
+
+const fetchGovProcessRegistryLookup = async (forceRefresh: boolean = false): Promise<Map<string, GovProcessRegistryEntry>> => {
+    if (!forceRefresh && govProcessRegistryCache && (Date.now() - govProcessRegistryCache.loadedAt) < GOV_PROCESS_REGISTRY_CACHE_TTL_MS) {
+        return govProcessRegistryCache.lookup;
+    }
+
+    try {
+        const response = await fetchWithTimeout(`${API_SERVER_URL}/api/gov-process-registry`, undefined, 5000);
+        if (!response.ok) throw new Error('Falha ao carregar registro de processos governamentais.');
+        const payload = await response.json();
+        const entries = Array.isArray(payload?.data) ? payload.data : [];
+        const lookup = new Map<string, GovProcessRegistryEntry>();
+
+        entries.forEach((entry: GovProcessRegistryEntry) => {
+            const key = normalizeProcessNumber(entry?.numeroProcesso || entry?.processKey);
+            if (key) lookup.set(key, entry);
+        });
+
+        govProcessRegistryCache = {
+            loadedAt: Date.now(),
+            lookup
+        };
+
+        return lookup;
+    } catch (error) {
+        const fallbackLookup = govProcessRegistryCache?.lookup || new Map<string, GovProcessRegistryEntry>();
+        govProcessRegistryCache = {
+            loadedAt: Date.now() - GOV_PROCESS_REGISTRY_CACHE_TTL_MS + GOV_PROCESS_REGISTRY_ERROR_CACHE_TTL_MS,
+            lookup: fallbackLookup
+        };
+
+        if (!isAbortError(error)) {
+            console.warn('[PCA Service] Nao foi possivel carregar o registro de processos governamentais:', error);
+        }
+
+        return fallbackLookup;
+    }
+};
+
+const resolveGovProcessMatch = (
+    protocolOrProcess: string | undefined | null,
+    lookup: Map<string, GovProcessRegistryEntry>
+) => {
+    const normalized = normalizeProcessNumber(protocolOrProcess);
+    if (!normalized) {
+        return {
+            govProcessStatusCode: null,
+            govProcessStatusLabel: null,
+            govProcessMatch: null
+        };
+    }
+
+    const match = lookup.get(normalized) || null;
+    return {
+        govProcessStatusCode: match?.identificationStatusCode || 'NAO_IDENTIFICADO',
+        govProcessStatusLabel: match?.identificationStatusLabel || 'Nao identificado',
+        govProcessMatch: match
+    };
 };
 
 export const fetchLocalPcaSnapshot = async (year: string): Promise<ContractItem[]> => {
@@ -41,10 +130,21 @@ export const fetchLocalPcaSnapshot = async (year: string): Promise<ContractItem[
     const exec_url = `/data/execution_data.json?t=${Date.now()}`;
 
     try {
-        const [response, execResponse] = await Promise.all([
-            fetch(api_url),
-            fetch(exec_url).catch(() => ({ ok: false, json: async () => ({}) } as Response))
+        const [responseResult, execResponseResult, govProcessLookupResult] = await Promise.allSettled([
+            fetchWithTimeout(api_url),
+            fetchWithTimeout(exec_url).catch(() => ({ ok: false, json: async () => ({}) } as Response)),
+            fetchGovProcessRegistryLookup()
         ]);
+
+        const response = responseResult.status === 'fulfilled'
+            ? responseResult.value
+            : ({ ok: false, json: async () => ({}) } as Response);
+        const execResponse = execResponseResult.status === 'fulfilled'
+            ? execResponseResult.value
+            : ({ ok: false, json: async () => ({}) } as Response);
+        const govProcessLookup = govProcessLookupResult.status === 'fulfilled'
+            ? govProcessLookupResult.value
+            : new Map<string, GovProcessRegistryEntry>();
 
         let executionData: any[] = [];
         if (execResponse.ok) {
@@ -131,7 +231,8 @@ export const fetchLocalPcaSnapshot = async (year: string): Promise<ContractItem[
                             return executionData.find((ex: any) => normalizeProcessNumber(ex.processo) === normalized) || null;
                         }
                         return null;
-                    })()
+                    })(),
+                    ...resolveGovProcessMatch(item.protocoloSIPAC || item.dadosSIPAC?.numeroProcesso, govProcessLookup)
                 };
             });
 
@@ -171,12 +272,13 @@ export const fetchPcaData = async (
     let firestoreDataUpdates: Record<string, any> = {};
     let cacheMetadata: any = null;
     let executionData: any[] = [];
+    let govProcessLookup = new Map<string, GovProcessRegistryEntry>();
 
     // 2. Helper para Carregamento Local (Prioridade de Velocidade)
     const tryLocalJson = async () => {
         const api_url = `/data/pca_${year}.json?t=${Date.now()}`;
         try {
-            const response = await fetch(api_url);
+            const response = await fetchWithTimeout(api_url);
             if (response.ok) {
                 const jsonData = await response.json();
                 return jsonData.data || (Array.isArray(jsonData) ? jsonData : []);
@@ -191,7 +293,7 @@ export const fetchPcaData = async (
     const tryExecutionData = async () => {
         const api_url = `/data/execution_data.json?t=${Date.now()}`;
         try {
-            const response = await fetch(api_url);
+            const response = await fetchWithTimeout(api_url);
             if (response.ok) {
                 const jsonData = await response.json();
                 return jsonData.pncp || [];
@@ -204,9 +306,14 @@ export const fetchPcaData = async (
 
     // 3. Tentar carregar Snapshot Local PRIMEIRO (para não travar a tela)
     report(10);
-    const [rawItems, execItems] = await Promise.all([tryLocalJson(), tryExecutionData()]);
-    rawOfficialItems = rawItems;
-    executionData = execItems;
+    const [rawItemsResult, execItemsResult, registryLookupResult] = await Promise.allSettled([
+        tryLocalJson(),
+        tryExecutionData(),
+        fetchGovProcessRegistryLookup(forceSync)
+    ]);
+    rawOfficialItems = rawItemsResult.status === 'fulfilled' ? rawItemsResult.value : [];
+    executionData = execItemsResult.status === 'fulfilled' ? execItemsResult.value : [];
+    govProcessLookup = registryLookupResult.status === 'fulfilled' ? registryLookupResult.value : new Map<string, GovProcessRegistryEntry>();
     console.log(`[PCA Service] ✅ Snapshot local carregado: ${rawOfficialItems.length} itens brutos. ${executionData.length} itens de execução.`);
 
     // 4. Buscar no Firestore
@@ -248,7 +355,8 @@ export const fetchPcaData = async (
                         numeroDfd: d.numeroDfd || d.identificadorFuturaContratacao || '',
                         ifc: d.ifc || '',
                         isManual: true,
-                        ano: String(year)
+                        ano: String(year),
+                        ...resolveGovProcessMatch(d.protocoloSIPAC || d.dadosSIPAC?.numeroProcesso, govProcessLookup)
                     } as any);
                 } else if (d.officialId) {
                     firestoreDataUpdates[String(d.officialId)] = d;
@@ -276,7 +384,7 @@ export const fetchPcaData = async (
 
             const pageSize = 100;
             const firstUrl = `${API_SERVER_URL}/api/pncp/pca/${cnpj}/${year}?tamanhoPagina=${pageSize}&sequencial=${seq}&pagina=1`;
-            const firstRes = await fetch(firstUrl);
+            const firstRes = await fetchWithTimeout(firstUrl, undefined, 12000);
 
             if (firstRes.ok) {
                 const firstData = await firstRes.json();
@@ -287,7 +395,7 @@ export const fetchPcaData = async (
                 const totalPages = firstData.totalPaginas || 1;
 
                 for (let p = 2; p <= totalPages; p++) {
-                    const res = await fetch(`${API_SERVER_URL}/api/pncp/pca/${cnpj}/${year}?tamanhoPagina=${pageSize}&sequencial=${seq}&pagina=${p}`);
+                    const res = await fetchWithTimeout(`${API_SERVER_URL}/api/pncp/pca/${cnpj}/${year}?tamanhoPagina=${pageSize}&sequencial=${seq}&pagina=${p}`, undefined, 12000);
                     if (res.ok) {
                         const pageData = await res.json();
                         rawOfficialItems = [...rawOfficialItems, ...(pageData.data || [])];
@@ -394,7 +502,8 @@ export const fetchPcaData = async (
             classificacaoSuperiorNome: item.classificacaoSuperiorNome || '',
             dataDesejada: item.dataDesejada || '',
             equipePlanejamento: extra.equipePlanejamento || [],
-            equipeIdentificada: extra.equipeIdentificada || false
+            equipeIdentificada: extra.equipeIdentificada || false,
+            ...resolveGovProcessMatch(extra.protocoloSIPAC || extra.dadosSIPAC?.numeroProcesso, govProcessLookup)
         };
     });
 

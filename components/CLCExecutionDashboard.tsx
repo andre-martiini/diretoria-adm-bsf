@@ -39,7 +39,7 @@ const CLCExecutionDashboard: React.FC = () => {
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Painel de Execucao de Processos</h1>
           <p className="text-sm text-slate-500 font-medium">
-            Acompanhamento dos processos vinculados ao SIPAC, com indicadores, filas e andamento da execucao.
+            Painel rapido de consulta com processos indexados. A sincronizacao pesada do SIPAC fica no modulo Extrator SIPAC.
           </p>
         </section>
 

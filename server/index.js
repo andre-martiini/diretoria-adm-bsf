@@ -412,19 +412,36 @@ app.get('/api/pncp/consulta/itens', async (req, res) => {
   // Mas vamos manter a URL antiga neste step e observar o log, pois nÃ£o tenho certeza absoluta da URL de itens.
   // PorÃ©m, para garantir, vamos usar a URL que o Swagger geralmente aponta para GET /itens.
 
-  const url = `https://pncp.gov.br/api/consulta/v1/orgaos/${CNPJ}/compras/${ano}/${sequencial}/itens?pagina=${pagina}&tamanhoPagina=${tamanhoPagina}`;
+  const endpoints = [
+    `https://pncp.gov.br/api/consulta/v1/orgaos/${CNPJ}/compras/${ano}/${sequencial}/itens?pagina=${pagina}&tamanhoPagina=${tamanhoPagina}`,
+    `https://pncp.gov.br/api/pncp/v1/orgaos/${CNPJ}/compras/${ano}/${sequencial}/itens?pagina=${pagina}&tamanhoPagina=${tamanhoPagina}`
+  ];
 
-  console.log(`[PNCP PROXY] Buscando itens: ${url}`);
-  try {
-    const response = await axios.get(url);
-    res.json(response.data);
-  } catch (error) {
-    console.error(`[PNCP PROXY ERROR] Itens`, error.message);
-    if (error.response) {
-      return res.status(error.response.status).json(error.response.data);
+  const upstreamErrors = [];
+  for (const url of endpoints) {
+    try {
+      console.log(`[PNCP PROXY] Buscando itens: ${url}`);
+      const response = await axios.get(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'application/json'
+        },
+        timeout: 10000
+      });
+      return res.json(response.data);
+    } catch (error) {
+      const status = error.response?.status || 500;
+      const message = error.response?.data?.message || error.message;
+      upstreamErrors.push({ url, status, message });
+      console.warn(`[PNCP PROXY WARN] ${status} em ${url}: ${message}`);
     }
-    res.status(500).json({ error: error.message });
   }
+
+  return res.json({
+    data: [],
+    message: 'Falha temporaria ao consultar itens no PNCP; retornando lista vazia.',
+    upstreamErrors
+  });
 });
 
 // Endpoint para AnÃ¡lise AutomÃ¡tica de DFD (Auto Linker)
@@ -444,6 +461,7 @@ app.post('/api/sipac/analyze-dfd', async (req, res) => {
 // Endpoint para SIPAC Scraping
 app.get('/api/sipac/processo', async (req, res) => {
   const protocolo = req.query.protocolo;
+  const summaryOnly = String(req.query.summaryOnly || '').toLowerCase() === 'true' || String(req.query.summaryOnly || '') === '1';
   if (!protocolo) return res.status(400).json({ error: 'Protocolo Ã© obrigatÃ³rio' });
 
   let formattedProtocol = protocolo;
@@ -455,14 +473,15 @@ app.get('/api/sipac/processo', async (req, res) => {
   console.log(`[SIPAC] Buscando processo: ${formattedProtocol}`);
   try {
     const data = await scrapeSIPACProcess(formattedProtocol);
+    const payload = summaryOnly ? buildSipacSummaryPayload(data) : { ...data, summaryOnly: false };
 
     const processId = formattedProtocol.replace(/[^\d]/g, '');
-    if (data.documentos && data.documentos.length > 0) {
+    if (!summaryOnly && data.documentos && data.documentos.length > 0) {
       syncProcessDocuments(formattedProtocol, processId, data.documentos).catch(err => {
         console.error(`[BACKGROUND SYNC ERROR] ${formattedProtocol}:`, err);
       });
     }
-    res.json(data);
+    res.json(payload);
   } catch (error) {
     console.error(`[SIPAC ERROR]`, error);
     res.status(500).json({ error: error.message });
@@ -989,6 +1008,45 @@ function normalizeText(value) {
     .toLowerCase();
 }
 
+function buildSipacSummaryPayload(data = {}) {
+  const latestMovement = Array.isArray(data?.movimentacoes) && data.movimentacoes.length > 0
+    ? [...data.movimentacoes].sort((a, b) => {
+      const parse = (value) => {
+        const parts = String(value || '').split('/');
+        if (parts.length !== 3) return 0;
+        return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0])).getTime();
+      };
+      return parse(b?.data) - parse(a?.data);
+    })[0]
+    : null;
+
+  return {
+    numeroProcesso: data?.numeroProcesso || '',
+    dataAutuacion: data?.dataAutuacion || '',
+    horarioAutuacion: data?.horarioAutuacion || '',
+    usuarioAutuacion: data?.usuarioAutuacion || '',
+    natureza: data?.natureza || '',
+    status: data?.status || '',
+    dataCadastro: data?.dataCadastro || '',
+    unidadeOrigem: data?.unidadeOrigem || '',
+    unidadeAtual: data?.unidadeAtual || latestMovement?.unidadeDestino || '',
+    ultimaMovimentacao: latestMovement?.data || data?.ultimaMovimentacao || '',
+    ultimaAtualizacao: data?.ultimaAtualizacao || '',
+    totalDocumentos: data?.totalDocumentos || '0',
+    observacao: data?.observacao || '',
+    assuntoCodigo: data?.assuntoCodigo || '',
+    assuntoDescricao: data?.assuntoDescricao || '',
+    assuntoDetalhado: data?.assuntoDetalhado || '',
+    interessados: [],
+    documentos: [],
+    movimentacoes: [],
+    incidentes: [],
+    snapshot_hash: data?.snapshot_hash || '',
+    scraping_last_error: data?.scraping_last_error || null,
+    summaryOnly: true
+  };
+}
+
 function normalizeProcessIdentifier(value) {
   return String(value || '').replace(/[^\d]/g, '');
 }
@@ -1108,6 +1166,275 @@ function normalizeOptionalString(value) {
   if (value === null || value === undefined) return null;
   const normalized = String(value).trim();
   return normalized.length > 0 ? normalized : null;
+}
+
+const EXECUTION_PROCESS_CACHE_TTL_MS = 5 * 60 * 1000;
+const EXECUTION_PROCESS_ERROR_CACHE_TTL_MS = 30 * 1000;
+const EXECUTION_PROCESS_LOOKUP_TIMEOUT_MS = 5000;
+let executionProcessLookupCache = {
+  expiresAt: 0,
+  lookup: null
+};
+let executionProcessLookupRefreshPromise = null;
+const GOV_SYNC_COLLECTION = 'gov_sync_cache';
+const GOV_SYNC_RECORDS_SUBCOLLECTION = 'records';
+
+function getGovProcessIdentificationStatus(hasProcurement, hasInstrument) {
+  if (hasProcurement && hasInstrument) {
+    return {
+      code: 'CONTRATACAO_E_INSTRUMENTO_IDENTIFICADOS',
+      label: 'Contratacao e instrumento identificados'
+    };
+  }
+
+  if (hasInstrument) {
+    return {
+      code: 'INSTRUMENTO_IDENTIFICADO',
+      label: 'Instrumento identificado'
+    };
+  }
+
+  if (hasProcurement) {
+    return {
+      code: 'CONTRATACAO_IDENTIFICADA',
+      label: 'Contratacao identificada'
+    };
+  }
+
+  return {
+    code: 'NAO_IDENTIFICADO',
+    label: 'Nao identificado'
+  };
+}
+
+async function refreshExecutionProcessLookupCache() {
+  const byProcess = new Map();
+
+  try {
+    if (db_admin) {
+      const snapshot = await Promise.race([
+        db_admin.collection('acquisition_processes').get(),
+        new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Execution process lookup timeout.')), EXECUTION_PROCESS_LOOKUP_TIMEOUT_MS);
+        })
+      ]);
+
+      snapshot.forEach((doc) => {
+        const data = doc.data() || {};
+        const protocolo = normalizeOptionalString(data?.protocoloSIPAC || data?.dadosSIPAC?.numeroProcesso);
+        const processKey = normalizeProcessIdentifier(protocolo);
+        if (!processKey || byProcess.has(processKey)) return;
+
+        byProcess.set(processKey, {
+          protocoloSIPAC: protocolo,
+          faseInternaStatus: normalizeOptionalString(data?.fase_interna_status),
+          healthScore: Number.isFinite(Number(data?.health_score)) ? Number(data.health_score) : null
+        });
+      });
+    }
+  } catch (error) {
+    console.warn('[EXECUTION PROCESS LOOKUP WARNING]', error?.message || error);
+    const fallbackLookup = executionProcessLookupCache.lookup || {
+      generatedAt: new Date().toISOString(),
+      byProcess: new Map()
+    };
+
+    executionProcessLookupCache = {
+      expiresAt: Date.now() + EXECUTION_PROCESS_ERROR_CACHE_TTL_MS,
+      lookup: fallbackLookup
+    };
+
+    return fallbackLookup;
+  }
+
+  return {
+    generatedAt: new Date().toISOString(),
+    byProcess
+  };
+}
+
+async function getExecutionProcessLookup(forceRefresh = false) {
+  if (!forceRefresh && executionProcessLookupCache.lookup && executionProcessLookupCache.expiresAt > Date.now()) {
+    return executionProcessLookupCache.lookup;
+  }
+
+  const fallbackLookup = executionProcessLookupCache.lookup || {
+    generatedAt: new Date().toISOString(),
+    byProcess: new Map()
+  };
+
+  if (forceRefresh) {
+    const lookup = await refreshExecutionProcessLookupCache();
+    executionProcessLookupCache = {
+      expiresAt: Date.now() + EXECUTION_PROCESS_CACHE_TTL_MS,
+      lookup
+    };
+    return lookup;
+  }
+
+  if (!executionProcessLookupRefreshPromise) {
+    executionProcessLookupRefreshPromise = refreshExecutionProcessLookupCache()
+      .then((lookup) => {
+        executionProcessLookupCache = {
+          expiresAt: Date.now() + EXECUTION_PROCESS_CACHE_TTL_MS,
+          lookup
+        };
+        return lookup;
+      })
+      .catch((error) => {
+        console.warn('[EXECUTION PROCESS LOOKUP BACKGROUND WARNING]', error?.message || error);
+        executionProcessLookupCache = {
+          expiresAt: Date.now() + EXECUTION_PROCESS_ERROR_CACHE_TTL_MS,
+          lookup: fallbackLookup
+        };
+        return fallbackLookup;
+      })
+      .finally(() => {
+        executionProcessLookupRefreshPromise = null;
+      });
+  }
+
+  return fallbackLookup;
+}
+
+function buildExecutionLinkStatus(numeroProcesso, executionLookup = null) {
+  const processKey = normalizeProcessIdentifier(numeroProcesso);
+  const linkedEntry = processKey && executionLookup?.byProcess?.has(processKey)
+    ? executionLookup.byProcess.get(processKey)
+    : null;
+
+  if (linkedEntry) {
+    return {
+      executionLinkStatusCode: 'PROCESSO_VINCULADO',
+      executionLinkStatusLabel: 'Processo vinculado',
+      executionLinkedProtocol: linkedEntry?.protocoloSIPAC || null
+    };
+  }
+
+  if (processKey) {
+    return {
+      executionLinkStatusCode: 'PROCESSO_DISPONIVEL',
+      executionLinkStatusLabel: 'Disponivel na execucao',
+      executionLinkedProtocol: formatSipacProtocol(processKey) || numeroProcesso || null
+    };
+  }
+
+  return {
+    executionLinkStatusCode: 'NAO_VINCULADO',
+    executionLinkStatusLabel: 'Nao vinculado',
+    executionLinkedProtocol: null
+  };
+}
+
+function buildGovProcessRegistry(executionLookup = null) {
+  const registryMap = new Map();
+  const procurementYears = getProcurementYears();
+  const contractYears = getContractSnapshotYears();
+  const procurementLookup = buildProcurementLookupForYears(procurementYears);
+
+  const ensureEntry = (numeroProcesso) => {
+    const normalizedProcess = normalizeOptionalString(numeroProcesso);
+    const processKey = normalizeProcessIdentifier(normalizedProcess);
+    if (!processKey) return null;
+
+    if (!registryMap.has(processKey)) {
+      registryMap.set(processKey, {
+        numeroProcesso: normalizedProcess || formatSipacProtocol(processKey) || processKey,
+        processKey,
+        procurementCount: 0,
+        instrumentCount: 0,
+        procurementRecords: [],
+        instrumentRecords: [],
+        _procurementKeys: new Set(),
+        _instrumentKeys: new Set()
+      });
+    }
+
+    return registryMap.get(processKey);
+  };
+
+  procurementYears.forEach((year) => {
+    const yearData = readProcurementYearSnapshot(year, '/api/gov-process-registry/procurements');
+    const purchases = Array.isArray(yearData?.data) ? yearData.data : [];
+
+    purchases.forEach((purchase) => {
+      const mapped = mapPurchaseToGovRecord(purchase);
+      if (!mapped) return;
+
+      const entry = ensureEntry(mapped.numeroProcesso);
+      if (!entry) return;
+
+      const procurementKey = [
+        normalizeOptionalString(mapped.numeroControlePNCP),
+        normalizeOptionalString(mapped.identificacaoContratacao),
+        mapped.modalidadeCodigo,
+        sanitizeYear(year)
+      ].join('|');
+
+      if (!entry._procurementKeys.has(procurementKey)) {
+        entry._procurementKeys.add(procurementKey);
+        entry.procurementRecords.push({
+          snapshotYear: sanitizeYear(year) || null,
+          modalidade: mapped.modalidade || null,
+          identificacaoContratacao: mapped.identificacaoContratacao || null,
+          situacaoCompra: mapped.situacaoCompra || null,
+          statusHomologacao: mapped.statusHomologacao || null
+        });
+        entry.procurementCount += 1;
+      }
+    });
+  });
+
+  contractYears.forEach((year) => {
+    const yearData = readContractsYearSnapshot(year, '/api/gov-process-registry/instruments');
+    const contracts = Array.isArray(yearData?.data) ? yearData.data : [];
+
+    contracts.forEach((contract) => {
+      const mapped = buildGovContractInstrumentRecord(contract, procurementLookup, year);
+      const entry = ensureEntry(mapped.numeroProcesso);
+      if (!entry) return;
+
+      const instrumentKey = [
+        normalizeOptionalString(mapped.numeroControlePNCP),
+        normalizeOptionalString(mapped.numeroInstrumento),
+        sanitizeYear(year)
+      ].join('|');
+
+      if (!entry._instrumentKeys.has(instrumentKey)) {
+        entry._instrumentKeys.add(instrumentKey);
+        entry.instrumentRecords.push({
+          snapshotYear: sanitizeYear(year) || null,
+          tipoInstrumento: mapped.tipoInstrumento || null,
+          numeroInstrumento: mapped.numeroInstrumento || null,
+          identificacaoContratacao: mapped.identificacaoContratacao || null,
+          statusVigencia: mapped.statusVigencia || null
+        });
+        entry.instrumentCount += 1;
+      }
+    });
+  });
+
+  return Array.from(registryMap.values())
+    .map((entry) => {
+      const identification = getGovProcessIdentificationStatus(entry.procurementCount > 0, entry.instrumentCount > 0);
+      const executionLink = buildExecutionLinkStatus(entry.numeroProcesso, executionLookup);
+
+      return {
+        numeroProcesso: entry.numeroProcesso,
+        processKey: entry.processKey,
+        identificationStatusCode: identification.code,
+        identificationStatusLabel: identification.label,
+        procurementCount: entry.procurementCount,
+        instrumentCount: entry.instrumentCount,
+        procurementRecords: entry.procurementRecords,
+        instrumentRecords: entry.instrumentRecords,
+        executionLinked: executionLink.executionLinkStatusCode !== 'NAO_VINCULADO',
+        executionLinkStatusCode: executionLink.executionLinkStatusCode,
+        executionLinkStatusLabel: executionLink.executionLinkStatusLabel,
+        executionLinkedProtocol: executionLink.executionLinkedProtocol
+      };
+    })
+    .sort((a, b) => a.numeroProcesso.localeCompare(b.numeroProcesso, 'pt-BR'));
 }
 
 function normalizeCompanyCandidate(value) {
@@ -1783,6 +2110,80 @@ function saveProcurementSnapshot(year, purchases, source = 'pncp_sync') {
   };
   fs.writeFileSync(filePath, JSON.stringify(payload, null, 2));
   return filePath;
+}
+
+function sanitizeFirestoreValue(value) {
+  if (value === undefined) return null;
+  if (value === null) return null;
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value;
+  if (value instanceof Date) return value.toISOString();
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => sanitizeFirestoreValue(entry))
+      .filter((entry) => entry !== undefined);
+  }
+  if (typeof value === 'object') {
+    const sanitized = {};
+    Object.entries(value).forEach(([key, entry]) => {
+      const normalizedEntry = sanitizeFirestoreValue(entry);
+      if (normalizedEntry !== undefined) {
+        sanitized[key] = normalizedEntry;
+      }
+    });
+    return sanitized;
+  }
+  return String(value);
+}
+
+function buildGovSyncRecordId(kind, year, record, index) {
+  const normalizedYear = sanitizeYear(year) || '0000';
+  const processKey = normalizeProcessIdentifier(record?.processo || record?.numeroProcesso);
+  const controlKey = normalizeOptionalString(record?.numeroControlePNCP || record?.numeroControlePncpCompra);
+  const itemKey = normalizeOptionalString(record?.id || record?.numeroItem || record?.numeroCompra || record?.numeroContratoEmpenho);
+  const baseKey = processKey || controlKey || itemKey || `${kind}_${normalizedYear}_${index}`;
+  return String(baseKey).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 120);
+}
+
+async function persistCurrentYearGovSync(kind, year, metadata, records = []) {
+  const normalizedYear = sanitizeYear(year);
+  if (!db_admin || !normalizedYear || normalizedYear !== getCurrentProcurementYear()) return;
+
+  const docId = `${kind}_${normalizedYear}`;
+  const docRef = db_admin.collection(GOV_SYNC_COLLECTION).doc(docId);
+  const syncRunId = new Date().toISOString();
+  const sanitizedMetadata = sanitizeFirestoreValue(metadata || {});
+
+  await docRef.set({
+    kind,
+    year: normalizedYear,
+    cnpj: CNPJ_IFES_BSF,
+    syncRunId,
+    totalRecords: Array.isArray(records) ? records.length : 0,
+    metadata: sanitizedMetadata,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+
+  if (!Array.isArray(records) || records.length === 0) return;
+
+  for (let start = 0; start < records.length; start += 400) {
+    const batch = db_admin.batch();
+    const chunk = records.slice(start, start + 400);
+
+    chunk.forEach((record, offset) => {
+      const recordId = buildGovSyncRecordId(kind, normalizedYear, record, start + offset);
+      const recordRef = docRef.collection(GOV_SYNC_RECORDS_SUBCOLLECTION).doc(recordId);
+      batch.set(recordRef, {
+        kind,
+        year: normalizedYear,
+        syncRunId,
+        position: start + offset,
+        data: sanitizeFirestoreValue(record),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    });
+
+    await batch.commit();
+  }
 }
 
 async function fetchContractsFromPncp(year) {
@@ -2561,6 +2962,29 @@ app.post('/api/procurement/sync', async (req, res) => {
   }
 });
 
+app.get('/api/gov-process-registry', async (req, res) => {
+  try {
+    const linkedOnly = String(req.query.linkedOnly || '').toLowerCase() === 'true' || String(req.query.linkedOnly || '') === '1';
+    const executionLookup = await getExecutionProcessLookup();
+    const registry = buildGovProcessRegistry(executionLookup);
+    const data = linkedOnly ? registry.filter((item) => item.executionLinked) : registry;
+
+    return res.json({
+      metadata: {
+        generatedAt: new Date().toISOString(),
+        totalRecords: data.length,
+        totalLinkedToExecution: data.filter((item) => item.executionLinked).length,
+        totalWithProcurement: data.filter((item) => item.procurementCount > 0).length,
+        totalWithInstrument: data.filter((item) => item.instrumentCount > 0).length
+      },
+      data
+    });
+  } catch (error) {
+    console.error('[GOV PROCESS REGISTRY ERROR]', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/gov-contracts/modalities', async (req, res) => {
   try {
     const requestedYear = sanitizeYear(req.query.year || getCurrentProcurementYear());
@@ -2637,7 +3061,11 @@ app.get('/api/gov-contracts/modalities', async (req, res) => {
     }
 
     const rawPurchases = Array.isArray(yearData?.data) ? yearData.data : [];
-    const data = buildGovModalityPayload(rawPurchases, modalityType);
+    const executionLookup = await getExecutionProcessLookup();
+    const data = buildGovModalityPayload(rawPurchases, modalityType).map((item) => ({
+      ...item,
+      ...buildExecutionLinkStatus(item.numeroProcesso, executionLookup)
+    }));
     const totalHomologado = data.reduce((acc, item) => acc + Number(item.valorHomologado || 0), 0);
     const semHomologacao = data.filter((item) => !item.temValorHomologado).length;
 
@@ -2738,6 +3166,9 @@ app.get('/api/gov-contracts/detail', async (req, res) => {
       remoteDetailError = 'Nao foi possivel identificar ano/sequencial para consulta de detalhe no PNCP.';
     }
 
+    const executionLookup = await getExecutionProcessLookup();
+    const detailPayload = await buildGovContractDetailPayload(matchedPurchase, remoteDetail, year);
+
     return res.json({
       metadata: {
         generatedAt: new Date().toISOString(),
@@ -2748,7 +3179,10 @@ app.get('/api/gov-contracts/detail', async (req, res) => {
         remoteDetailUsed: !!remoteDetail,
         remoteDetailError: remoteDetailError || undefined
       },
-      data: await buildGovContractDetailPayload(matchedPurchase, remoteDetail, year)
+      data: {
+        ...detailPayload,
+        ...buildExecutionLinkStatus(detailPayload.numeroProcesso, executionLookup)
+      }
     });
   } catch (error) {
     console.error('[GOV CONTRACTS DETAIL ERROR]', error);
@@ -2916,7 +3350,11 @@ app.get('/api/gov-contract-instruments', async (req, res) => {
 
     const rawContracts = Array.isArray(yearData?.data) ? yearData.data : [];
     const procurementLookup = buildProcurementLookupForYears([year, String(Number(year) - 1), String(Number(year) + 1)]);
-    const records = rawContracts.map((contract) => buildGovContractInstrumentRecord(contract, procurementLookup, year));
+    const executionLookup = await getExecutionProcessLookup();
+    const records = rawContracts.map((contract) => ({
+      ...buildGovContractInstrumentRecord(contract, procurementLookup, year),
+      ...buildExecutionLinkStatus(contract?.processo, executionLookup)
+    }));
 
     return res.json({
       metadata: {
@@ -2982,6 +3420,7 @@ app.get('/api/gov-contract-instruments/vigentes', async (req, res) => {
     }
 
     const procurementLookup = buildProcurementLookupForYears(getProcurementYears());
+    const executionLookup = await getExecutionProcessLookup();
     const consolidatedRecords = [];
     const latestExtractedAt = [];
     const sourceNames = new Set();
@@ -2997,7 +3436,10 @@ app.get('/api/gov-contract-instruments/vigentes', async (req, res) => {
       }
 
       rawContracts.forEach((contract) => {
-        const record = buildGovContractInstrumentRecord(contract, procurementLookup, year);
+        const record = {
+          ...buildGovContractInstrumentRecord(contract, procurementLookup, year),
+          ...buildExecutionLinkStatus(contract?.processo, executionLookup)
+        };
         if (record.vigente) {
           consolidatedRecords.push(record);
         }
@@ -3100,6 +3542,8 @@ app.get('/api/gov-contract-instruments/detail', async (req, res) => {
     }
 
     const procurementLookup = buildProcurementLookupForYears([year, String(Number(year) - 1), String(Number(year) + 1)]);
+    const executionLookup = await getExecutionProcessLookup();
+    const detailPayload = await buildGovContractInstrumentDetailPayload(matchedContract, procurementLookup, year);
 
     return res.json({
       metadata: {
@@ -3109,7 +3553,10 @@ app.get('/api/gov-contract-instruments/detail', async (req, res) => {
         extractedAt: yearData?.metadata?.extractedAt || null,
         source: yearData?.metadata?.source || null
       },
-      data: await buildGovContractInstrumentDetailPayload(matchedContract, procurementLookup, year)
+      data: {
+        ...detailPayload,
+        ...buildExecutionLinkStatus(detailPayload.numeroProcesso, executionLookup)
+      }
     });
   } catch (error) {
     console.error('[GOV CONTRACT INSTRUMENT DETAIL ERROR]', error);

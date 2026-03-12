@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { ArrowUpDown, RefreshCw, Eye, PencilLine, Sparkles, Info } from 'lucide-react';
+import { ArrowUpDown, Info, RefreshCw } from 'lucide-react';
 import { ContractItem, SortConfig } from '../types';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { getProcessStatus, getStatusColor } from '../utils/processLogic';
@@ -22,12 +21,40 @@ interface ContractTableProps {
 }
 
 const ContractTable: React.FC<ContractTableProps> = ({
-  data, loading, onSort, sortConfig, onEdit, onViewDetails, onViewPcaDetails, onViewSummary, isPublic = false,
-  selectedIds = [], onToggleSelection, onToggleAll, viewMode = 'planning'
+  data,
+  loading,
+  onSort,
+  sortConfig,
+  onEdit,
+  onViewDetails,
+  onViewPcaDetails,
+  onViewSummary,
+  isPublic = false,
+  selectedIds = [],
+  onToggleSelection,
+  onToggleAll,
+  viewMode = 'planning'
 }) => {
-  const TableHeader = ({ label, sortKey, align = 'left' }: { label: string; sortKey?: keyof ContractItem; align?: 'left' | 'center' | 'right' }) => (
+  const getGovProcessStatusClass = (statusCode?: ContractItem['govProcessStatusCode'] | null) => {
+    if (statusCode === 'CONTRATACAO_E_INSTRUMENTO_IDENTIFICADOS') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    if (statusCode === 'INSTRUMENTO_IDENTIFICADO') return 'bg-sky-50 text-sky-700 border-sky-200';
+    if (statusCode === 'CONTRATACAO_IDENTIFICADA') return 'bg-amber-50 text-amber-700 border-amber-200';
+    return 'bg-slate-100 text-slate-500 border-slate-200';
+  };
+
+  const totalColumns = viewMode === 'planning' ? 6 : 5;
+
+  const TableHeader = ({
+    label,
+    sortKey,
+    align = 'left'
+  }: {
+    label: string;
+    sortKey?: keyof ContractItem;
+    align?: 'left' | 'center' | 'right';
+  }) => (
     <th
-      className={`p-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-white hover:bg-slate-50 ${sortKey ? 'cursor-pointer hover:text-ifes-green' : ''} transition-colors whitespace-nowrap ${align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'}`}
+      className={`px-6 py-4 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 border-b border-slate-100 ${sortKey ? 'cursor-pointer hover:text-ifes-green' : ''} transition-colors whitespace-nowrap ${align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'}`}
       onClick={() => sortKey && onSort(sortKey)}
     >
       <div className={`flex items-center gap-1 ${align === 'right' ? 'justify-end' : align === 'center' ? 'justify-center' : ''}`}>
@@ -41,18 +68,18 @@ const ContractTable: React.FC<ContractTableProps> = ({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse">
+      <table className={`${viewMode === 'status' ? 'min-w-[1080px] border-separate border-spacing-y-2' : 'w-full border-collapse'} w-full`}>
         <thead>
-          <tr className="bg-slate-50/50 border-b border-slate-100">
+          <tr className={`${viewMode === 'status' ? 'bg-transparent' : 'bg-slate-50/50 border-b border-slate-100'}`}>
             {viewMode === 'planning' ? (
               <>
                 <TableHeader label="ITEM PCA" sortKey="numeroItem" align="center" />
                 <TableHeader label="Tipo" sortKey="categoria" align="center" />
-                <TableHeader label="Descrição do Item / Classe / Grupo" sortKey="titulo" />
+                <TableHeader label="Descricao do Item / Classe / Grupo" sortKey="titulo" />
                 <th
                   className="p-6 text-right text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-white hover:bg-slate-50 hover:text-ifes-green cursor-pointer transition-colors whitespace-nowrap group"
                   onClick={() => onSort('ifc')}
-                  title="IFC: Identificador de Futura Contratação"
+                  title="IFC: Identificador de Futura Contratacao"
                 >
                   <div className="flex items-center gap-1 justify-end">
                     <span className="flex items-center gap-1">
@@ -67,19 +94,41 @@ const ContractTable: React.FC<ContractTableProps> = ({
               </>
             ) : (
               <>
-                <TableHeader label="Número de processo no SIPAC" sortKey="protocoloSIPAC" />
-                <TableHeader label="Objeto" sortKey="titulo" />
-                <TableHeader label="Data de Criação" sortKey="inicio" align="center" />
-                <TableHeader label="Local Atual" />
-                <TableHeader label="Status do processo no SIPAC" align="center" />
+                <th className="w-[250px] min-w-[250px] px-6 py-3 text-left text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 border-b border-slate-100">
+                  <div className="flex items-center gap-1 cursor-pointer hover:text-ifes-green transition-colors" onClick={() => onSort('protocoloSIPAC')}>
+                    Numero de processo no SIPAC
+                    <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'protocoloSIPAC' ? 'opacity-100 text-ifes-green' : 'opacity-20'}`} />
+                  </div>
+                </th>
+                <th className="w-[390px] min-w-[390px] px-6 py-3 text-left text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 border-b border-slate-100">
+                  <div className="flex items-center gap-1 cursor-pointer hover:text-ifes-green transition-colors" onClick={() => onSort('titulo')}>
+                    Objeto
+                    <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'titulo' ? 'opacity-100 text-ifes-green' : 'opacity-20'}`} />
+                  </div>
+                </th>
+                <th className="w-[150px] min-w-[150px] px-6 py-3 text-center text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 border-b border-slate-100">
+                  <div className="flex items-center justify-center gap-1 cursor-pointer hover:text-ifes-green transition-colors" onClick={() => onSort('inicio')}>
+                    Data de Criacao
+                    <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'inicio' ? 'opacity-100 text-ifes-green' : 'opacity-20'}`} />
+                  </div>
+                </th>
+                <th className="w-[180px] min-w-[180px] px-6 py-3 text-center text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 border-b border-slate-100">
+                  Status do processo no SIPAC
+                </th>
+                <th className="w-[210px] min-w-[210px] px-6 py-3 text-center text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 border-b border-slate-100">
+                  <div className="flex items-center justify-center gap-1 cursor-pointer hover:text-ifes-green transition-colors" onClick={() => onSort('govProcessStatusLabel')}>
+                    Identificacao Gov
+                    <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'govProcessStatusLabel' ? 'opacity-100 text-ifes-green' : 'opacity-20'}`} />
+                  </div>
+                </th>
               </>
             )}
           </tr>
         </thead>
-        <tbody className="divide-y divide-[#E5E5E5]">
+        <tbody className={viewMode === 'status' ? '' : 'divide-y divide-[#E5E5E5]'}>
           {loading ? (
             <tr>
-              <td colSpan={5} className="p-20 text-center">
+              <td colSpan={totalColumns} className="p-20 text-center">
                 <div className="flex flex-col items-center gap-3">
                   <RefreshCw className="animate-spin text-ifes-green" size={24} />
                   <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Carregando Planejamento...</span>
@@ -93,11 +142,14 @@ const ContractTable: React.FC<ContractTableProps> = ({
               const processObjectTitle =
                 item.dadosSIPAC?.assuntoDetalhado ||
                 item.dadosSIPAC?.assuntoDescricao ||
-                item.titulo;
+                'Aguardando sincronizacao do SIPAC';
+              const processSubject =
+                item.dadosSIPAC?.assuntoDescricao ||
+                'AGUARDANDO DADOS DO SIPAC';
 
               let isSelected = false;
               if (item.isGroup && item.childItems) {
-                isSelected = item.childItems.every(c => selectedIds.includes(String(c.id)));
+                isSelected = item.childItems.every((child) => selectedIds.includes(String(child.id)));
               } else {
                 isSelected = selectedIds.includes(String(item.id));
               }
@@ -105,7 +157,10 @@ const ContractTable: React.FC<ContractTableProps> = ({
               return (
                 <tr
                   key={item.id}
-                  className={`transition-all group cursor-pointer ${isSelected ? 'bg-ifes-green/5' : 'hover:bg-ifes-green/[0.02]'}`}
+                  className={`transition-all group cursor-pointer ${viewMode === 'status'
+                    ? `${isSelected ? 'bg-ifes-green/5' : 'bg-transparent'} hover:bg-slate-50/70`
+                    : `${isSelected ? 'bg-ifes-green/5' : 'hover:bg-ifes-green/[0.02]'}`
+                    }`}
                   onClick={() => {
                     if (viewMode === 'status') {
                       onViewDetails?.(item);
@@ -114,31 +169,27 @@ const ContractTable: React.FC<ContractTableProps> = ({
                     }
                   }}
                 >
-
                   {viewMode === 'planning' ? (
                     <>
-                      {/* PCA Item ID Column */}
                       <td className="p-6 text-center">
                         <span className="text-xs font-bold text-blue-600 font-mono">
                           {item.numeroItem || '-'}
                         </span>
                       </td>
 
-                      {/* Tipo Column */}
                       <td className="p-6 text-center">
-                        <span className={`text-[10px] font-black px-2 py-1 rounded border uppercase tracking-wider ${item.categoria === 'Bens' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                          item.categoria === 'TIC' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                            'bg-amber-50 text-amber-600 border-amber-100'
-                          }`}>
+                        <span className={`text-[10px] font-black px-2 py-1 rounded border uppercase tracking-wider ${item.categoria === 'Bens' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : item.categoria === 'TIC' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
                           {item.categoria}
                         </span>
                       </td>
 
-                      {/* Descrição / Classe Column */}
-                      <td className="p-6" onClick={(e) => {
-                        e.stopPropagation();
-                        if (onViewPcaDetails) onViewPcaDetails(item);
-                      }}>
+                      <td
+                        className="p-6"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onViewPcaDetails?.(item);
+                        }}
+                      >
                         <div className="flex flex-col max-w-[500px]">
                           <span className="text-xs font-black text-slate-800 uppercase leading-none mb-1">
                             {item.titulo}
@@ -147,7 +198,11 @@ const ContractTable: React.FC<ContractTableProps> = ({
                             {item.classificacaoSuperiorCodigo ? `${item.classificacaoSuperiorCodigo} - ${item.classificacaoSuperiorNome}` : (item.grupoContratacao || 'N/A')}
                           </span>
                           <div className="flex items-center gap-2 mt-2">
-                            {item.isManual && <span className="text-[8px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-sm uppercase font-black tracking-widest leading-none">Extra-PCA</span>}
+                            {item.isManual && (
+                              <span className="text-[8px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-sm uppercase font-black tracking-widest leading-none">
+                                Extra-PCA
+                              </span>
+                            )}
                             {item.isGroup && (
                               <span className="text-[9px] bg-blue-600 text-white px-2 py-0.5 rounded-md font-black uppercase tracking-tighter leading-none">
                                 {item.childItems?.length || 0} itens do PCA
@@ -157,70 +212,63 @@ const ContractTable: React.FC<ContractTableProps> = ({
                         </div>
                       </td>
 
-                      {/* IFC Column */}
                       <td className="p-6 text-right">
                         <span className="text-xs font-bold text-slate-700 font-mono tracking-widest bg-slate-50 border border-slate-100 px-2 py-1 rounded-md">
                           {(() => {
                             if (!item.isGroup || !item.childItems || item.childItems.length <= 1) return item.ifc || 'N/D';
                             const firstIfc = item.childItems[0].ifc;
-                            const allSame = item.childItems.every(c => c.ifc === firstIfc);
-                            return allSame ? (firstIfc || 'N/D') : 'Múltiplos';
+                            const allSame = item.childItems.every((child) => child.ifc === firstIfc);
+                            return allSame ? (firstIfc || 'N/D') : 'Multiplos';
                           })()}
                         </span>
                       </td>
 
-                      {/* Valor Column */}
                       <td className="p-6 text-right text-xs font-bold text-slate-700 tabular-nums">
                         {formatCurrency(item.valor)}
                       </td>
 
-                      {/* Data Column */}
                       <td className="p-6 text-center">
                         <span className="text-xs font-bold text-slate-700 uppercase">
                           {item.dataDesejada ? formatDate(item.dataDesejada) : formatDate(item.inicio)}
                         </span>
                       </td>
-
                     </>
                   ) : (
                     <>
-                      {/* Número de processo no SIPAC + Assunto */}
-                      <td className="p-6">
-                        <div className="flex flex-col">
-                          <span className="text-[13px] font-black text-blue-700 tracking-tight">
+                      <td className="min-w-[250px] rounded-l-2xl border-y border-l border-slate-200/80 bg-transparent px-6 py-5 align-top">
+                        <div className="flex flex-col gap-2">
+                          <span className="text-[15px] font-black text-blue-700 tracking-tight leading-tight">
                             {item.protocoloSIPAC}
                           </span>
-                          <span className="text-[10px] font-bold text-slate-400 leading-tight mt-1 max-w-[350px]">
-                            {item.dadosSIPAC?.assuntoDescricao ? `${item.dadosSIPAC.assuntoCodigo || ''} ${item.dadosSIPAC.assuntoDescricao}` : 'SEM ASSUNTO'}
+                          <span className="text-[11px] font-semibold text-slate-500 leading-snug max-w-[320px]">
+                            {item.dadosSIPAC?.assuntoDescricao ? `${item.dadosSIPAC.assuntoCodigo || ''} ${item.dadosSIPAC.assuntoDescricao}` : processSubject}
                           </span>
                         </div>
                       </td>
 
-                      {/* Objeto */}
-                      <td className="p-6">
-                        <span className="text-sm font-bold text-slate-700 leading-tight block max-w-[400px]" title={processObjectTitle}>
+                      <td className="min-w-[390px] border-y border-slate-200/80 bg-transparent px-6 py-5 align-top">
+                        <span className="text-[12px] font-semibold text-slate-800 leading-[1.45] block" title={processObjectTitle}>
                           {processObjectTitle}
                         </span>
                       </td>
 
-                      {/* Data de Criação */}
-                      <td className="p-6 text-center">
-                        <span className="text-[11px] font-bold text-slate-500">
+                      <td className="min-w-[150px] border-y border-slate-200/80 bg-transparent px-6 py-5 text-center align-top">
+                        <div className="inline-flex rounded-xl bg-slate-100/80 px-3 py-2 border border-slate-200/80">
+                          <span className="text-[11px] font-bold text-slate-600">
                           {item.dadosSIPAC?.dataAutuacion || '---'}
-                        </span>
+                          </span>
+                        </div>
                       </td>
 
-                      {/* Local Atual */}
-                      <td className="p-6">
-                        <span className="text-[11px] font-bold text-slate-600 block max-w-[250px] leading-snug" title={item.dadosSIPAC?.unidadeAtual}>
-                          {item.dadosSIPAC?.unidadeAtual || 'N/D'}
-                        </span>
-                      </td>
-
-                      {/* Status */}
-                      <td className="p-6 text-center">
-                        <span className={`text-[10px] font-black px-3 py-1.5 rounded-full border uppercase tracking-tighter ${statusColor}`}>
+                      <td className="min-w-[180px] border-y border-slate-200/80 bg-transparent px-6 py-5 text-center align-top">
+                        <span className={`inline-flex max-w-[170px] justify-center text-[10px] font-bold px-3 py-1.5 rounded-full border tracking-tight ${statusColor}`}>
                           {computedStatus}
+                        </span>
+                      </td>
+
+                      <td className="min-w-[210px] rounded-r-2xl border-y border-r border-slate-200/80 bg-transparent px-6 py-5 text-center align-top">
+                        <span className={`inline-flex max-w-[190px] justify-center whitespace-normal text-[10px] font-bold px-3 py-1.5 rounded-full border tracking-tight ${getGovProcessStatusClass(item.govProcessStatusCode)}`}>
+                          {item.govProcessStatusLabel || 'Nao identificado'}
                         </span>
                       </td>
                     </>
@@ -230,7 +278,7 @@ const ContractTable: React.FC<ContractTableProps> = ({
             })
           ) : (
             <tr>
-              <td colSpan={5} className="p-20 text-center text-slate-400 font-medium italic">
+              <td colSpan={totalColumns} className="p-20 text-center text-slate-400 font-medium italic">
                 Nenhum registro encontrado para os filtros selecionados.
               </td>
             </tr>

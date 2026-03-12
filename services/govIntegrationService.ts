@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { API_SERVER_URL } from '../constants';
-import { ModalidadeContratacaoGov } from '../types';
+import { ExecutionLinkStatusCode, GovProcessRegistryEntry, ModalidadeContratacaoGov } from '../types';
 
 export type GovModalityType =
   | 'all'
@@ -21,6 +21,9 @@ export interface GovContractsRecord extends ModalidadeContratacaoGov {
   temValorHomologado?: boolean;
   statusHomologacao?: 'HOMOLOGADO' | 'NAO_HOMOLOGADO';
   situacaoCompra?: string | null;
+  executionLinkStatusCode?: ExecutionLinkStatusCode;
+  executionLinkStatusLabel?: string | null;
+  executionLinkedProtocol?: string | null;
 }
 
 export interface GovContractsResponse {
@@ -107,6 +110,9 @@ export interface GovContractDetail {
     codigo: number | null;
     descricao: string | null;
   };
+  executionLinkStatusCode?: ExecutionLinkStatusCode;
+  executionLinkStatusLabel?: string | null;
+  executionLinkedProtocol?: string | null;
   links: {
     sistemaOrigem: string | null;
     processoEletronico: string | null;
@@ -150,6 +156,9 @@ export interface GovContractInstrumentRecord {
   anoContrato: string | null;
   sequencialContrato: string | null;
   identificacaoContratacao: string | null;
+  executionLinkStatusCode?: ExecutionLinkStatusCode;
+  executionLinkStatusLabel?: string | null;
+  executionLinkedProtocol?: string | null;
   links: {
     pncpInstrumento: string | null;
     pncpContratacao: string | null;
@@ -209,6 +218,9 @@ export interface GovContractInstrumentDetail {
   receita: boolean | null;
   categoriaProcesso: string | null;
   identificacaoContratacao: string | null;
+  executionLinkStatusCode?: ExecutionLinkStatusCode;
+  executionLinkStatusLabel?: string | null;
+  executionLinkedProtocol?: string | null;
   orgaoEntidade: {
     cnpj: string | null;
     razaoSocial: string | null;
@@ -238,6 +250,17 @@ export interface GovContractInstrumentDetailResponse {
     source: string | null;
   };
   data: GovContractInstrumentDetail;
+}
+
+export interface GovProcessRegistryResponse {
+  metadata: {
+    generatedAt: string;
+    totalRecords: number;
+    totalLinkedToExecution: number;
+    totalWithProcurement: number;
+    totalWithInstrument: number;
+  };
+  data: GovProcessRegistryEntry[];
 }
 
 export const fetchGovContractsModalities = async (
@@ -318,5 +341,10 @@ export const fetchGovContractInstrumentDetail = async (
       numeroProcesso: record.numeroProcesso || undefined
     }
   });
+  return response.data;
+};
+
+export const fetchGovProcessRegistry = async (): Promise<GovProcessRegistryResponse> => {
+  const response = await axios.get(`${API_SERVER_URL}/api/gov-process-registry`);
   return response.data;
 };

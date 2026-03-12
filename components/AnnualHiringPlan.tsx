@@ -62,7 +62,8 @@ import {
   SortConfig,
   SIPACProcess,
   PCAMetadata,
-  DocumentChecklistAIAnalysis
+  DocumentChecklistAIAnalysis,
+  GovProcessRegistryEntry
 } from '../types';
 import {
   FALLBACK_DATA,
@@ -103,6 +104,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { findPncpPurchaseByProcess, findPncpPurchaseByProcessCached, fetchPncpPurchaseItems, PNCPPurchase, PNCPItem } from '../services/pncpService';
+import { fetchGovProcessRegistry } from '../services/govIntegrationService';
 import { getFinancialStatusByProcess, ProcurementHistory } from '../services/procurementService';
 import { ShoppingSearch } from './ShoppingSearch';
 import PlanningChecklist from './PlanningChecklist';
@@ -121,6 +123,42 @@ interface AnnualHiringPlanProps {
   initialDashboardView?: 'planning' | 'status';
   lockedDashboardView?: 'planning' | 'status';
 }
+
+const normalizeProcessIdentifier = (value: string | undefined | null): string =>
+  String(value || '').replace(/\D/g, '');
+
+const formatProcessIdentifier = (value: string | undefined | null): string => {
+  const digits = normalizeProcessIdentifier(value).slice(0, 17);
+  if (digits.length > 15) return `${digits.slice(0, 5)}.${digits.slice(5, 11)}/${digits.slice(11, 15)}-${digits.slice(15)}`;
+  if (digits.length > 11) return `${digits.slice(0, 5)}.${digits.slice(5, 11)}/${digits.slice(11)}`;
+  if (digits.length > 5) return `${digits.slice(0, 5)}.${digits.slice(5)}`;
+  return digits;
+};
+
+const matchesRegistryYear = (entry: GovProcessRegistryEntry, year: string) =>
+  entry.procurementRecords.some((record) => String(record.snapshotYear || '') === String(year)) ||
+  entry.instrumentRecords.some((record) => String(record.snapshotYear || '') === String(year));
+
+const buildGovRegistryLookup = (entries: GovProcessRegistryEntry[]) =>
+  new Map(
+    entries
+      .map((entry) => [normalizeProcessIdentifier(entry.numeroProcesso || entry.processKey), entry] as const)
+      .filter(([key]) => key.length > 0)
+  );
+
+const buildGovAutoExecutionTitle = (entry: GovProcessRegistryEntry): string => {
+  const procurementRecord = entry.procurementRecords[0];
+  if (procurementRecord?.identificacaoContratacao) {
+    return `${procurementRecord.modalidade || 'Contratacao'} ${procurementRecord.identificacaoContratacao}`;
+  }
+
+  const instrumentRecord = entry.instrumentRecords[0];
+  if (instrumentRecord?.numeroInstrumento) {
+    return `${instrumentRecord.tipoInstrumento || 'Instrumento'} ${instrumentRecord.numeroInstrumento}`;
+  }
+
+  return 'Processo identificado automaticamente na integracao governamental';
+};
 
 const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
   embedded = false,
@@ -148,6 +186,7 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
 
   const [config, setConfig] = useState<SystemConfig | null>(null);
   const [loadingConfig, setLoadingConfig] = useState(true);
+  const [govProcessRegistryEntries, setGovProcessRegistryEntries] = useState<GovProcessRegistryEntry[]>([]);
 
   useEffect(() => {
     const initConfig = async () => {
@@ -160,6 +199,8 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
   }, []);
 
   useEffect(() => {
+    if (lockedDashboardView === 'status') return;
+
     const triggerGlobalOcrBackfill = async () => {
       const markerKey = 'sipac_ocr_backfill_triggered_v1';
       if (typeof window === 'undefined') return;
@@ -175,7 +216,7 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
       }
     };
     triggerGlobalOcrBackfill();
-  }, []);
+  }, [lockedDashboardView]);
 
   const [saving, setSaving] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -219,6 +260,32 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
   const [isExportingDossier, setIsExportingDossier] = useState(false);
   const [checklistAiAnalyses, setChecklistAiAnalyses] = useState<Record<string, DocumentChecklistAIAnalysis>>({});
   const [isAnalyzingChecklistAi, setIsAnalyzingChecklistAi] = useState(false);
+  const isExecutionMode = lockedDashboardView === 'status';
+
+  useEffect(() => {
+    if (dashboardView !== 'status' && lockedDashboardView !== 'status') return;
+
+    let cancelled = false;
+    const loadGovRegistry = async () => {
+      try {
+        const response = await fetchGovProcessRegistry();
+        if (!cancelled) {
+          setGovProcessRegistryEntries(Array.isArray(response?.data) ? response.data : []);
+        }
+      } catch (error) {
+        console.warn('[AnnualHiringPlan] Nao foi possivel carregar o registro governamental para a Execucao CLC:', error);
+        if (!cancelled) {
+          setGovProcessRegistryEntries([]);
+        }
+      }
+    };
+
+    loadGovRegistry();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dashboardView, lockedDashboardView]);
   const [checklistAiError, setChecklistAiError] = useState<string | null>(null);
 
   // AI Team Identification State
@@ -850,23 +917,25 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
 
   const fetchData = useCallback(async (year: string, forceSync: boolean = false) => {
     const hasCache = hasPcaInMemoryCache(year);
-
-    if (forceSync) {
-      setIsSyncing(true);
-      setLoading(true);
-    } else if (!hasCache) {
-      const localSnapshot = await fetchLocalPcaSnapshot(year);
-      if (localSnapshot && localSnapshot.length > 0) {
-        setData(localSnapshot);
-        setLoading(false);
-      } else {
-        setLoading(true);
-      }
-    }
+    const isStatusView = lockedDashboardView === 'status' || dashboardView === 'status';
+    const shouldSkipLiveSync = isStatusView;
 
     try {
+      if (forceSync) {
+        setIsSyncing(true);
+        setLoading(true);
+      } else if (!hasCache) {
+        const localSnapshot = await fetchLocalPcaSnapshot(year);
+        if (localSnapshot && localSnapshot.length > 0) {
+          setData(localSnapshot);
+          setLoading(false);
+        } else {
+          setLoading(true);
+        }
+      }
+
       setSyncProgress(0);
-      const result = await fetchPcaData(year, forceSync, false, (p) => setSyncProgress(p));
+      const result = await fetchPcaData(year, isStatusView ? false : forceSync, shouldSkipLiveSync, (p) => setSyncProgress(p));
 
       if (result.data.length === 0) {
         setData(FALLBACK_DATA);
@@ -879,12 +948,22 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
     } catch (err) {
       console.error("Erro ao carregar dados:", err);
       setData(FALLBACK_DATA);
+      setUsingFallback(true);
     } finally {
       setLoading(false);
       setIsSyncing(false);
       setSyncProgress(100);
     }
-  }, []);
+  }, [dashboardView, lockedDashboardView]);
+
+  const handleRefreshByContext = useCallback(async () => {
+    if (dashboardView === 'status') {
+      await fetchData(selectedYear, false);
+      return;
+    }
+
+    await fetchData(selectedYear, true);
+  }, [dashboardView, fetchData, selectedYear]);
 
   useEffect(() => {
     fetchData(selectedYear);
@@ -927,13 +1006,15 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
 
   // Trigger para resumo IA em segundo plano quando visualiza o processo
   useEffect(() => {
+    if (isExecutionMode) return;
     if (isDetailsModalOpen && viewingItem?.dadosSIPAC) {
       generateAISummary(viewingItem);
     }
-  }, [isDetailsModalOpen, viewingItem]);
+  }, [isDetailsModalOpen, isExecutionMode, viewingItem]);
 
   // Trigger para busca no PNCP quando visualiza o processo
   useEffect(() => {
+    if (isExecutionMode) return;
     const protocolo = viewingItem?.protocoloSIPAC;
     if (isDetailsModalOpen && protocolo) {
       const fetchDataPncp = async () => {
@@ -968,7 +1049,7 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
       setPncpMatch(null);
       setPncpItems([]);
     }
-  }, [isDetailsModalOpen, viewingItem?.protocoloSIPAC, selectedYear]);
+  }, [isDetailsModalOpen, isExecutionMode, viewingItem?.protocoloSIPAC, selectedYear]);
 
   // Clean up selected document when modal closes
   useEffect(() => {
@@ -1255,7 +1336,12 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
         setEditingItem(finalItem);
       }
 
-      setData(prev => prev.map(i => String(i.id) === String(item.id) ? finalItem : i));
+      setData(prev => {
+        const hasItem = prev.some((existing) => String(existing.id) === String(item.id));
+        return hasItem
+          ? prev.map(i => String(i.id) === String(item.id) ? finalItem : i)
+          : [...prev, finalItem];
+      });
       setToast({ message: "Dados SIPAC sincronizados!", type: "success" });
     } catch (err) {
       console.error("Erro SIPAC:", err);
@@ -1343,7 +1429,7 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
       return;
     }
 
-    if (item.dadosSIPAC) {
+    if (item.dadosSIPAC && !item.dadosSIPAC.summaryOnly) {
       setViewingItem(item);
       setIsDetailsModalOpen(true);
       return;
@@ -1386,7 +1472,12 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
       };
       const finalItem = { ...hydrated, dadosSIPAC: enhancedSipacData };
 
-      setData(prev => prev.map(i => String(i.id) === String(item.id) ? finalItem : i));
+      setData(prev => {
+        const hasItem = prev.some((existing) => String(existing.id) === String(item.id));
+        return hasItem
+          ? prev.map(i => String(i.id) === String(item.id) ? finalItem : i)
+          : [...prev, finalItem];
+      });
       setViewingItem(finalItem);
       setIsDetailsModalOpen(true);
 
@@ -1401,11 +1492,7 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
   };
 
   const formatProtocolo = (val: string) => {
-    const v = val.replace(/\D/g, '').slice(0, 17);
-    if (v.length > 15) return `${v.slice(0, 5)}.${v.slice(5, 11)}/${v.slice(11, 15)}-${v.slice(15)}`;
-    if (v.length > 11) return `${v.slice(0, 5)}.${v.slice(5, 11)}/${v.slice(11)}`;
-    if (v.length > 5) return `${v.slice(0, 5)}.${v.slice(5)}`;
-    return v;
+    return formatProcessIdentifier(val);
   };
 
   const handleAddManualItem = async () => {
@@ -1446,16 +1533,79 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
     { name: 'TIC', value: summary.tic.val, fill: '#3b82f6' }
   ], [summary]);
 
+  const statusSourceData = useMemo(() => {
+    const govRegistryLookup = buildGovRegistryLookup(govProcessRegistryEntries);
+    const existingProcesses = new Set(
+      processedData
+        .map((item) => normalizeProcessIdentifier(item.protocoloSIPAC || item.dadosSIPAC?.numeroProcesso))
+        .filter((value) => value.length > 0)
+    );
+
+    const statusItems = processedData.map((item) => {
+      const processKey = normalizeProcessIdentifier(item.protocoloSIPAC || item.dadosSIPAC?.numeroProcesso);
+      const govMatch = processKey ? govRegistryLookup.get(processKey) || null : null;
+
+      if (!govMatch) {
+        return {
+          ...item,
+          govProcessStatusCode: item.govProcessStatusCode || 'NAO_IDENTIFICADO',
+          govProcessStatusLabel: item.govProcessStatusLabel || 'Nao identificado',
+          govProcessMatch: item.govProcessMatch || null
+        };
+      }
+
+      return {
+        ...item,
+        govProcessStatusCode: govMatch.identificationStatusCode,
+        govProcessStatusLabel: govMatch.identificationStatusLabel,
+        govProcessMatch: govMatch
+      };
+    });
+
+    const autoLinkedGovItems: ContractItem[] = govProcessRegistryEntries
+      .filter((entry) => matchesRegistryYear(entry, selectedYear))
+      .filter((entry) => !existingProcesses.has(normalizeProcessIdentifier(entry.numeroProcesso || entry.processKey)))
+      .map((entry, index) => {
+        const protocol = formatProcessIdentifier(entry.numeroProcesso || entry.processKey);
+        const primaryProcurement = entry.procurementRecords.find((record) => String(record.snapshotYear || '') === String(selectedYear)) || entry.procurementRecords[0];
+        const primaryInstrument = entry.instrumentRecords.find((record) => String(record.snapshotYear || '') === String(selectedYear)) || entry.instrumentRecords[0];
+
+        return {
+          id: `gov-auto-${entry.processKey || index}`,
+          titulo: buildGovAutoExecutionTitle(entry),
+          subtitulo: primaryInstrument?.numeroInstrumento || primaryProcurement?.identificacaoContratacao || undefined,
+          categoria: Category.Servicos,
+          valor: 0,
+          valorExecutado: 0,
+          inicio: `${selectedYear}-01-01`,
+          fim: '',
+          area: primaryProcurement?.modalidade || primaryInstrument?.tipoInstrumento || 'Integracao Governamental',
+          isManual: true,
+          protocoloSIPAC: protocol,
+          dadosSIPAC: null,
+          vinculo_processo_id: protocol,
+          status_item: 'Identificado automaticamente',
+          ano: String(selectedYear),
+          govProcessStatusCode: entry.identificationStatusCode,
+          govProcessStatusLabel: entry.identificationStatusLabel,
+          govProcessMatch: entry
+        };
+      });
+
+    return [...statusItems, ...autoLinkedGovItems];
+  }, [govProcessRegistryEntries, processedData, selectedYear]);
+
   const activeData = useMemo(() => {
-    let base = [...processedData];
+    let base = [...(dashboardView === 'status' ? statusSourceData : processedData)];
     if (searchTerm) {
       const low = searchTerm.toLowerCase();
+      const lowProcess = normalizeProcessIdentifier(searchTerm);
       base = base.filter(i =>
         i.titulo.toLowerCase().includes(low) ||
         i.area.toLowerCase().includes(low) ||
         (i.numeroDfd && i.numeroDfd.toLowerCase().includes(low)) ||
         (i.ifc && i.ifc.toLowerCase().includes(low)) ||
-        (i.protocoloSIPAC && i.protocoloSIPAC.toLowerCase().includes(low)) ||
+        (i.protocoloSIPAC && (i.protocoloSIPAC.toLowerCase().includes(low) || normalizeProcessIdentifier(i.protocoloSIPAC).includes(lowProcess))) ||
         (i.grupoContratacao && i.grupoContratacao.toLowerCase().includes(low))
       );
     }
@@ -1477,12 +1627,16 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
       // For 'status' view: ProcessDashboard needs ALL items to show pending DFDs
       // It will filter internally for process-specific metrics
       // But for the table below, we still group by process
-      const processItems = base.filter(i => i.protocoloSIPAC && i.protocoloSIPAC.length > 5);
+      const processItems = base.filter(i => normalizeProcessIdentifier(i.protocoloSIPAC || i.dadosSIPAC?.numeroProcesso).length > 5);
       const groups: Record<string, ContractItem[]> = {};
       processItems.forEach(item => {
-        const proto = item.protocoloSIPAC as string;
+        const proto = normalizeProcessIdentifier(item.protocoloSIPAC || item.dadosSIPAC?.numeroProcesso);
+        if (!proto) return;
         if (!groups[proto]) groups[proto] = [];
-        groups[proto].push(item);
+        groups[proto].push({
+          ...item,
+          protocoloSIPAC: formatProcessIdentifier(item.protocoloSIPAC || item.dadosSIPAC?.numeroProcesso)
+        });
       });
       const result = Object.values(groups).map(items => {
         const first = items[0];
@@ -1499,23 +1653,24 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
       });
       return result.sort(sortFn);
     }
-  }, [processedData, dashboardView, searchTerm, selectedCategory, statusFilter, sortConfig]);
+  }, [processedData, dashboardView, searchTerm, selectedCategory, statusFilter, statusSourceData, sortConfig]);
 
   // Separate data for ProcessDashboard - includes ALL items for DFD analysis
   // Separate data for ProcessDashboard - includes ALL items for DFD analysis
   const processDashboardData = useMemo(() => {
     if (dashboardView !== 'status') return [];
     // Also apply a basic filter based on searchTerm to keep them somewhat in sync
-    if (!searchTerm) return processedData;
+    if (!searchTerm) return statusSourceData;
     const low = searchTerm.toLowerCase();
-    return processedData.filter(i =>
+    const lowProcess = normalizeProcessIdentifier(searchTerm);
+    return statusSourceData.filter(i =>
       i.titulo.toLowerCase().includes(low) ||
       i.area.toLowerCase().includes(low) ||
       (i.numeroDfd && i.numeroDfd.toLowerCase().includes(low)) ||
       (i.ifc && i.ifc.toLowerCase().includes(low)) ||
-      (i.protocoloSIPAC && i.protocoloSIPAC.toLowerCase().includes(low))
+      (i.protocoloSIPAC && (i.protocoloSIPAC.toLowerCase().includes(low) || normalizeProcessIdentifier(i.protocoloSIPAC).includes(lowProcess)))
     );
-  }, [processedData, dashboardView, searchTerm]);
+  }, [statusSourceData, dashboardView, searchTerm]);
 
   const pagedData = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -1562,7 +1717,7 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
                 {Object.keys(config?.pcaYearsMap || PCA_YEARS_MAP).sort((a, b) => b.localeCompare(a)).map(year => (<option key={year} value={year}>{year}</option>))}
               </select>
             </div>
-            <button onClick={() => fetchData(selectedYear, true)} disabled={isSyncing} className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl transition-all border border-blue-200 cursor-pointer disabled:opacity-50"><RefreshCw size={18} className={isSyncing ? 'animate-spin' : ''} /></button>
+            <button onClick={handleRefreshByContext} disabled={isSyncing} className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl transition-all border border-blue-200 cursor-pointer disabled:opacity-50"><RefreshCw size={18} className={isSyncing ? 'animate-spin' : ''} /></button>
             <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 px-3 py-2 bg-slate-50 hover:bg-ifes-green/10 text-slate-600 hover:text-ifes-green rounded-xl transition-all font-bold text-xs border border-slate-100 hover:border-ifes-green/20 cursor-pointer"><LayoutDashboard size={18} /><span className="hidden md:inline">Menu Princ.</span></button>
           </div>
         </div>
@@ -1579,17 +1734,25 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
               <p className="text-xs font-medium text-slate-500">
                 {dashboardView === 'planning'
                   ? 'Controle do PCA com filtro de ano e sincronizacao dentro do modulo.'
-                  : 'Acompanhamento de processos SIPAC com filtro de ano e sincronizacao.'}
+                  : 'Painel rapido com processos indexados. A sincronizacao pesada do SIPAC fica no modulo Extrator SIPAC.'}
               </p>
             </div>
             <div className="flex items-center gap-3">
               <select value={selectedYear} onChange={(e) => { setSelectedYear(e.target.value); setCurrentPage(1); }} className="bg-ifes-green/5 text-ifes-green border border-ifes-green/20 rounded-xl px-3 py-2 text-sm font-black outline-none focus:ring-2 focus:ring-ifes-green/40 transition-all cursor-pointer">
                 {Object.keys(config?.pcaYearsMap || PCA_YEARS_MAP).sort((a, b) => b.localeCompare(a)).map(year => (<option key={year} value={year}>{year}</option>))}
               </select>
-              <button onClick={() => fetchData(selectedYear, true)} disabled={isSyncing} className="flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl transition-all border border-blue-200 cursor-pointer disabled:opacity-50">
+              <button onClick={handleRefreshByContext} disabled={isSyncing} className="flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl transition-all border border-blue-200 cursor-pointer disabled:opacity-50">
                 <RefreshCw size={16} className={isSyncing ? 'animate-spin' : ''} />
-                <span className="text-xs font-black uppercase tracking-wide">Atualizar</span>
+                <span className="text-xs font-black uppercase tracking-wide">
+                  {dashboardView === 'planning' ? 'Atualizar' : 'Recarregar indice'}
+                </span>
               </button>
+              {dashboardView === 'status' && (
+                <button onClick={() => navigate('/extrator-sipac')} className="flex items-center gap-2 px-4 py-2 bg-ifes-green/10 hover:bg-ifes-green/15 text-ifes-green rounded-xl transition-all border border-ifes-green/20 cursor-pointer">
+                  <ExternalLink size={16} />
+                  <span className="text-xs font-black uppercase tracking-wide">Extrator SIPAC</span>
+                </button>
+              )}
             </div>
           </section>
         )}
@@ -1760,7 +1923,7 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
                   {dashboardView === 'planning' ? 'Detalhamento do Plano (PNCP)' : 'Processos em Andamento'}
                 </h2>
                 <p className={`text-[10px] font-bold ${dashboardView === 'planning' ? 'text-slate-400' : 'text-blue-400'} uppercase tracking-widest mt-1 italic`}>
-                  {dashboardView === 'planning' ? `Lista completa de itens importados do PNCP - Ano ${selectedYear}` : 'Listagem de processos com protocolo SIPAC vinculado'}
+                  {dashboardView === 'planning' ? `Lista completa de itens importados do PNCP - Ano ${selectedYear}` : 'Listagem indexada de processos vinculados ou identificados'}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
@@ -1777,7 +1940,7 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
                   <input
                     type="text"
-                    placeholder="Buscar por descrição ou área..."
+                    placeholder={dashboardView === 'planning' ? 'Buscar por descricao ou area...' : 'Buscar por processo, objeto SIPAC ou area...'}
                     className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-[11px] font-bold outline-none focus:ring-2 focus:ring-ifes-green/20 transition-all"
                     value={searchTerm}
                     onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
@@ -2027,7 +2190,25 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
                       <h2 className="text-base font-black text-slate-800 tracking-tight leading-tight uppercase" title={viewingItem.dadosSIPAC.assuntoDetalhado || viewingItem.dadosSIPAC.assuntoDescricao}>
                         {viewingItem.dadosSIPAC.assuntoDetalhado || viewingItem.dadosSIPAC.assuntoDescricao}
                       </h2>
-                      <div className="flex items-center gap-0.5 shrink-0">
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          onClick={() => handleUpdateSIPACItem(viewingItem, true)}
+                          disabled={isFetchingSIPAC}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-all text-[10px] font-black uppercase tracking-wide disabled:opacity-50"
+                          title="Atualizar este processo no SIPAC"
+                        >
+                          <RefreshCw size={12} className={isFetchingSIPAC ? 'animate-spin' : ''} />
+                          <span>{isFetchingSIPAC ? 'Atualizando...' : 'Atualizar SIPAC'}</span>
+                        </button>
+                        <button
+                          onClick={handleExportProcessDossier}
+                          disabled={isExportingDossier || (viewingItem.dadosSIPAC.documentos || []).length === 0}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 border border-indigo-600 transition-all text-[10px] font-black uppercase tracking-wide disabled:opacity-50"
+                          title="Baixar dossie Gemini deste processo"
+                        >
+                          {isExportingDossier ? <RefreshCw size={12} className="animate-spin" /> : <Download size={12} />}
+                          <span>{isExportingDossier ? 'Gerando...' : 'Dossie Gemini'}</span>
+                        </button>
                         {(viewingItem.dadosSIPAC as any).id && (
                           <a
                             href={`https://sipac.ifes.edu.br/public/jsp/processos/processo_detalhado.jsf?id=${(viewingItem.dadosSIPAC as any).id}`}
@@ -2130,11 +2311,12 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
                         ${activeTab === 'planning' ? 'border-ifes-green text-ifes-green' : 'border-transparent text-slate-400 hover:text-slate-600'}
                       `}
                 >
-                  <LayoutDashboard size={14} /> Dados PCA
+                  <LayoutDashboard size={14} /> Visao Geral
                 </button>
 
                 <button
                   onClick={() => setActiveTab('users')}
+                  style={{ display: 'none' }}
                   className={`flex items-center gap-2 py-4 border-b-2 text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap
                         ${activeTab === 'users' ? 'border-violet-500 text-violet-600' : 'border-transparent text-slate-400 hover:text-slate-600'}
                       `}
@@ -2144,6 +2326,7 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
 
                 <button
                   onClick={() => setActiveTab('checklist')}
+                  style={{ display: 'none' }}
                   className={`flex items-center gap-2 py-4 border-b-2 text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap
                         ${activeTab === 'checklist' ? 'border-teal-500 text-teal-600' : 'border-transparent text-slate-400 hover:text-slate-600'}
                       `}
@@ -2157,7 +2340,7 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
                         ${activeTab === 'documents' ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600'}
                       `}
                 >
-                  <FileText size={14} /> Documentos & Atas
+                  <FileText size={14} /> Documentos
                   <span className={`px-1.5 py-0.5 rounded-md text-[9px] ${activeTab === 'documents' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>
                     {(viewingItem.dadosSIPAC.documentos || []).length}
                   </span>
@@ -2169,7 +2352,7 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
                         ${activeTab === 'history' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'}
                       `}
                 >
-                  <History size={14} /> Histórico de Tramitação
+                  <History size={14} /> Movimentacoes
                   <span className={`px-1.5 py-0.5 rounded-md text-[9px] ${activeTab === 'history' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'}`}>
                     {(viewingItem.dadosSIPAC.movimentacoes || []).length}
                   </span>
@@ -2187,6 +2370,7 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
                 {!isLoadingPncp && pncpMatch && (
                   <button
                     onClick={() => setActiveTab('pncp')}
+                    style={{ display: 'none' }}
                     className={`flex items-center gap-2 py-4 border-b-2 text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap
                          ${activeTab === 'pncp' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-400 hover:text-slate-600'}
                        `}
@@ -2199,13 +2383,14 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
                 )}
 
                 {isLoadingPncp && (
-                  <div className="flex items-center gap-2 py-4 text-xs font-black text-slate-300 uppercase tracking-wide">
+                  <div style={{ display: 'none' }} className="flex items-center gap-2 py-4 text-xs font-black text-slate-300 uppercase tracking-wide">
                     <RefreshCw size={14} className="animate-spin" /> Consultando PNCP...
                   </div>
                 )}
 
                 <button
                   onClick={() => setActiveTab('financial')}
+                  style={{ display: 'none' }}
                   className={`flex items-center gap-2 py-4 border-b-2 text-xs font-black uppercase tracking-wide transition-all whitespace-nowrap
                          ${activeTab === 'financial' ? 'border-amber-500 text-amber-600' : 'border-transparent text-slate-400 hover:text-slate-600'}
                        `}

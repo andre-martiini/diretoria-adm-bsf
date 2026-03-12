@@ -15,11 +15,49 @@ export interface SIPACDocument {
 
 export type FinancialEventType = 'EMPENHO' | 'LIQUIDACAO' | 'PAGAMENTO' | 'ANULACAO';
 
+export type ExecutionLinkStatusCode =
+  | 'PROCESSO_VINCULADO'
+  | 'PROCESSO_DISPONIVEL'
+  | 'NAO_VINCULADO';
+
 export interface FinancialEvent {
   value: number;
   date: string;
   type: FinancialEventType;
   documentTitle: string;
+}
+
+export type GovProcessIdentificationCode =
+  | 'NAO_IDENTIFICADO'
+  | 'CONTRATACAO_IDENTIFICADA'
+  | 'INSTRUMENTO_IDENTIFICADO'
+  | 'CONTRATACAO_E_INSTRUMENTO_IDENTIFICADOS';
+
+export interface GovProcessRegistryEntry {
+  numeroProcesso: string;
+  processKey: string;
+  identificationStatusCode: GovProcessIdentificationCode;
+  identificationStatusLabel: string;
+  procurementCount: number;
+  instrumentCount: number;
+  procurementRecords: Array<{
+    snapshotYear: string | null;
+    modalidade: string | null;
+    identificacaoContratacao: string | null;
+    situacaoCompra: string | null;
+    statusHomologacao: 'HOMOLOGADO' | 'NAO_HOMOLOGADO' | null;
+  }>;
+  instrumentRecords: Array<{
+    snapshotYear: string | null;
+    tipoInstrumento: string | null;
+    numeroInstrumento: string | null;
+    identificacaoContratacao: string | null;
+    statusVigencia: string | null;
+  }>;
+  executionLinked: boolean;
+  executionLinkStatusCode: ExecutionLinkStatusCode;
+  executionLinkStatusLabel: string;
+  executionLinkedProtocol: string | null;
 }
 
 export interface SIPACMovement {
@@ -126,6 +164,9 @@ export interface ContractItem {
   equipeIdentificada?: boolean;
   valorEstimadoPesquisa?: number | null;
   valorEstimadoIdentificado?: boolean;
+  govProcessStatusCode?: GovProcessIdentificationCode | null;
+  govProcessStatusLabel?: string | null;
+  govProcessMatch?: GovProcessRegistryEntry | null;
 }
 
 export interface PCAMetadata {
@@ -249,6 +290,7 @@ export interface SIPACProcess {
   checklistMode?: 'standard' | 'arp' | 'irp';
   checklistAiAnalyses?: Record<string, DocumentChecklistAIAnalysis>;
   isARP?: boolean;
+  summaryOnly?: boolean;
 }
 
 export interface ProcessoAquisicao {

@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "extractedAt": "2026-03-12T15:37:22.971Z",
+    "extractedAt": "2026-03-12T20:29:59.880Z",
     "cnpj": "10838653000106",
     "year": "2026",
     "totalPurchases": 4,
@@ -8,7 +8,6 @@
   },
   "data": [
     {
-      "tipoInstrumentoConvocatorioCodigo": 1,
       "dataAtualizacao": "2026-01-20T07:01:53",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
@@ -50,9 +49,10 @@
       "linkProcessoEletronico": null,
       "numeroControlePNCP": "10838653000106-1-000013/2026",
       "modoDisputaId": 1,
-      "valorTotalEstimado": 548170.2,
       "modalidadeNome": "Pregão - Eletrônico",
+      "valorTotalEstimado": 548170.2,
       "modoDisputaNome": "Aberto",
+      "tipoInstrumentoConvocatorioCodigo": 1,
       "tipoInstrumentoConvocatorioNome": "Edital",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
@@ -102,15 +102,15 @@
       "linkProcessoEletronico": "https://sipac.ifes.edu.br/public/jsp/processos/processo_detalhado.jsf?id=216464",
       "numeroControlePNCP": "10838653000106-1-000083/2026",
       "modoDisputaId": 5,
-      "tipoInstrumentoConvocatorioCodigo": 3,
-      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
-      "valorTotalEstimado": 9140,
-      "modalidadeNome": "Dispensa",
-      "modoDisputaNome": "Não se aplica",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
       "usuarioNome": "Compras.gov.br",
+      "valorTotalEstimado": 9140,
+      "modalidadeNome": "Dispensa",
+      "modoDisputaNome": "Não se aplica",
+      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
+      "tipoInstrumentoConvocatorioCodigo": 3,
       "itens": []
     },
     {
@@ -155,15 +155,15 @@
       "linkProcessoEletronico": "https://sipac.ifes.edu.br/public/jsp/processos/processo_detalhado.jsf?id=215345",
       "numeroControlePNCP": "10838653000106-1-000097/2026",
       "modoDisputaId": 5,
-      "tipoInstrumentoConvocatorioCodigo": 3,
-      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
-      "valorTotalEstimado": 3400.75,
-      "modalidadeNome": "Dispensa",
-      "modoDisputaNome": "Não se aplica",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
       "usuarioNome": "Compras.gov.br",
+      "valorTotalEstimado": 3400.75,
+      "modalidadeNome": "Dispensa",
+      "modoDisputaNome": "Não se aplica",
+      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
+      "tipoInstrumentoConvocatorioCodigo": 3,
       "itens": []
     },
     {
@@ -208,15 +208,15 @@
       "linkProcessoEletronico": "https://sipac.ifes.edu.br/public/jsp/processos/processo_detalhado.jsf?id=209817",
       "numeroControlePNCP": "10838653000106-1-000118/2026",
       "modoDisputaId": 5,
-      "tipoInstrumentoConvocatorioCodigo": 3,
-      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
-      "valorTotalEstimado": 1239.9,
-      "modalidadeNome": "Dispensa",
-      "modoDisputaNome": "Não se aplica",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
       "usuarioNome": "Compras.gov.br",
+      "valorTotalEstimado": 1239.9,
+      "modalidadeNome": "Dispensa",
+      "modoDisputaNome": "Não se aplica",
+      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
+      "tipoInstrumentoConvocatorioCodigo": 3,
       "itens": []
     }
   ]

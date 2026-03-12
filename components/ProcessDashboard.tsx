@@ -61,6 +61,7 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
     const [searchTerm, setSearchTerm] = useState('');
     const [sortConfig, setSortConfig] = useState<{ key: keyof ContractItem, direction: 'asc' | 'desc' }>({ key: 'valor', direction: 'desc' });
     const itemsPerPage = 10;
+    const normalizeProcessIdentifier = (value: string | undefined | null) => String(value || '').replace(/\D/g, '');
 
     useEffect(() => {
         setIsMounted(true);
@@ -218,7 +219,7 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
     const uniqueProcesses = useMemo(() => {
         const processMap = new Map<string, ContractItem[]>();
         processItems.forEach(item => {
-            const protocol = item.protocoloSIPAC!;
+            const protocol = normalizeProcessIdentifier(item.protocoloSIPAC) || item.protocoloSIPAC!;
             if (!processMap.has(protocol)) {
                 processMap.set(protocol, []);
             }
@@ -276,10 +277,16 @@ const ProcessDashboard: React.FC<ProcessDashboardProps> = ({ data, showGraphs = 
     }, [uniqueProcesses]);
 
     const STATUS_COLORS: Record<string, string> = {
+        'Planejamento da Contratacao': '#3b82f6',
         'Planejamento da Contratação': '#3b82f6',
+        'Composicao de Precos': '#6366f1',
         'Composição de Preços': '#6366f1',
+        'Analise de Legalidade': '#f59e0b',
         'Análise de Legalidade': '#f59e0b',
+        'Aguardando Sincronizacao SIPAC': '#0ea5e9',
+        'Sincronizacao Parcial': '#06b6d4',
         'Fase Externa': '#10b981',
+        'Licitacao Suspensa/Sob Analise': '#ef4444',
         'Licitação Suspensa/Sob Análise': '#ef4444',
         'Adjudicado/Homologado': '#8b5cf6',
         'Contratado': '#047857',

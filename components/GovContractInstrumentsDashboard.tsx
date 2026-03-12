@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft, ExternalLink, FileText, RefreshCw, Search, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ExternalLink, FileText, Search, X } from 'lucide-react';
 import logoIfes from '../logo-ifes.png';
 import { fetchSystemConfig } from '../services/configService';
 import { SystemConfig } from '../types';
@@ -10,8 +10,7 @@ import {
   fetchGovContractInstrumentsVigentes,
   GovContractInstrumentDetailResponse,
   GovContractInstrumentRecord,
-  GovContractInstrumentResponse,
-  triggerGovContractsSync
+  GovContractInstrumentResponse
 } from '../services/govIntegrationService';
 import { formatCurrency, formatDate } from '../utils/formatters';
 
@@ -47,6 +46,13 @@ const STATUS_STYLES: Record<string, string> = {
 
 const currentYear = String(new Date().getFullYear());
 
+const normalizeSearchValue = (value: string | null | undefined): string =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
 const parseDateValue = (value: string | null | undefined, endOfDay: boolean = false): Date | null => {
   if (!value) return null;
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
@@ -81,6 +87,12 @@ const getRemainingStyle = (daysRemaining: number | null): string => {
   return 'bg-emerald-50 text-emerald-700 border-emerald-200';
 };
 
+const getExecutionLinkBadgeClass = (statusCode?: 'PROCESSO_VINCULADO' | 'PROCESSO_DISPONIVEL' | 'NAO_VINCULADO') => {
+  if (statusCode === 'PROCESSO_VINCULADO') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+  if (statusCode === 'PROCESSO_DISPONIVEL') return 'bg-blue-50 text-blue-700 border-blue-200';
+  return 'bg-slate-100 text-slate-600 border-slate-200';
+};
+
 const GovContractInstrumentsDashboard: React.FC<GovContractInstrumentsDashboardProps> = ({ embedded = false }) => {
   const navigate = useNavigate();
   const [config, setConfig] = useState<SystemConfig | null>(null);
@@ -91,7 +103,6 @@ const GovContractInstrumentsDashboard: React.FC<GovContractInstrumentsDashboardP
   const [selectedStatus, setSelectedStatus] = useState<StatusFilterType>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
-  const [syncing, setSyncing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [historicalPayload, setHistoricalPayload] = useState<GovContractInstrumentResponse | null>(null);
   const [activePayload, setActivePayload] = useState<GovContractInstrumentResponse | null>(null);
@@ -115,11 +126,11 @@ const GovContractInstrumentsDashboard: React.FC<GovContractInstrumentsDashboardP
     return Array.from(years).sort((a, b) => Number(b) - Number(a));
   }, [config]);
 
-  const loadHistoricalData = useCallback(async (forceSync: boolean = false) => {
+  const loadHistoricalData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await fetchGovContractInstruments(selectedYear, forceSync);
+      const result = await fetchGovContractInstruments(selectedYear, false);
       setHistoricalPayload(result);
     } catch (err: any) {
       setError(err?.response?.data?.error || err?.message || 'Falha ao carregar dados.');
@@ -130,14 +141,14 @@ const GovContractInstrumentsDashboard: React.FC<GovContractInstrumentsDashboardP
   }, [selectedYear]);
 
   useEffect(() => {
-    loadHistoricalData(false);
+    loadHistoricalData();
   }, [loadHistoricalData]);
 
-  const loadActiveData = useCallback(async (forceSync: boolean = false) => {
+  const loadActiveData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await fetchGovContractInstrumentsVigentes(forceSync);
+      const result = await fetchGovContractInstrumentsVigentes(false);
       setActivePayload(result);
     } catch (err: any) {
       setError(err?.response?.data?.error || err?.message || 'Falha ao carregar dados.');
@@ -148,7 +159,7 @@ const GovContractInstrumentsDashboard: React.FC<GovContractInstrumentsDashboardP
   }, []);
 
   useEffect(() => {
-    loadActiveData(false);
+    loadActiveData();
   }, [loadActiveData]);
 
   useEffect(() => {
@@ -160,7 +171,7 @@ const GovContractInstrumentsDashboard: React.FC<GovContractInstrumentsDashboardP
 
   const filteredData = useMemo(() => {
     const source = activeTab === 'vigentes' ? (activePayload?.data || []) : (historicalPayload?.data || []);
-    const normalized = searchTerm.trim().toLowerCase();
+    const normalized = normalizeSearchValue(searchTerm);
 
     return source.filter((item) => {
       if (selectedType !== 'all' && item.tipoInstrumentoCodigo !== selectedType) return false;
@@ -168,11 +179,11 @@ const GovContractInstrumentsDashboard: React.FC<GovContractInstrumentsDashboardP
       if (!normalized) return true;
 
       return (
-        (item.numeroInstrumento || '').toLowerCase().includes(normalized) ||
-        (item.identificacaoContratacao || '').toLowerCase().includes(normalized) ||
-        (item.empresa || '').toLowerCase().includes(normalized) ||
-        item.numeroProcesso.toLowerCase().includes(normalized) ||
-        item.objeto.toLowerCase().includes(normalized)
+        normalizeSearchValue(item.numeroInstrumento).includes(normalized) ||
+        normalizeSearchValue(item.identificacaoContratacao).includes(normalized) ||
+        normalizeSearchValue(item.empresa).includes(normalized) ||
+        normalizeSearchValue(item.numeroProcesso).includes(normalized) ||
+        normalizeSearchValue(item.objeto).includes(normalized)
       );
     });
   }, [activePayload, activeTab, historicalPayload, searchTerm, selectedStatus, selectedType]);
@@ -200,26 +211,6 @@ const GovContractInstrumentsDashboard: React.FC<GovContractInstrumentsDashboardP
       })
       .slice(0, 8);
   }, [activePayload]);
-
-  const handleSync = async () => {
-    setSyncing(true);
-    try {
-      if (activeTab === 'vigentes' || selectedYear === currentYear) {
-        await triggerGovContractsSync();
-        await Promise.all([
-          loadActiveData(false),
-          loadHistoricalData(false)
-        ]);
-      } else {
-        await Promise.all([
-          loadHistoricalData(true),
-          loadActiveData(false)
-        ]);
-      }
-    } finally {
-      setSyncing(false);
-    }
-  };
 
   const handleOpenDetail = async (record: GovContractInstrumentRecord) => {
     setSelectedRecord(record);
@@ -393,18 +384,6 @@ const GovContractInstrumentsDashboard: React.FC<GovContractInstrumentsDashboardP
             )}
           </div>
 
-          <button
-            onClick={handleSync}
-            disabled={syncing || loading}
-            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-black uppercase tracking-wide bg-ifes-green text-white disabled:opacity-50 cursor-pointer"
-          >
-            <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
-            {activeTab === 'vigentes'
-              ? 'Atualizar Painel de Vigencias'
-              : selectedYear === currentYear
-                ? 'Sincronizar Ano Atual'
-                : 'Atualizar Snapshot do Ano'}
-          </button>
         </section>
 
         <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -467,6 +446,11 @@ const GovContractInstrumentsDashboard: React.FC<GovContractInstrumentsDashboardP
                   <div>
                     <p className="text-xs font-bold text-slate-700 line-clamp-2">{item.empresa || 'Empresa nao identificada'}</p>
                     <p className="text-[11px] text-slate-500 line-clamp-3 mt-1">{item.objeto}</p>
+                    <div className="mt-2">
+                      <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide border ${getExecutionLinkBadgeClass(item.executionLinkStatusCode)}`}>
+                        {item.executionLinkStatusLabel || 'Nao vinculado'}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 pt-1">
@@ -519,13 +503,14 @@ const GovContractInstrumentsDashboard: React.FC<GovContractInstrumentsDashboardP
             <div className="p-8 text-center text-sm font-bold text-slate-500">Nenhum registro encontrado.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1220px] text-left">
+              <table className="w-full min-w-[1360px] text-left">
                 <thead className="bg-slate-50">
                   <tr>
                     <th className="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Situacao</th>
                     <th className="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Tipo</th>
                     <th className="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Instrumento</th>
                     <th className="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Empresa</th>
+                    <th className="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Vinculo Execucao</th>
                     <th className="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Objeto</th>
                     <th className="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider text-right">Valor Global</th>
                     <th className="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Vigencia</th>
@@ -554,6 +539,11 @@ const GovContractInstrumentsDashboard: React.FC<GovContractInstrumentsDashboardP
                       </td>
                       <td className="px-5 py-4 text-sm font-semibold text-slate-600 max-w-[260px]">
                         <div className="line-clamp-2">{item.empresa || '-'}</div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className={`inline-flex px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wide border ${getExecutionLinkBadgeClass(item.executionLinkStatusCode)}`}>
+                          {item.executionLinkStatusLabel || 'Nao vinculado'}
+                        </span>
                       </td>
                       <td className="px-5 py-4 text-sm text-slate-600 max-w-[520px]">
                         <div className="line-clamp-2">{item.objeto}</div>
@@ -605,6 +595,7 @@ const GovContractInstrumentsDashboard: React.FC<GovContractInstrumentsDashboardP
                     <p className="text-sm"><span className="font-bold text-slate-700">Situacao:</span> {detailData.statusVigencia || '-'}</p>
                     <p className="text-sm"><span className="font-bold text-slate-700">Numero do instrumento:</span> {detailData.numeroInstrumento || '-'}</p>
                     <p className="text-sm"><span className="font-bold text-slate-700">Contratacao originaria:</span> {detailData.identificacaoContratacao || '-'}</p>
+                    <p className="text-sm"><span className="font-bold text-slate-700">Vinculo Execucao:</span> {detailData.executionLinkStatusLabel || 'Nao vinculado'}</p>
                     <p className="text-sm"><span className="font-bold text-slate-700">Processo:</span> {detailData.numeroProcesso || '-'}</p>
                     <p className="text-sm"><span className="font-bold text-slate-700">Controle PNCP:</span> {detailData.numeroControlePNCP || '-'}</p>
                   </section>
