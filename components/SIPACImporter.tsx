@@ -19,7 +19,11 @@ import {
     RefreshCw,
     ExternalLink,
     ChevronRight,
-    Download
+    Download,
+    CheckCircle2,
+    Zap,
+    Terminal,
+    FileSearch
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import logoIfes from '../logo-ifes.png';
@@ -34,6 +38,13 @@ export const SIPACImporter: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [config, setConfig] = useState<SystemConfig | null>(null);
     const [isExporting, setIsExporting] = useState(false);
+    const [exportProgress, setExportProgress] = useState<{
+        done: number;
+        total: number;
+        status: string;
+        logs: { type: 'cache' | 'scrape' | 'error' | 'info'; msg: string }[];
+    }>({ done: 0, total: 0, status: 'idle', logs: [] });
+    const [showExportModal, setShowExportModal] = useState(false);
 
     useEffect(() => {
         const initConfig = async () => {
@@ -84,10 +95,87 @@ export const SIPACImporter: React.FC = () => {
 
     const handleExportZip = async () => {
         if (!data) return;
+        
+        setExportProgress({ 
+            done: 0, 
+            total: data.documentos?.length || 0, 
+            status: 'preparing', 
+            logs: [{ type: 'info', msg: 'Iniciando construção do dossiê digital...' }] 
+        });
+        setShowExportModal(true);
         setIsExporting(true);
+
         try {
             const documentos = Array.isArray(data.documentos) ? data.documentos : [];
-            const response = await fetch(`${DOSSIER_EXPORT_API_URL}/api/sipac/processo/exportar-gemini`, {
+            const queryParams = new URLSearchParams({
+                protocolo: data.numeroProcesso,
+                documentos: JSON.stringify(documentos.map(d => ({ 
+                    url: d.url, 
+                    ordem: d.ordem, 
+                    tipo: d.tipo,
+                    data: d.data,
+                    unidadeOrigem: d.unidadeOrigem
+                })))
+            });
+
+            const eventSource = new EventSource(`${API_SERVER_URL}/api/sipac/processo/exportar-gemini/progresso?${queryParams.toString()}`);
+
+            eventSource.onmessage = (event) => {
+                const update = JSON.parse(event.data);
+                
+                if (update.status === 'processing') {
+                    setExportProgress(prev => {
+                        const newLogs = [...prev.logs];
+                        update.lastResults.forEach((res: any) => {
+                            if (res.status === 'OK') {
+                                newLogs.push({ 
+                                    type: res.fromCache ? 'cache' : 'scrape', 
+                                    msg: `${res.fromCache ? '[CACHE]' : '[EXTRAÇÃO]'} #${res.ordem} - ${res.tipo} (${res.chars} chars)` 
+                                });
+                            } else {
+                                newLogs.push({ type: 'error', msg: `[ERRO] Doc #${res.ordem}: ${res.erro}` });
+                            }
+                        });
+                        return {
+                            ...prev,
+                            done: update.done,
+                            logs: newLogs.slice(-6)
+                        };
+                    });
+                } else if (update.status === 'complete') {
+                    eventSource.close();
+                    finalizeZipDownload();
+                } else if (update.status === 'error') {
+                    eventSource.close();
+                    alert('Erro no processamento: ' + update.message);
+                    setShowExportModal(false);
+                    setIsExporting(false);
+                }
+            };
+
+            eventSource.onerror = () => {
+                eventSource.close();
+                setIsExporting(false);
+            };
+
+        } catch (err: any) {
+            alert('Erro ao exportar: ' + err.message);
+            setIsExporting(false);
+            setShowExportModal(false);
+        }
+    };
+
+    const finalizeZipDownload = async () => {
+        if (!data) return;
+        setExportProgress(prev => ({ 
+            ...prev, 
+            status: 'zipping', 
+            logs: [...prev.logs, { type: 'info', msg: '🔥 Todos os docs prontos! Compactando em ZIP...' }] 
+        }));
+
+        try {
+            const documentos = Array.isArray(data.documentos) ? data.documentos : [];
+            const response = await fetch(`${API_SERVER_URL}/api/sipac/processo/exportar-gemini`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -96,7 +184,7 @@ export const SIPACImporter: React.FC = () => {
                 })
             });
 
-            if (!response.ok) throw new Error('Falha na geração do dossiê.');
+            if (!response.ok) throw new Error('Falha na geração do arquivo compactado.');
 
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
@@ -107,10 +195,22 @@ export const SIPACImporter: React.FC = () => {
             a.click();
             a.remove();
             window.URL.revokeObjectURL(url);
+            
+            setExportProgress(prev => ({ 
+                ...prev, 
+                status: 'done', 
+                logs: [...prev.logs, { type: 'info', msg: '🎉 Dossiê finalizado e baixado com sucesso!' }] 
+            }));
+
+            setTimeout(() => {
+                setShowExportModal(false);
+                setIsExporting(false);
+            }, 3000);
+
         } catch (err: any) {
-            alert('Erro ao exportar: ' + err.message);
-        } finally {
+            alert('Erro no download final: ' + err.message);
             setIsExporting(false);
+            setShowExportModal(false);
         }
     };
 
@@ -408,6 +508,99 @@ export const SIPACImporter: React.FC = () => {
                         </motion.div>
                     )}
                 </AnimatePresence>
+
+                {/* Dossier Builder Modal */}
+                <AnimatePresence>
+                    {showExportModal && (
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xl"
+                        >
+                            <motion.div 
+                                initial={{ scale: 0.9, y: 20 }}
+                                animate={{ scale: 1, y: 0 }}
+                                className="bg-white rounded-[2.5rem] shadow-2xl border border-white/40 max-w-lg w-full overflow-hidden"
+                            >
+                                <div className="p-8 space-y-8">
+                                    <div className="text-center space-y-2">
+                                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-indigo-50 text-indigo-600 mb-2">
+                                            {exportProgress.status === 'done' ? (
+                                                <CheckCircle2 className="w-8 h-8 animate-bounce" />
+                                            ) : (
+                                                <Zap className="w-8 h-8 animate-pulse" />
+                                            )}
+                                        </div>
+                                        <h3 className="text-2xl font-black text-slate-900">Construindo Dossiê</h3>
+                                        <p className="text-slate-500 text-sm font-medium">Processando documentos e consolidando inteligência.</p>
+                                    </div>
+
+                                    {/* Progress Visual */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                            <span>Progresso Geral</span>
+                                            <span className="text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">{Math.round((exportProgress.done / (exportProgress.total || 1)) * 100)}%</span>
+                                        </div>
+                                        <div className="h-4 bg-slate-100 rounded-full overflow-hidden p-1 border border-slate-200">
+                                            <motion.div 
+                                                className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full"
+                                                initial={{ width: 0 }}
+                                                animate={{ width: `${(exportProgress.done / (exportProgress.total || 1)) * 100}%` }}
+                                            />
+                                        </div>
+                                        <div className="flex justify-between text-[9px] font-bold text-slate-400">
+                                            <span>{exportProgress.done} de {exportProgress.total} documentos</span>
+                                            <span className="italic">{(exportProgress.total - exportProgress.done)} restantes</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Live Terminal Log */}
+                                    <div className="bg-slate-900 rounded-2xl p-4 font-mono text-[10px] space-y-2 border border-slate-800 shadow-inner min-h-[140px]">
+                                        <div className="flex items-center gap-2 text-slate-500 mb-2 border-b border-slate-800 pb-2">
+                                            <Terminal size={12} />
+                                            <span className="uppercase tracking-tighter">Status de Execução</span>
+                                        </div>
+                                        {exportProgress.logs.map((log, i) => (
+                                            <motion.div 
+                                                key={i} 
+                                                initial={{ opacity: 0, x: -5 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                className={`flex gap-2 ${
+                                                    log.type === 'error' ? 'text-red-400' : 
+                                                    log.type === 'cache' ? 'text-emerald-400' : 
+                                                    log.type === 'scrape' ? 'text-sky-400' : 'text-slate-300'
+                                                }`}
+                                            >
+                                                <span className="shrink-0 text-slate-600">[{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}]</span>
+                                                <span className="line-clamp-1">{log.msg}</span>
+                                            </motion.div>
+                                        ))}
+                                        {exportProgress.status !== 'done' && (
+                                            <div className="flex gap-1 items-center">
+                                                <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-ping" />
+                                                <span className="text-slate-600 animate-pulse">Aguardando resposta do servidor...</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                
+                                {/* Footer hint */}
+                                <div className="bg-slate-50 px-8 py-4 border-t border-slate-100 flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-slate-400">
+                                        <FileSearch size={14} />
+                                        <span className="text-[10px] font-bold uppercase tracking-tight">Vantagem: Otimização de Cache Ativa</span>
+                                    </div>
+                                    <div className="flex gap-1 text-slate-300">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-current" />
+                                        <div className="w-1.5 h-1.5 rounded-full bg-current opacity-50" />
+                                        <div className="w-1.5 h-1.5 rounded-full bg-current opacity-20" />
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </main>
 
             {/* Premium Progress Bar */}
@@ -424,4 +617,3 @@ export const SIPACImporter: React.FC = () => {
         </div>
     );
 };
-

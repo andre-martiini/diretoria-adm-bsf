@@ -179,6 +179,60 @@ async function syncSingleDocumentOcr(cleanProtocol, doc) {
   }
 }
 
+/**
+ * Tenta obter o texto do documento do cache (Firestore) ou extrai se não existir.
+ * Centraliza a lógica para ser usada tanto em visualização individual quanto em exportação.
+ */
+async function getOrProcessDocumentOcr(protocol, doc) {
+  const cleanProtocol = String(protocol || '').replace(/[^\d]/g, '');
+  const docId = buildSipacDocumentId(doc);
+  const docRef = db_admin && cleanProtocol 
+    ? db_admin.collection('contratacoes').doc(cleanProtocol).collection('arquivos').doc(docId) 
+    : null;
+
+  if (docRef) {
+    try {
+      const snap = await docRef.get();
+      if (snap.exists) {
+        const data = snap.data();
+        if (data.ocrStatus === 'READY' && typeof data.ocrText === 'string' && data.ocrText.length > 30) {
+          return {
+            text: data.ocrText,
+            sourceKind: data.ocrSource || 'cache',
+            contentType: data.ocrContentType,
+            fileName: data.ocrFileName,
+            sizeBytes: data.ocrFileSizeBytes,
+            fileHash: data.ocrFileHash,
+            fromCache: true
+          };
+        }
+      }
+    } catch (e) {
+      console.warn(`[OCR CACHE] Erro ao ler cache para ${docId}:`, e.message);
+    }
+  }
+
+  // Se não houver cache ou falhar, extrai
+  const extraction = await extractDocumentText(doc.url);
+  
+  // Salva no cache background se tiver conteúdo
+  if (docRef && extraction.text && extraction.text.length > 30) {
+    docRef.set({
+      ocrStatus: 'READY',
+      ocrText: extraction.text,
+      ocrChars: extraction.text.length,
+      ocrSource: extraction.sourceKind,
+      ocrContentType: extraction.contentType,
+      ocrFileName: extraction.fileName,
+      ocrFileHash: extraction.fileHash,
+      ocrFileSizeBytes: extraction.sizeBytes,
+      ocrUpdatedAt: admin.firestore.FieldValue.serverTimestamp()
+    }, { merge: true }).catch(err => console.warn(`[OCR CACHE] Erro ao salvar cache background:`, err.message));
+  }
+
+  return { ...extraction, fromCache: false };
+}
+
 async function syncProcessDocumentsOCR(protocol, documentos) {
   if (!db_admin || !Array.isArray(documentos) || documentos.length === 0) return;
 
@@ -497,6 +551,7 @@ app.post('/api/sipac/processo/exportar-gemini', async (req, res) => {
   }
 
   const cleanProtocol = String(protocolo || 'processo_sem_numero').replace(/[^\w\d]/g, '_');
+  const firestoreProtocol = String(protocolo || '').replace(/[^\d]/g, '');
   const filename = `Dossie_${cleanProtocol}.zip`;
 
   // Configurar headers para download do ZIP
@@ -504,13 +559,11 @@ app.post('/api/sipac/processo/exportar-gemini', async (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
 
   const archive = archiver('zip', {
-    zlib: { level: 9 } // Nível máximo de compressão
+    zlib: { level: 9 }
   });
 
-  // Pipe do archive para a resposta
   archive.pipe(res);
 
-  // Tratamento de erro do archive
   archive.on('error', (err) => {
     console.error('[EXPORT ZIP ERROR]', err);
     if (!res.headersSent) {
@@ -520,14 +573,6 @@ app.post('/api/sipac/processo/exportar-gemini', async (req, res) => {
     }
   });
 
-  // Aviso de finalização (opcional)
-  archive.on('end', () => {
-    console.log(`[EXPORT ZIP] Arquivo ${filename} enviado com sucesso.`);
-  });
-
-  // Consolidar em 2 arquivos no ZIP:
-  // 1) dossie_consolidado.md (conteudo completo de todos os docs)
-  // 2) manifesto_dossie.json (metadados e status de extracao)
   const dossierStream = new PassThrough();
   archive.append(dossierStream, { name: 'dossie_consolidado.md' });
 
@@ -545,128 +590,147 @@ app.post('/api/sipac/processo/exportar-gemini', async (req, res) => {
   dossierStream.write(`Total de documentos informados: ${documentos.length}\n\n`);
   dossierStream.write(`Este arquivo consolida o conteudo de todos os documentos em um unico Markdown.\n\n`);
 
-  for (const doc of documentos) {
-    const safeOrdem = String(doc?.ordem || '00').padStart(2, '0');
-    const tipo = String(doc?.tipo || 'DOCUMENTO');
-    const data = String(doc?.data || '');
-    const origem = String(doc?.unidadeOrigem || '');
-    const url = String(doc?.url || '');
+  // Processamento em lotes (concorrência limitada)
+  const CONCURRENCY = 3;
+  for (let i = 0; i < documentos.length; i += CONCURRENCY) {
+    const chunk = documentos.slice(i, i + CONCURRENCY);
+    
+    console.log(`[EXPORT ZIP] Processando lote ${Math.floor(i/CONCURRENCY) + 1} (${chunk.length} documentos)...`);
+    
+    const chunkResults = await Promise.all(chunk.map(async (doc) => {
+      const safeOrdem = String(doc?.ordem || '00').padStart(2, '0');
+      const tipo = String(doc?.tipo || 'DOCUMENTO');
+      const docData = String(doc?.data || '');
+      const origem = String(doc?.unidadeOrigem || '');
+      const url = String(doc?.url || '');
 
-    dossierStream.write(`---\n`);
-    dossierStream.write(`## Documento ${safeOrdem} - ${tipo}\n\n`);
-    dossierStream.write(`- Ordem: ${String(doc?.ordem || '')}\n`);
-    dossierStream.write(`- Tipo: ${tipo}\n`);
-    dossierStream.write(`- Data: ${data}\n`);
-    dossierStream.write(`- Unidade de origem: ${origem}\n`);
-    dossierStream.write(`- URL: ${url || '(nao informada)'}\n`);
+      if (!url) {
+        return { doc, status: 'ERRO', erro: 'Documento sem URL para extracao.' };
+      }
 
-    if (!url) {
-      manifest.documentosComErro += 1;
-      manifest.documentos.push({
-        ordem: String(doc?.ordem || ''),
-        tipo,
-        data,
-        unidadeOrigem: origem,
-        url: '',
-        status: 'ERRO',
-        erro: 'Documento sem URL para extracao.'
-      });
-      dossierStream.write(`- Status: ERRO\n\n`);
-      dossierStream.write(`> Erro ao extrair: Documento sem URL para extracao.\n\n`);
-      continue;
-    }
+      try {
+        const extraction = await getOrProcessDocumentOcr(firestoreProtocol, doc);
+        return { doc, status: 'OK', extraction };
+      } catch (err) {
+        return { doc, status: 'ERRO', erro: err.message };
+      }
+    }));
 
-    try {
-      console.log(`[EXPORT ZIP] Processando doc ${safeOrdem} - ${tipo}`);
-      const extraction = await extractDocumentText(url);
-      const markdownContent = String(extraction.text || '(Conteudo vazio ou nao extraido)');
+    // Escrever os resultados do lote no stream (mantendo a ordem original do lote se possível, 
+    // mas aqui chunkResults segue a ordem do chunk mapeado)
+    for (const result of chunkResults) {
+      const { doc, status, extraction, erro } = result;
+      const safeOrdem = String(doc?.ordem || '00').padStart(2, '0');
+      const tipo = String(doc?.tipo || 'DOCUMENTO');
+      const url = String(doc?.url || '');
 
-      manifest.documentosComConteudo += 1;
-      manifest.documentos.push({
-        ordem: String(doc?.ordem || ''),
-        tipo,
-        data,
-        unidadeOrigem: origem,
-        url,
-        status: 'OK',
-        fonteExtracao: extraction.sourceKind,
-        contentType: extraction.contentType || '',
-        fileName: extraction.fileName || '',
-        sizeBytes: Number(extraction.sizeBytes || 0),
-        fileHash: extraction.fileHash || '',
-        charsExtraidos: markdownContent.length
-      });
+      dossierStream.write(`---\n`);
+      dossierStream.write(`## Documento ${safeOrdem} - ${tipo}\n\n`);
+      dossierStream.write(`- Ordem: ${String(doc?.ordem || '')}\n`);
+      dossierStream.write(`- Tipo: ${tipo}\n`);
+      dossierStream.write(`- Data: ${String(doc?.data || '')}\n`);
+      dossierStream.write(`- Unidade de origem: ${String(doc?.unidadeOrigem || '')}\n`);
+      dossierStream.write(`- URL: ${url}\n`);
 
-      dossierStream.write(`- Status: OK\n`);
-      dossierStream.write(`- Fonte da extracao: ${String(extraction.sourceKind || 'unknown')}\n`);
-      dossierStream.write(`- Nome do arquivo: ${String(extraction.fileName || '')}\n`);
-      dossierStream.write(`- Content-Type: ${String(extraction.contentType || '')}\n`);
-      dossierStream.write(`- Tamanho (bytes): ${Number(extraction.sizeBytes || 0)}\n`);
-      dossierStream.write(`- Hash: ${String(extraction.fileHash || '')}\n`);
-      dossierStream.write(`- Caracteres extraidos: ${markdownContent.length}\n\n`);
-      dossierStream.write(`${markdownContent}\n\n`);
-    } catch (error) {
-      const errorMessage = error?.message || String(error);
-      manifest.documentosComErro += 1;
-      manifest.documentos.push({
-        ordem: String(doc?.ordem || ''),
-        tipo,
-        data,
-        unidadeOrigem: origem,
-        url,
-        status: 'ERRO',
-        erro: errorMessage
-      });
-      console.error(`[EXPORT ZIP] Falha no doc ${doc?.ordem}:`, errorMessage);
-      dossierStream.write(`- Status: ERRO\n\n`);
-      dossierStream.write(`> Erro ao extrair documento: ${errorMessage}\n\n`);
+      if (status === 'OK') {
+        const markdownContent = String(extraction.text || '(Conteudo vazio ou nao extraido)');
+        manifest.documentosComConteudo += 1;
+        manifest.documentos.push({
+          ordem: String(doc?.ordem || ''),
+          tipo,
+          data: doc?.data,
+          unidadeOrigem: doc?.unidadeOrigem,
+          url,
+          status: 'OK',
+          fonteExtracao: extraction.sourceKind,
+          charsExtraidos: markdownContent.length,
+          fromCache: extraction.fromCache
+        });
+
+        dossierStream.write(`- Status: OK\n`);
+        dossierStream.write(`- Cache: ${extraction.fromCache ? 'SIM' : 'NAO'}\n`);
+        dossierStream.write(`- Caracteres extraidos: ${markdownContent.length}\n\n`);
+        dossierStream.write(`${markdownContent}\n\n`);
+      } else {
+        manifest.documentosComErro += 1;
+        manifest.documentos.push({
+          ordem: String(doc?.ordem || ''),
+          tipo,
+          data: doc?.data,
+          unidadeOrigem: doc?.unidadeOrigem,
+          url,
+          status: 'ERRO',
+          erro
+        });
+        dossierStream.write(`- Status: ERRO\n\n`);
+        dossierStream.write(`> Erro ao extrair documento: ${erro}\n\n`);
+      }
     }
   }
 
   dossierStream.end();
   archive.append(JSON.stringify(manifest, null, 2), { name: 'manifesto_dossie.json' });
   await archive.finalize();
-  return;
+});
 
-  // Iterar e processar documentos
-  for (const doc of documentos) {
-    if (!doc.url) continue;
+// Endpoint SSE para monitorar o progresso da extração antes do download do ZIP
+app.get('/api/sipac/processo/exportar-gemini/progresso', async (req, res) => {
+  const { protocolo, documentos: docsJson } = req.query;
+  
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
 
-    const safeOrdem = String(doc.ordem || '00').padStart(2, '0');
-    const safeTipo = String(doc.tipo || 'doc').replace(/[^\w\d\s-]/g, '').trim().replace(/\s+/g, '_');
-    const docFilename = `${safeOrdem}_${safeTipo}.md`;
+  const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
 
-    try {
-      console.log(`[EXPORT ZIP] Processando: ${docFilename}`);
+  try {
+    const documentos = JSON.parse(docsJson || '[]');
+    const firestoreProtocol = String(protocolo || '').replace(/[^\d]/g, '');
 
-      // Extrair texto (agora em Markdown via Turndown se for HTML)
-      const extraction = await extractDocumentText(doc.url);
-      const markdownContent = extraction.text || '(Conteúdo vazio ou não extraído)';
-
-      // Montar Frontmatter YAML
-      const yamlHeader = `---
-Processo: "${protocolo || ''}"
-Documento: "${doc.tipo || ''}"
-Ordem: "${doc.ordem || ''}"
-Data: "${doc.data || ''}"
-Origem: "${doc.unidadeOrigem || ''}"
-Fonte: "${extraction.sourceKind}"
----
-
-`;
-
-      // Adicionar arquivo ao ZIP
-      archive.append(yamlHeader + markdownContent, { name: docFilename });
-
-    } catch (error) {
-      console.error(`[EXPORT ZIP] Falha no doc ${doc.ordem}:`, error.message);
-      // Adicionar arquivo de erro para não quebrar o fluxo
-      archive.append(`Erro ao extrair documento: ${error.message}`, { name: `${safeOrdem}_ERRO.txt` });
+    if (!documentos.length) {
+      send({ status: 'error', message: 'Nenhum documento para processar.' });
+      return res.end();
     }
-  }
 
-  // Finalizar o ZIP
-  await archive.finalize();
+    send({ status: 'start', total: documentos.length });
+
+    const CONCURRENCY = 3;
+    let processedCount = 0;
+
+    for (let i = 0; i < documentos.length; i += CONCURRENCY) {
+      const chunk = documentos.slice(i, i + CONCURRENCY);
+      
+      const results = await Promise.all(chunk.map(async (doc) => {
+        try {
+          const extraction = await getOrProcessDocumentOcr(firestoreProtocol, doc);
+          return { 
+            ordem: doc.ordem, 
+            tipo: doc.tipo, 
+            status: 'OK', 
+            fromCache: extraction.fromCache,
+            chars: extraction.text?.length || 0
+          };
+        } catch (err) {
+          return { ordem: doc.ordem, tipo: doc.tipo, status: 'ERRO', erro: err.message };
+        }
+      }));
+
+      processedCount += chunk.length;
+      send({ 
+        status: 'processing', 
+        done: Math.min(processedCount, documentos.length), 
+        total: documentos.length,
+        lastResults: results
+      });
+    }
+
+    send({ status: 'complete', message: 'Todos os documentos foram preparados.' });
+  } catch (error) {
+    send({ status: 'error', message: error.message });
+  } finally {
+    res.end();
+  }
 });
 
 // PROXY Endpoint para PDF
