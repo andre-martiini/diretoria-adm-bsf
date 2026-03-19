@@ -139,6 +139,8 @@ export interface ContractItem {
   updatedAt?: any;
   ano?: string;
   isGroup?: boolean;
+  modalidade?: string;
+  codigoPdm?: string;
   childItems?: ContractItem[];
   identificadorFuturaContratacao?: string;
   computedStatus?: string;
