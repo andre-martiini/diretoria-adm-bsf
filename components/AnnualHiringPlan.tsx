@@ -39,7 +39,10 @@ import {
   Clock,
   MapPin,
   Calendar,
-  CheckSquare
+  CheckSquare,
+  Scale,
+  ScrollText,
+  CheckCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
@@ -123,6 +126,7 @@ interface AnnualHiringPlanProps {
   embedded?: boolean;
   initialDashboardView?: 'planning' | 'status';
   lockedDashboardView?: 'planning' | 'status';
+  view?: 'standard' | 'fractionation';
 }
 
 const normalizeProcessIdentifier = (value: string | undefined | null): string =>
@@ -164,7 +168,8 @@ const buildGovAutoExecutionTitle = (entry: GovProcessRegistryEntry): string => {
 const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
   embedded = false,
   initialDashboardView = 'planning',
-  lockedDashboardView
+  lockedDashboardView,
+  view = 'standard'
 }) => {
   const navigate = useNavigate();
   const [data, setData] = useState<ContractItem[]>([]);
@@ -246,6 +251,9 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
   const [isDocLoading, setIsDocLoading] = useState(false);
   const [isChartsVisible, setIsChartsVisible] = useState<boolean>(true);
+  const [activeFractionationCategory, setActiveFractionationCategory] = useState<Category>(Category.Bens);
+  const [expandedPdm, setExpandedPdm] = useState<string | null>(null);
+  const [fractionationSortConfig, setFractionationSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'totalDispensa', direction: 'desc' });
 
   // PNCP States
   const [pncpMatch, setPncpMatch] = useState<PNCPPurchase | null>(null);
@@ -1086,6 +1094,15 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
       else if (daysToStart < 60) risk = 'Médio';
 
       const computedStatus = getProcessStatus(item);
+      const mod = item.modalidade || item.dadosExecucao?.modalidadeNome || item.area || '';
+      
+      const fractionationRisk = FractionationControlService.calculateFractionation(
+        data,
+        item.codigoPdm || item.codigoItem || item.categoria || '',
+        item.categoria === Category.Obras,
+        0, // Item is already in the list, so it is counted in 'used'
+        mod
+      );
 
       let computedSituation = 'Previsto';
       if (item.protocoloSIPAC) {
@@ -1096,9 +1113,86 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
         computedSituation = 'Previsto';
       }
 
-      return { ...item, riskStatus: risk, computedStatus, computedSituation };
+      return { ...item, riskStatus: risk, computedStatus, computedSituation, fractionationRisk };
     });
   }, [data]);
+  
+  const pdmGroups = useMemo(() => {
+    if (!processedData || processedData.length === 0) return [];
+    
+    const groups: Record<string, { 
+      pdm: string, 
+      items: any[], 
+      totalDispensa: number, 
+      totalPlan: number,
+      limit: number, 
+      category: string,
+      pdmDescricao?: string
+    }> = {};
+
+    const LEGAL_LIMIT_OBRAS = 130984.20;
+    const LEGAL_LIMIT_OUTROS = 65492.11;
+
+    processedData.forEach(item => {
+      // Usar pdmCodigo como chave, mas garantir que PDMs diferentes no mesmo Category não se misturem
+      const pdmKey = String(item.codigoPdm || item.classificacaoSuperiorCodigo || item.id);
+      if (!groups[pdmKey]) {
+        groups[pdmKey] = {
+          pdm: pdmKey,
+          items: [],
+          totalDispensa: 0,
+          totalPlan: 0,
+          limit: item.categoria === Category.Obras ? LEGAL_LIMIT_OBRAS : LEGAL_LIMIT_OUTROS,
+          category: item.categoria,
+          pdmDescricao: (item as any).pdmDescricao || item.titulo
+        };
+      }
+      groups[pdmKey].items.push(item);
+      groups[pdmKey].totalPlan += item.valor;
+      
+      const isDispensa = item.modalidade?.toLowerCase().includes('dispensa') || 
+                        item.dadosExecucao?.modalidadeNome?.toLowerCase().includes('dispensa') ||
+                        item.area?.toLowerCase().includes('dispensa') ||
+                        (!item.modalidade && item.valor < LEGAL_LIMIT_OUTROS && !item.protocoloSIPAC);
+      
+      if (isDispensa) {
+        groups[pdmKey].totalDispensa += item.valor;
+      }
+    });
+
+    return Object.values(groups).sort((a, b) => b.totalPlan - a.totalPlan);
+  }, [processedData]);
+
+  const handleFractionationSort = (key: string) => {
+    setFractionationSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc'
+    }));
+  };
+
+  const filteredPdmGroups = useMemo(() => {
+    const list = pdmGroups.filter(g => g.category === activeFractionationCategory);
+    
+    return [...list].sort((a, b) => {
+      const { key, direction } = fractionationSortConfig;
+      let valA: any, valB: any;
+      
+      if (key === 'percentage') {
+        valA = a.totalDispensa / a.limit;
+        valB = b.totalDispensa / b.limit;
+      } else if (key === 'itemsCount') {
+        valA = a.items.length;
+        valB = b.items.length;
+      } else {
+        valA = (a as any)[key];
+        valB = (b as any)[key];
+      }
+      
+      if (valA < valB) return direction === 'asc' ? -1 : 1;
+      if (valA > valB) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [pdmGroups, activeFractionationCategory, fractionationSortConfig]);
 
   const summary = useMemo<SummaryData>(() => {
     const materials = processedData.filter(i => i.categoria === Category.Bens);
@@ -1705,6 +1799,258 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
   const totalPages = Math.ceil(activeData.length / itemsPerPage);
   const closeToast = () => setToast(null);
 
+  if (view === 'fractionation') {
+    return (
+      <div className="space-y-6 animate-in fade-in duration-500 font-sans">
+        <section className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-premium relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-10 transition-opacity">
+              <Scale size={120} className="text-red-600" />
+            </div>
+
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 relative z-10">
+              <div className="flex items-center gap-5">
+                <div className="p-4 bg-red-50 rounded-2xl text-red-600 shadow-inner">
+                  <AlertTriangle size={32} />
+                </div>
+                <div>
+                  <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase leading-none">Painel de Controle de Fracionamento</h2>
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                    Monitoramento Automático por Ramo de Atividade (PDM)
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 bg-slate-50 p-2 pr-4 rounded-2xl border border-slate-100 self-start md:self-auto">
+                <div className="bg-white p-2 rounded-lg shadow-sm border border-slate-100 ml-1">
+                  <Calendar size={16} className="text-ifes-green" />
+                </div>
+                <div className="flex flex-col items-start mr-2">
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Exercício</span>
+                  <select 
+                    value={selectedYear} 
+                    onChange={(e) => { setSelectedYear(e.target.value); setCurrentPage(1); }} 
+                    className="bg-transparent text-ifes-green text-sm font-black outline-none cursor-pointer"
+                  >
+                    {Object.keys(config?.pcaYearsMap || PCA_YEARS_MAP).sort((a, b) => b.localeCompare(a)).map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="flex bg-slate-100/50 p-1.5 rounded-2xl mb-8 relative z-10 w-full sm:w-fit backdrop-blur overflow-x-auto">
+              {[Category.Bens, Category.Servicos, Category.TIC].map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => {
+                    setActiveFractionationCategory(cat);
+                    setExpandedPdm(null);
+                  }}
+                  className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] transition-all whitespace-nowrap ${
+                    activeFractionationCategory === cat
+                      ? 'bg-ifes-green text-white shadow-lg shadow-ifes-green/20'
+                      : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {cat === Category.Bens ? '📦 Materiais e Bens' : cat === Category.Servicos ? '🛠️ Serviços e Obras' : '💻 Soluções de TIC'}
+                </button>
+              ))}
+            </div>
+
+            {/* Barra de Valor Acumulado */}
+            <div className="bg-slate-900 rounded-[2rem] p-8 mb-10 relative z-10 shadow-2xl flex flex-col md:flex-row items-center gap-10 overflow-hidden border border-slate-800">
+               <div className="absolute top-0 right-0 p-8 opacity-10">
+                 <DollarSign size={80} className="text-ifes-green" />
+               </div>
+               
+               <div className="flex-1 w-full space-y-2">
+                 <span className="text-[10px] font-black text-ifes-green uppercase tracking-[0.3em]">Total Acumulado em {activeFractionationCategory}</span>
+                 <div className="flex items-baseline gap-3">
+                   <h2 className="text-4xl font-black text-white tracking-tighter">
+                     {formatCurrency(filteredPdmGroups.reduce((acc, g) => acc + g.totalDispensa, 0))}
+                   </h2>
+                   <span className="text-slate-500 font-bold text-sm">p/ Dispensas e CD</span>
+                 </div>
+               </div>
+
+               <div className="flex items-center gap-8 w-full md:w-auto shrink-0 border-t md:border-t-0 md:border-l border-slate-800 pt-8 md:pt-0 md:pl-10">
+                 <div className="flex flex-col">
+                   <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Alertas Críticos</span>
+                   <span className="text-2xl font-black text-red-500">
+                     {filteredPdmGroups.filter(g => g.totalDispensa > g.limit).length}
+                   </span>
+                 </div>
+                 <div className="flex flex-col">
+                   <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Ramos de Atividade</span>
+                   <span className="text-2xl font-black text-white">{filteredPdmGroups.length}</span>
+                 </div>
+                 <div className="flex flex-col">
+                   <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Planejado</span>
+                   <span className="text-lg font-bold text-slate-300">
+                     {formatCurrency(filteredPdmGroups.reduce((acc, g) => acc + g.totalPlan, 0))}
+                   </span>
+                 </div>
+               </div>
+            </div>
+
+            {/* Tabela de PDM */}
+            <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm relative z-10 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50/50 border-b border-slate-100">
+                      {[
+                        { key: 'pdm', label: 'PDM / Ramo' },
+                        { key: 'pdmDescricao', label: 'Descrição' },
+                        { key: 'itemsCount', label: 'Itens', align: 'center' },
+                        { key: 'totalDispensa', label: 'Accumulado', align: 'right' },
+                        { key: 'limit', label: 'Teto', align: 'right' },
+                        { key: 'percentage', label: 'Status', align: 'center' }
+                      ].map(col => (
+                        <th 
+                          key={col.key}
+                          onClick={() => handleFractionationSort(col.key)}
+                          className={`px-6 py-5 cursor-pointer hover:bg-slate-100/50 transition-colors ${col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : ''}`}
+                        >
+                          <div className={`flex items-center gap-2 ${col.align === 'center' ? 'justify-center' : col.align === 'right' ? 'justify-end' : ''}`}>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{col.label}</span>
+                            <div className="flex flex-col text-slate-300">
+                               <ChevronUp size={10} className={fractionationSortConfig.key === col.key && fractionationSortConfig.direction === 'asc' ? 'text-ifes-green' : ''} />
+                               <ChevronDown size={10} className={fractionationSortConfig.key === col.key && fractionationSortConfig.direction === 'desc' ? 'text-ifes-green' : '-mt-1'} />
+                            </div>
+                          </div>
+                        </th>
+                      ))}
+                      <th className="px-6 py-5 w-20"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {filteredPdmGroups.map(group => {
+                      const percentage = Math.min((group.totalDispensa / group.limit) * 100, 100);
+                      const isRisk = group.totalDispensa > group.limit;
+                      const isExpanded = expandedPdm === group.pdm;
+
+                      return (
+                        <React.Fragment key={group.pdm}>
+                          <tr className={`hover:bg-slate-50/50 transition-colors group ${isRisk ? 'bg-red-50/20' : ''}`}>
+                            <td className="px-6 py-5">
+                              <code className="text-[11px] font-black text-ifes-green bg-ifes-green/5 px-3 py-1 rounded-lg border border-ifes-green/10">
+                                {group.pdm}
+                              </code>
+                            </td>
+                            <td className="px-6 py-5">
+                              <span className="text-sm font-bold text-slate-700 line-clamp-1 truncate block max-w-sm" title={group.pdmDescricao}>
+                                {group.pdmDescricao}
+                              </span>
+                            </td>
+                            <td className="px-6 py-5 text-center">
+                              <span className="text-xs font-black text-slate-400">{group.items.length}</span>
+                            </td>
+                            <td className="px-6 py-5 text-right">
+                              <span className={`text-sm font-black ${isRisk ? 'text-red-600' : 'text-slate-900'}`}>
+                                {formatCurrency(group.totalDispensa)}
+                              </span>
+                            </td>
+                            <td className="px-6 py-5 text-right">
+                              <span className="text-xs font-bold text-slate-500">{formatCurrency(group.limit)}</span>
+                            </td>
+                            <td className="px-6 py-5">
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 h-1.5 w-24 bg-slate-100 rounded-full overflow-hidden">
+                                  <div className={`h-full ${isRisk ? 'bg-red-500' : 'bg-ifes-green'}`} style={{ width: `${percentage}%` }} />
+                                </div>
+                                <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${isRisk ? 'bg-red-100 text-red-600 animate-pulse' : 'bg-green-50 text-green-600'}`}>
+                                  {isRisk ? 'Crítico' : 'OK'}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-5 text-right">
+                              <button 
+                                onClick={() => setExpandedPdm(isExpanded ? null : group.pdm)}
+                                className={`p-2 rounded-lg transition-all ${isExpanded ? 'bg-slate-800 text-white shadow-lg' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
+                              >
+                                <ChevronDown size={16} className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                              </button>
+                            </td>
+                          </tr>
+                          
+                          <AnimatePresence>
+                            {isExpanded && (
+                              <tr>
+                                <td colSpan={7} className="p-0 border-0">
+                                  <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    className="bg-slate-50 overflow-hidden"
+                                  >
+                                    <div className="p-8 border-t border-slate-100 space-y-4">
+                                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Detalhamento dos Elementos do Planejamento</h4>
+                                      <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="bg-slate-50 border-b border-slate-100">
+                                                    <th className="px-6 py-3 text-[9px] font-black text-slate-400 uppercase">Item</th>
+                                                    <th className="px-6 py-3 text-[9px] font-black text-slate-400 uppercase text-center">Status</th>
+                                                    <th className="px-6 py-3 text-[9px] font-black text-slate-400 uppercase text-right">Valor Estimado</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-50">
+                                              {group.items.map((it: any) => (
+                                                <tr key={it.id} className="hover:bg-slate-50/50 transition-colors">
+                                                   <td className="px-6 py-3">
+                                                      <span className="text-[11px] font-bold text-slate-700">{it.titulo}</span>
+                                                      <div className="flex gap-2 mt-1">
+                                                        <span className="text-[8px] font-medium text-slate-400 uppercase">IFC: {it.ifc || 'Não identificado'}</span>
+                                                        {it.protocoloSIPAC && <span className="text-[8px] font-medium text-blue-400">Processo: {it.protocoloSIPAC}</span>}
+                                                      </div>
+                                                   </td>
+                                                   <td className="px-6 py-3 text-center">
+                                                     <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase ${
+                                                        it.computedSituation === 'Em Execução' ? 'bg-blue-100 text-blue-600' :
+                                                        it.computedSituation === 'Atrasado' ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500'
+                                                     }`}>
+                                                       {it.computedSituation || 'Previsto'}
+                                                     </span>
+                                                   </td>
+                                                   <td className="px-6 py-3 text-right">
+                                                      <span className="text-[11px] font-black text-slate-900 tabular-nums">{formatCurrency(it.valor)}</span>
+                                                   </td>
+                                                </tr>
+                                              ))}
+                                            </tbody>
+                                        </table>
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                </td>
+                              </tr>
+                            )}
+                          </AnimatePresence>
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {filteredPdmGroups.length === 0 && (
+                <div className="py-20 flex flex-col items-center justify-center text-center">
+                  <div className="bg-slate-50 p-6 rounded-3xl mb-4 text-slate-200">
+                    <Search size={48} />
+                  </div>
+                  <h3 className="text-xl font-black text-slate-800">Nenhum dado para {activeFractionationCategory}</h3>
+                  <p className="text-sm text-slate-400 max-w-sm mt-2 font-medium">Os ramos de atividade desta categoria estão sob controle ou não possuem itens planejados para o exercício.</p>
+                </div>
+              )}
+            </div>
+        </section>
+      </div>
+    );
+  }
+
+
   return (
     <div className={embedded ? 'bg-transparent relative font-sans' : 'min-h-screen border-t-4 border-ifes-green bg-slate-50/30 relative font-sans'}>
       {toast && <Toast message={toast.message} type={toast.type} onClose={closeToast} />}
@@ -1961,6 +2307,15 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
                     <span>Vincular processo</span>
                   </button>
                 )}
+                {dashboardView === 'planning' && (
+                  <button
+                    onClick={() => setIsManualModalOpen(true)}
+                    className="flex items-center gap-2 bg-ifes-green text-white px-4 py-2 rounded-xl text-xs font-black hover:bg-[#115e59] transition-all shadow-sm"
+                  >
+                    <Plus size={16} />
+                    <span>Adicionar Demanda Manual</span>
+                  </button>
+                )}
                 <div className="relative w-64">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
                   <input
@@ -2161,6 +2516,7 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
                       <option value={Category.Bens}>🏢 Bens (Materiais)</option>
                       <option value={Category.Servicos}>🛠️ Serviços</option>
                       <option value={Category.TIC}>💻 Tecnologia (TIC)</option>
+                      <option value={Category.Obras}>🚧 Obras e Engenharia</option>
                     </select>
                     <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
                   </div>

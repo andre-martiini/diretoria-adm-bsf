@@ -356,6 +356,9 @@ export const fetchPcaData = async (
                         ifc: d.ifc || '',
                         isManual: true,
                         ano: String(year),
+                        modalidade: d.modalidade || '',
+                        codigoPdm: d.codigoPdm || '',
+                        codigoItem: d.codigoItem || d.codigoPdm || '',
                         ...resolveGovProcessMatch(d.protocoloSIPAC || d.dadosSIPAC?.numeroProcesso, govProcessLookup)
                     } as any);
                 } else if (d.officialId) {

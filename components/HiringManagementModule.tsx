@@ -6,7 +6,7 @@ import AnnualHiringPlan from './AnnualHiringPlan';
 import GovContractsDashboard from './GovContractsDashboard';
 import GovContractInstrumentsDashboard from './GovContractInstrumentsDashboard';
 
-type HiringManagementTab = 'pca' | 'contratacoes' | 'contratos-empenhos';
+type HiringManagementTab = 'pca' | 'contratacoes' | 'contratos-empenhos' | 'fracionamento';
 
 const TAB_CONFIG: Array<{
   id: HiringManagementTab;
@@ -31,6 +31,12 @@ const TAB_CONFIG: Array<{
     label: 'Contratos e Empenhos',
     description: 'Instrumentos vigentes e historico por ano.',
     icon: <ScrollText size={16} />
+  },
+  {
+    id: 'fracionamento',
+    label: 'Fracionamento',
+    description: 'Auditoria de limites por ramo de atividade (PDM).',
+    icon: <Scale size={16} color="#ef4444" />
   }
 ];
 
@@ -79,7 +85,7 @@ const HiringManagementModule: React.FC = () => {
         </section>
 
         <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-2">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
             {TAB_CONFIG.map((item) => (
               <button
                 key={item.id}
@@ -100,6 +106,7 @@ const HiringManagementModule: React.FC = () => {
           {activeTab === 'pca' && <AnnualHiringPlan embedded />}
           {activeTab === 'contratacoes' && <GovContractsDashboard embedded />}
           {activeTab === 'contratos-empenhos' && <GovContractInstrumentsDashboard embedded />}
+          {activeTab === 'fracionamento' && <AnnualHiringPlan embedded view="fractionation" />}
         </section>
       </main>
     </div>

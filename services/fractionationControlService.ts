@@ -1,12 +1,5 @@
-import { ContractItem, Category } from '../types';
+import { ContractItem, Category, FractionationResult } from '../types';
 import { LEGAL_LIMITS } from '../constants/legalLimits';
-
-export interface FractionationResult {
-    used: number;
-    available: number;
-    exceeded: boolean;
-    limit: number;
-}
 
 export const FractionationControlService = {
     /**
@@ -38,7 +31,7 @@ export const FractionationControlService = {
 
         // Filtra os itens do histórico e soma os valores consumidos
         const used = data.reduce((sum, item) => {
-            const itemModalidade = item.modalidade || item.area || item.dadosExecucao?.modalidadeNome || '';
+            const itemModalidade = item.modalidade || item.dadosExecucao?.modalidadeNome || item.area || '';
             const isItemRestricted = itemModalidade.includes('Dispensa de Licitação') ||
                                      itemModalidade.includes('Dispensa de Licitacao') ||
                                      itemModalidade.includes('Suprimento de Fundos');

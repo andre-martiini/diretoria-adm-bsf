@@ -13,6 +13,13 @@ export interface SIPACDocument {
   ocrError?: string;
 }
 
+export interface FractionationResult {
+    used: number;
+    available: number;
+    exceeded: boolean;
+    limit: number;
+}
+
 export type FinancialEventType = 'EMPENHO' | 'LIQUIDACAO' | 'PAGAMENTO' | 'ANULACAO';
 
 export type ExecutionLinkStatusCode =
@@ -141,6 +148,7 @@ export interface ContractItem {
   isGroup?: boolean;
   modalidade?: string;
   codigoPdm?: string;
+  pdmDescricao?: string;
   childItems?: ContractItem[];
   identificadorFuturaContratacao?: string;
   computedStatus?: string;
@@ -169,6 +177,7 @@ export interface ContractItem {
   govProcessStatusCode?: GovProcessIdentificationCode | null;
   govProcessStatusLabel?: string | null;
   govProcessMatch?: GovProcessRegistryEntry | null;
+  fractionationRisk?: FractionationResult;
 }
 
 export interface PCAMetadata {

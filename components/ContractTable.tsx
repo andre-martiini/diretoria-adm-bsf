@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowUpDown, Info, RefreshCw } from 'lucide-react';
+import { ArrowUpDown, Info, RefreshCw, AlertTriangle } from 'lucide-react';
 import { ContractItem, SortConfig } from '../types';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { getProcessStatus, getStatusColor } from '../utils/processLogic';
@@ -224,7 +224,17 @@ const ContractTable: React.FC<ContractTableProps> = ({
                       </td>
 
                       <td className="p-6 text-right text-xs font-bold text-slate-700 tabular-nums">
-                        {formatCurrency(item.valor)}
+                        <div className="flex items-center justify-end gap-2">
+                          {item.fractionationRisk?.exceeded && (
+                            <span 
+                              className="text-red-500 bg-red-50 p-1 rounded-md border border-red-100 animate-pulse" 
+                              title={`Risco de Fracionamento: Limite excedido para este ramo (${formatCurrency(item.fractionationRisk.used)})`}
+                            >
+                              <AlertTriangle size={14} />
+                            </span>
+                          )}
+                          {formatCurrency(item.valor)}
+                        </div>
                       </td>
 
                       <td className="p-6 text-center">

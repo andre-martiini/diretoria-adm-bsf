@@ -3799,8 +3799,8 @@ function loadCatalogIntoMemory() {
   console.log(`[CATALOG LOAD] IndexaÃ§Ã£o concluÃ­da em ${duration}s. Itens Ãºnicos (Agrupados): ${CACHED_CATALOG.length}`);
 }
 
-// Initial load
-loadCatalogIntoMemory();
+// Initial load movido para dentro do app.listen() para evitar erro de proxy
+
 
 /**
  * Importa e higieniza os dados do JSON para o Firestore
@@ -4085,6 +4085,12 @@ app.delete('/api/cart/:id', async (req, res) => {
 if (!process.env.FUNCTION_TARGET && !process.env.FIREBASE_CONFIG) {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Servidor rodando em http://localhost:${PORT}`);
+
+    // Inicia carregamento do catÃ¡logo em background
+    setImmediate(() => {
+      loadCatalogIntoMemory();
+    });
+
 
     // Executa sincronizaÃ§Ã£o inicial apÃ³s 5 segundos (dÃ¡ tempo do servidor iniciar completamente)
     setTimeout(() => {
