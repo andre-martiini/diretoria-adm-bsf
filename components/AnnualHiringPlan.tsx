@@ -73,6 +73,7 @@ import {
   PCA_YEARS_MAP,
   CNPJ_IFES_BSF
 } from '../constants';
+import { FractionationControlService } from '../services/fractionationControlService';
 import { fetchSystemConfig } from '../services/configService';
 import { SystemConfig } from '../types';
 import {
@@ -912,7 +913,9 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
     inicio: new Date().toISOString().split('T')[0],
     area: 'Diretoria de Adm. e Planejamento',
     numeroDfd: '',
-    ifc: ''
+    ifc: '',
+    modalidade: '',
+    codigoPdm: ''
   });
 
   const fetchData = useCallback(async (year: string, forceSync: boolean = false) => {
@@ -1495,7 +1498,27 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
     return formatProcessIdentifier(val);
   };
 
+
+  const fractionationAlert = useMemo(() => {
+    if (!isManualModalOpen) return null;
+    const isRestricted = newItem.modalidade === 'Dispensa de Licitação' || newItem.modalidade === 'Suprimento de Fundos';
+    if (!isRestricted || !newItem.codigoPdm || !newItem.valor) return null;
+
+    const isObras = newItem.categoria === Category.Obras;
+    return FractionationControlService.calculateFractionation(
+      data,
+      newItem.codigoPdm,
+      isObras,
+      newItem.valor,
+      newItem.modalidade
+    );
+  }, [isManualModalOpen, newItem.valor, newItem.categoria, newItem.modalidade, newItem.codigoPdm, data]);
+
   const handleAddManualItem = async () => {
+    if (['Dispensa de Licitação', 'Suprimento de Fundos'].includes(newItem.modalidade || '') && !newItem.codigoPdm) {
+      setToast({ message: 'PDM/CATSER é obrigatório para Dispensa e Suprimento de Fundos.', type: 'error' });
+      return;
+    }
     setSaving(true);
     try {
       await addDoc(collection(db, "pca_data"), {
@@ -1507,7 +1530,9 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
       });
       await fetchData(selectedYear);
       setIsManualModalOpen(false);
-      setNewItem({ titulo: '', categoria: Category.Bens, valor: 0, inicio: new Date().toISOString().split('T')[0], area: 'Diretoria de Adm. e Planejamento', numeroDfd: '', ifc: '' });
+      setNewItem({ titulo: '', categoria: Category.Bens, valor: 0, inicio: new Date().toISOString().split('T')[0], area: 'Diretoria de Adm. e Planejamento', numeroDfd: '', ifc: '',
+    modalidade: '',
+    codigoPdm: '' });
       setToast({ message: "Demanda registrada!", type: "success" });
     } catch (err) {
       console.error("Erro ao adicionar:", err);
@@ -2093,6 +2118,37 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
                 />
               </div>
 
+
+              <div className="grid grid-cols-2 gap-8">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Modalidade</label>
+                  <div className="relative">
+                    <select
+                      className="w-full px-6 py-4 bg-white border border-slate-200 rounded-[24px] text-sm font-black outline-none focus:ring-4 focus:ring-ifes-blue/10 focus:border-ifes-blue transition-all appearance-none cursor-pointer"
+                      value={newItem.modalidade || ''}
+                      onChange={(e) => setNewItem({ ...newItem, modalidade: e.target.value })}
+                    >
+                      <option value="">Selecione...</option>
+                      <option value="Pregão Eletrônico">Pregão Eletrônico</option>
+                      <option value="Dispensa de Licitação">Dispensa de Licitação</option>
+                      <option value="Suprimento de Fundos">Suprimento de Fundos</option>
+                      <option value="Inexigibilidade">Inexigibilidade</option>
+                    </select>
+                    <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Código PDM/CATSER</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: 12345"
+                    className="w-full px-6 py-4 bg-white border border-slate-200 rounded-[24px] text-sm font-bold outline-none focus:ring-4 focus:ring-ifes-blue/10 focus:border-ifes-blue transition-all"
+                    value={newItem.codigoPdm || ''}
+                    onChange={(e) => setNewItem({ ...newItem, codigoPdm: e.target.value })}
+                  />
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-8">
                 <div className="space-y-3">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Categoria de Compra</label>
@@ -2119,6 +2175,14 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
                       value={newItem.valor}
                       onChange={(e) => setNewItem({ ...newItem, valor: Number(e.target.value) })}
                     />
+
+                    {fractionationAlert && fractionationAlert.exceeded && (
+                      <div className="absolute top-[100%] left-0 w-full mt-2 text-[10px] font-bold text-red-500 bg-red-50 px-3 py-1.5 rounded-lg flex items-center gap-2 border border-red-100 z-10">
+                        <AlertTriangle size={12} className="shrink-0" />
+                        <span>Atenção: Limite de fracionamento para este ramo excedido. Consumido: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(fractionationAlert.used)}.</span>
+                      </div>
+                    )}
+
                   </div>
                 </div>
               </div>
