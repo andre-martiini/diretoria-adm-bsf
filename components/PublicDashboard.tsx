@@ -18,7 +18,8 @@ import {
     Wallet,
     Calendar,
     TrendingUp,
-    LayoutDashboard
+    LayoutDashboard,
+    FileSpreadsheet
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { fetchPcaData, hasPcaInMemoryCache, fetchLocalPcaSnapshot } from '../services/pcaService';
@@ -51,6 +52,7 @@ import {
 // Components
 import ContractTable from './ContractTable';
 import logoIfes from '../logo-ifes.png';
+import * as XLSX from 'xlsx';
 
 const PublicDashboard: React.FC = () => {
     const navigate = useNavigate();
@@ -225,6 +227,59 @@ const PublicDashboard: React.FC = () => {
 
     const totalPages = Math.ceil(filteredPcaData.length / itemsPerPage);
 
+    const handleExportPcaSpreadsheet = useCallback(() => {
+        if (!filteredPcaData.length) return;
+
+        const rows = filteredPcaData.map((item, index) => ({
+            'Ordem': index + 1,
+            'Ano PCA': item.ano || selectedYear,
+            'Item PCA': item.numeroItem ?? item.sequencialItemPca ?? '',
+            'Titulo': item.titulo || '',
+            'Descricao detalhada': item.descricaoDetalhada || '',
+            'Categoria': item.categoria || '',
+            'Area demandante': item.area || '',
+            'Unidade requisitante': item.unidadeRequisitante || '',
+            'Grupo de contratacao': item.grupoContratacao || '',
+            'Numero DFD': item.numeroDfd || '',
+            'IFC': item.ifc || '',
+            'Codigo PDM': item.codigoPdm || '',
+            'Descricao PDM': item.pdmDescricao || '',
+            'Codigo item': item.codigoItem || '',
+            'Quantidade': item.quantidade ?? '',
+            'Unidade de medida': item.unidadeMedida || '',
+            'Valor unitario': item.valorUnitario ?? '',
+            'Valor total estimado': item.valor ?? 0,
+            'Data desejada': item.dataDesejada ? formatDate(item.dataDesejada) : ''
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(rows);
+        worksheet['!cols'] = [
+            { wch: 8 },
+            { wch: 10 },
+            { wch: 12 },
+            { wch: 36 },
+            { wch: 60 },
+            { wch: 14 },
+            { wch: 24 },
+            { wch: 24 },
+            { wch: 24 },
+            { wch: 16 },
+            { wch: 12 },
+            { wch: 14 },
+            { wch: 28 },
+            { wch: 14 },
+            { wch: 12 },
+            { wch: 18 },
+            { wch: 14 },
+            { wch: 18 },
+            { wch: 14 }
+        ];
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, `PCA ${selectedYear}`);
+        XLSX.writeFile(workbook, `pca_publico_${selectedYear}_${filteredPcaData.length}_itens.xlsx`);
+    }, [filteredPcaData, selectedYear]);
+
     return (
         <div className="min-h-screen border-t-4 border-ifes-green bg-slate-50/30 relative font-sans">
             {/* Loading Overlay */}
@@ -339,7 +394,17 @@ const PublicDashboard: React.FC = () => {
                         </div>
 
                         {/* View Toggle */}
-                        <div className="flex bg-slate-200/50 p-1 rounded-xl">
+                        <div className="flex items-center gap-3">
+                            {activeTab === 'pca' && (
+                                <button
+                                    onClick={handleExportPcaSpreadsheet}
+                                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-sm"
+                                >
+                                    <FileSpreadsheet size={14} />
+                                    Exportar Planilha
+                                </button>
+                            )}
+                            <div className="flex bg-slate-200/50 p-1 rounded-xl">
                             <button
                                 onClick={() => setViewMode('charts')}
                                 className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${viewMode === 'charts' ? 'bg-white shadow-sm text-ifes-green' : 'text-slate-500 hover:text-slate-700'}`}
@@ -354,6 +419,7 @@ const PublicDashboard: React.FC = () => {
                                 <TableIcon size={14} />
                                 Detalhamento
                             </button>
+                            </div>
                         </div>
                     </div>
                 </div>

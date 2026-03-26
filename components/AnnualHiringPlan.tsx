@@ -91,6 +91,7 @@ import {
 
 import { fetchPcaData, hasPcaInMemoryCache, fetchLocalPcaSnapshot, updatePcaCache } from '../services/pcaService';
 import { motion, AnimatePresence } from 'motion/react';
+import * as XLSX from 'xlsx';
 
 // Components
 import ContractTable from './ContractTable';
@@ -1799,6 +1800,75 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
   const totalPages = Math.ceil(activeData.length / itemsPerPage);
   const closeToast = () => setToast(null);
 
+  const handleExportPcaSpreadsheet = useCallback(() => {
+    if (dashboardView !== 'planning') return;
+
+    if (!activeData.length) {
+      setToast({ message: 'Nao ha itens do PCA para exportar com os filtros atuais.', type: 'error' });
+      return;
+    }
+
+    try {
+      const rows = activeData.map((item, index) => ({
+        'Ordem': index + 1,
+        'Ano PCA': item.ano || selectedYear,
+        'Item PCA': item.numeroItem ?? item.sequencialItemPca ?? '',
+        'Titulo': item.titulo || '',
+        'Descricao detalhada': item.descricaoDetalhada || '',
+        'Categoria': item.categoria || '',
+        'Area demandante': item.area || '',
+        'Unidade requisitante': item.unidadeRequisitante || '',
+        'Grupo de contratacao': item.grupoContratacao || '',
+        'Numero DFD': item.numeroDfd || '',
+        'IFC': item.ifc || '',
+        'Codigo PDM': item.codigoPdm || '',
+        'Descricao PDM': item.pdmDescricao || '',
+        'Codigo item': item.codigoItem || '',
+        'Quantidade': item.quantidade ?? '',
+        'Unidade de medida': item.unidadeMedida || '',
+        'Valor unitario': item.valorUnitario ?? '',
+        'Valor total estimado': item.valor ?? 0,
+        'Data desejada': item.dataDesejada ? formatDate(item.dataDesejada) : '',
+        'Status': item.computedStatus || item.status_item || item.status || '',
+        'Processo SIPAC': item.protocoloSIPAC || ''
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      worksheet['!cols'] = [
+        { wch: 8 },
+        { wch: 10 },
+        { wch: 12 },
+        { wch: 36 },
+        { wch: 60 },
+        { wch: 14 },
+        { wch: 24 },
+        { wch: 24 },
+        { wch: 24 },
+        { wch: 16 },
+        { wch: 12 },
+        { wch: 14 },
+        { wch: 28 },
+        { wch: 14 },
+        { wch: 12 },
+        { wch: 18 },
+        { wch: 14 },
+        { wch: 18 },
+        { wch: 14 },
+        { wch: 18 },
+        { wch: 22 }
+      ];
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, `PCA ${selectedYear}`);
+      XLSX.writeFile(workbook, `pca_${selectedYear}_${activeData.length}_itens.xlsx`);
+
+      setToast({ message: `Planilha do PCA exportada com ${activeData.length} itens.`, type: 'success' });
+    } catch (error) {
+      console.error('[AnnualHiringPlan] Erro ao exportar PCA:', error);
+      setToast({ message: 'Erro ao exportar a planilha do PCA.', type: 'error' });
+    }
+  }, [activeData, dashboardView, selectedYear]);
+
   if (view === 'fractionation') {
     return (
       <div className="space-y-6 animate-in fade-in duration-500 font-sans">
@@ -2305,6 +2375,15 @@ const AnnualHiringPlan: React.FC<AnnualHiringPlanProps> = ({
                   >
                     <Link size={16} />
                     <span>Vincular processo</span>
+                  </button>
+                )}
+                {dashboardView === 'planning' && (
+                  <button
+                    onClick={handleExportPcaSpreadsheet}
+                    className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-black hover:bg-emerald-700 transition-all shadow-sm"
+                  >
+                    <FileSpreadsheet size={16} />
+                    <span>Exportar planilha</span>
                   </button>
                 )}
                 {dashboardView === 'planning' && (
