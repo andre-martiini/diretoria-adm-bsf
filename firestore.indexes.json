@@ -2,12 +2,8 @@
     "indexes": [
         {
             "collectionGroup": "chunks",
-            "queryScope": "COLLECTION_GROUP",
+            "queryScope": "COLLECTION",
             "fields": [
-                {
-                    "fieldPath": "processoId",
-                    "order": "ASCENDING"
-                },
                 {
                     "fieldPath": "embedding",
                     "vectorConfig": {
