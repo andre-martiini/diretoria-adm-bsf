@@ -41,6 +41,15 @@ const getExecutionLinkBadgeClass = (statusCode?: 'PROCESSO_VINCULADO' | 'PROCESS
   return 'bg-slate-100 text-slate-600 border-slate-200';
 };
 
+const simplifyModality = (name: string): string => {
+  const n = String(name || '').toLowerCase();
+  if (n.includes('pregao')) return 'Pregão';
+  if (n.includes('dispensa')) return 'Dispensa';
+  if (n.includes('inexigibilidade')) return 'Inexigibilidade';
+  if (n.includes('concorrencia')) return 'Concorrência';
+  return name;
+};
+
 const GovContractsDashboard: React.FC<GovContractsDashboardProps> = ({ embedded = false }) => {
   const navigate = useNavigate();
   const [config, setConfig] = useState<SystemConfig | null>(null);
@@ -104,9 +113,6 @@ const GovContractsDashboard: React.FC<GovContractsDashboardProps> = ({ embedded 
     const normalized = normalizeSearchValue(searchTerm);
     if (!normalized) return source;
     return source.filter((item) =>
-      normalizeSearchValue(item.identificacaoContratacao).includes(normalized) ||
-      normalizeSearchValue(item.empresa).includes(normalized) ||
-      normalizeSearchValue(item.numeroProcesso).includes(normalized) ||
       normalizeSearchValue(item.objeto).includes(normalized)
     );
   }, [payload, searchTerm]);
@@ -216,7 +222,7 @@ const GovContractsDashboard: React.FC<GovContractsDashboardProps> = ({ embedded 
               <input
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Buscar por contratacao, empresa, processo ou objeto..."
+                placeholder="Buscar por objeto..."
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-sm font-medium text-slate-700 outline-none"
               />
             </div>
@@ -266,8 +272,6 @@ const GovContractsDashboard: React.FC<GovContractsDashboardProps> = ({ embedded 
                   <tr>
                     <th className="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Modalidade</th>
                     <th className="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Contratacao</th>
-                    <th className="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Empresa</th>
-                    <th className="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Vinculo Execucao</th>
                     <th className="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Objeto</th>
                     <th className="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider text-right">Valor Homologado</th>
                     <th className="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Homologacao</th>
@@ -275,32 +279,24 @@ const GovContractsDashboard: React.FC<GovContractsDashboardProps> = ({ embedded 
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredData.map((item: GovContractsRecord, index: number) => (
+                  {filteredData.map((item: any, index: number) => (
                     <tr
                       key={`${item.numeroControlePNCP || item.numeroProcesso}-${index}`}
                       onClick={() => handleOpenDetail(item)}
                       className="hover:bg-slate-50/60 transition-colors cursor-pointer"
                     >
                       <td className="px-5 py-4">
-                        <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-wide">
-                          <Building2 size={12} />
-                          {item.modalidade}
+                        <span className="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 text-[9px] font-black uppercase tracking-wide">
+                          <Building2 size={10} />
+                          {simplifyModality(item.modalidade)}
                         </span>
                       </td>
                       <td className="px-5 py-4">
                         <div className="text-sm font-bold text-slate-700">{item.identificacaoContratacao || item.numeroProcesso}</div>
                         <div className="text-[11px] font-medium text-slate-400">{item.numeroProcesso}</div>
                       </td>
-                      <td className="px-5 py-4 text-sm font-semibold text-slate-600 max-w-[260px]">
-                        <div className="line-clamp-2">{item.empresa || '-'}</div>
-                      </td>
-                      <td className="px-5 py-4">
-                        <span className={`inline-flex px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wide border ${getExecutionLinkBadgeClass(item.executionLinkStatusCode)}`}>
-                          {item.executionLinkStatusLabel || 'Nao vinculado'}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 text-sm text-slate-600 max-w-[520px]">
-                        <div className="line-clamp-2">{item.objeto}</div>
+                      <td className="px-5 py-4 text-[10px] text-slate-600 max-w-[800px]">
+                        <div className="line-clamp-4">{item.objeto}</div>
                       </td>
                       <td className="px-5 py-4 text-right text-sm font-black text-slate-900">
                         {formatCurrency(Number(item.valorHomologado || 0))}

@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { API_SERVER_URL } from '../constants';
-import { ExecutionLinkStatusCode, GovProcessRegistryEntry, ModalidadeContratacaoGov } from '../types';
+import { ExecutionLinkStatusCode, GovIntegrationBase, GovProcessRegistryEntry, ModalidadeContratacaoGov } from '../types';
 
 export type GovModalityType =
   | 'all'
@@ -9,11 +9,11 @@ export type GovModalityType =
   | 'inexigibilidade_licitacao'
   | 'concorrencia';
 
-export interface GovContractsRecord extends ModalidadeContratacaoGov {
+export interface GovContractsRecord extends GovIntegrationBase {
+  modalidade: string;
   modalidadeCodigo: Exclude<GovModalityType, 'all'>;
   numeroCompra?: string | null;
   identificacaoContratacao?: string | null;
-  empresa?: string | null;
   numeroControlePNCP?: string | null;
   anoCompra?: string | null;
   sequencialCompra?: string | null;
