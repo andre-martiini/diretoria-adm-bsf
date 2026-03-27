@@ -5,6 +5,10 @@
             "queryScope": "COLLECTION",
             "fields": [
                 {
+                    "fieldPath": "__name__",
+                    "order": "ASCENDING"
+                },
+                {
                     "fieldPath": "embedding",
                     "vectorConfig": {
                         "dimension": 768,
