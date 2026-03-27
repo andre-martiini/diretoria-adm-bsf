@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "extractedAt": "2026-03-27T18:24:23.143Z",
+    "extractedAt": "2026-03-27T19:06:27.002Z",
     "cnpj": "10838653000106",
     "year": "2026",
     "totalPurchases": 9,
@@ -8,13 +8,12 @@
   },
   "data": [
     {
-      "numeroControlePNCP": "10838653000106-1-000013/2026",
       "dataAtualizacao": "2026-01-20T07:01:53",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
-        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F"
+        "esferaId": "F",
+        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO"
       },
       "anoCompra": 2026,
       "sequencialCompra": 13,
@@ -48,6 +47,7 @@
       "modalidadeId": 6,
       "dataAtualizacaoGlobal": "2026-03-24T14:43:22",
       "linkProcessoEletronico": null,
+      "numeroControlePNCP": "10838653000106-1-000013/2026",
       "modoDisputaId": 1,
       "tipoInstrumentoConvocatorioNome": "Edital",
       "tipoInstrumentoConvocatorioCodigo": 1,
@@ -64,9 +64,9 @@
       "dataAtualizacao": "2026-02-20T16:41:44",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
-        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F"
+        "esferaId": "F",
+        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO"
       },
       "anoCompra": 2026,
       "sequencialCompra": 83,
@@ -102,8 +102,8 @@
       "linkProcessoEletronico": "https://sipac.ifes.edu.br/public/jsp/processos/processo_detalhado.jsf?id=216464",
       "numeroControlePNCP": "10838653000106-1-000083/2026",
       "modoDisputaId": 5,
-      "tipoInstrumentoConvocatorioCodigo": 3,
       "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
+      "tipoInstrumentoConvocatorioCodigo": 3,
       "valorTotalEstimado": 9140,
       "modalidadeNome": "Dispensa",
       "modoDisputaNome": "Não se aplica",
@@ -117,9 +117,9 @@
       "dataAtualizacao": "2026-02-27T14:04:59",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
-        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F"
+        "esferaId": "F",
+        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO"
       },
       "anoCompra": 2026,
       "sequencialCompra": 97,
@@ -155,8 +155,8 @@
       "linkProcessoEletronico": "https://sipac.ifes.edu.br/public/jsp/processos/processo_detalhado.jsf?id=215345",
       "numeroControlePNCP": "10838653000106-1-000097/2026",
       "modoDisputaId": 5,
-      "tipoInstrumentoConvocatorioCodigo": 3,
       "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
+      "tipoInstrumentoConvocatorioCodigo": 3,
       "valorTotalEstimado": 3400.75,
       "modalidadeNome": "Dispensa",
       "modoDisputaNome": "Não se aplica",
@@ -170,9 +170,9 @@
       "dataAtualizacao": "2026-03-11T10:49:44",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
-        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F"
+        "esferaId": "F",
+        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO"
       },
       "anoCompra": 2026,
       "sequencialCompra": 118,
@@ -208,8 +208,8 @@
       "linkProcessoEletronico": "https://sipac.ifes.edu.br/public/jsp/processos/processo_detalhado.jsf?id=209817",
       "numeroControlePNCP": "10838653000106-1-000118/2026",
       "modoDisputaId": 5,
-      "tipoInstrumentoConvocatorioCodigo": 3,
       "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
+      "tipoInstrumentoConvocatorioCodigo": 3,
       "valorTotalEstimado": 1239.9,
       "modalidadeNome": "Dispensa",
       "modoDisputaNome": "Não se aplica",
@@ -223,9 +223,9 @@
       "dataAtualizacao": "2026-03-13T16:22:02",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
-        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F"
+        "esferaId": "F",
+        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO"
       },
       "anoCompra": 2026,
       "sequencialCompra": 127,
@@ -261,8 +261,8 @@
       "linkProcessoEletronico": "https://sipac.ifes.edu.br/public/jsp/processos/processo_detalhado.jsf?id=217488",
       "numeroControlePNCP": "10838653000106-1-000127/2026",
       "modoDisputaId": 4,
-      "tipoInstrumentoConvocatorioCodigo": 2,
       "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
+      "tipoInstrumentoConvocatorioCodigo": 2,
       "valorTotalEstimado": 25552.52,
       "modalidadeNome": "Dispensa",
       "modoDisputaNome": "Dispensa Com Disputa",
@@ -276,9 +276,9 @@
       "dataAtualizacao": "2026-03-17T09:59:24",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
-        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F"
+        "esferaId": "F",
+        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO"
       },
       "anoCompra": 2026,
       "sequencialCompra": 132,
@@ -314,8 +314,8 @@
       "linkProcessoEletronico": "https://sipac.ifes.edu.br/public/jsp/processos/processo_detalhado.jsf?id=217318",
       "numeroControlePNCP": "10838653000106-1-000132/2026",
       "modoDisputaId": 4,
-      "tipoInstrumentoConvocatorioCodigo": 2,
       "tipoInstrumentoConvocatorioNome": "Aviso de Contratação Direta",
+      "tipoInstrumentoConvocatorioCodigo": 2,
       "valorTotalEstimado": 52473.23,
       "modalidadeNome": "Dispensa",
       "modoDisputaNome": "Dispensa Com Disputa",
@@ -329,9 +329,9 @@
       "dataAtualizacao": "2026-03-27T13:38:24",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
-        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
         "poderId": "E",
-        "esferaId": "F"
+        "esferaId": "F",
+        "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO"
       },
       "anoCompra": 2026,
       "sequencialCompra": 156,
@@ -367,8 +367,8 @@
       "linkProcessoEletronico": "https://sipac.ifes.edu.br/public/jsp/processos/processo_detalhado.jsf?id=220128",
       "numeroControlePNCP": "10838653000106-1-000156/2026",
       "modoDisputaId": 5,
-      "tipoInstrumentoConvocatorioCodigo": 3,
       "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
+      "tipoInstrumentoConvocatorioCodigo": 3,
       "valorTotalEstimado": 6175,
       "modalidadeNome": "Dispensa",
       "modoDisputaNome": "Não se aplica",
@@ -380,13 +380,6 @@
     },
     {
       "dataAtualizacao": "2026-03-13T09:05:13",
-      "valorTotalEstimado": 121560,
-      "modalidadeNome": "Inexigibilidade",
-      "modoDisputaNome": "Não se aplica",
-      "fontesOrcamentarias": [],
-      "situacaoCompraId": 1,
-      "situacaoCompraNome": "Divulgada no PNCP",
-      "usuarioNome": "Compras.gov.br",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
         "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
@@ -427,19 +420,19 @@
       "linkProcessoEletronico": "https://sipac.ifes.edu.br/public/jsp/processos/processo_detalhado.jsf?id=218688",
       "numeroControlePNCP": "10838653000106-1-000123/2026",
       "modoDisputaId": 5,
-      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
       "tipoInstrumentoConvocatorioCodigo": 3,
-      "itens": []
-    },
-    {
-      "dataAtualizacao": "2026-03-17T16:28:21",
-      "valorTotalEstimado": 36000,
+      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
+      "valorTotalEstimado": 121560,
       "modalidadeNome": "Inexigibilidade",
       "modoDisputaNome": "Não se aplica",
       "fontesOrcamentarias": [],
       "situacaoCompraId": 1,
       "situacaoCompraNome": "Divulgada no PNCP",
       "usuarioNome": "Compras.gov.br",
+      "itens": []
+    },
+    {
+      "dataAtualizacao": "2026-03-17T16:28:21",
       "orgaoEntidade": {
         "cnpj": "10838653000106",
         "razaoSocial": "INSTITUTO FEDERAL DE EDUCACAO CIENCIA E TECNOLOGIA DO ESPIRITO SANTO",
@@ -480,8 +473,15 @@
       "linkProcessoEletronico": "https://sipac.ifes.edu.br/public/jsp/processos/processo_detalhado.jsf?id=219283",
       "numeroControlePNCP": "10838653000106-1-000136/2026",
       "modoDisputaId": 5,
-      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
       "tipoInstrumentoConvocatorioCodigo": 3,
+      "tipoInstrumentoConvocatorioNome": "Ato que autoriza a Contratação Direta",
+      "valorTotalEstimado": 36000,
+      "modalidadeNome": "Inexigibilidade",
+      "modoDisputaNome": "Não se aplica",
+      "fontesOrcamentarias": [],
+      "situacaoCompraId": 1,
+      "situacaoCompraNome": "Divulgada no PNCP",
+      "usuarioNome": "Compras.gov.br",
       "itens": []
     }
   ]

@@ -2,10 +2,10 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import {
-    getFirestore,
     initializeFirestore,
     persistentLocalCache,
-    persistentMultipleTabManager
+    persistentSingleTabManager,
+    memoryLocalCache
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -32,13 +32,20 @@ const analytics = (typeof window !== 'undefined' && isConfigValid && app)
     ? getAnalytics(app)
     : null;
 
-const db = (app && isConfigValid)
-    ? initializeFirestore(app, {
-        localCache: persistentLocalCache({
-            tabManager: persistentMultipleTabManager()
-        })
-    })
-    : null;
+let db = null;
+if (app && isConfigValid) {
+    try {
+        db = initializeFirestore(app, {
+            localCache: persistentLocalCache({
+                tabManager: persistentSingleTabManager({ forceOwnership: true })
+            })
+        });
+    } catch {
+        db = initializeFirestore(app, {
+            localCache: memoryLocalCache()
+        });
+    }
+}
 
 
 export { app, analytics, db };
